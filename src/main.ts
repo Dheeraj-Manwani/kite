@@ -11,6 +11,9 @@ if (started) {
     registerOverlayIPC();
     createOverlayWindow();
     startCursorTracking();
+    if (!app.isPackaged && !globalShortcut.register('CommandOrControl+Shift+D', () => {
+      getOverlayWindow()?.webContents.send('dev:togglePanel');
+    })) console.warn('Kite: could not register the dev panel shortcut');
     if (!globalShortcut.register('CommandOrControl+Shift+K', () => {
       console.log('hotkey pressed');
     })) console.warn('Kite: could not register CommandOrControl+Shift+K');

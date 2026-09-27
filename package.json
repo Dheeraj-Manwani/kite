@@ -11,7 +11,8 @@
     "make": "electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --require ./tests/register.cjs --test tests/physics.test.cjs"
   },
   "keywords": [],
   "author": {

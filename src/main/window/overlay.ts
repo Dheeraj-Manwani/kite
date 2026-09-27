@@ -1,5 +1,6 @@
 import { BrowserWindow, screen } from 'electron';
 import { loadRenderer, preloadPath } from './renderer';
+import { resetPanelHitTest } from '../ipc/overlay';
 
 let overlayWindow: BrowserWindow | null = null;
 export const getOverlayWindow = () => overlayWindow;
@@ -17,18 +18,25 @@ export function createOverlayWindow(): BrowserWindow {
   if (overlayWindow) return overlayWindow;
   const win = new BrowserWindow({
     ...getDesktopBounds(), transparent: true, frame: false, alwaysOnTop: true,
-    skipTaskbar: true, resizable: false, hasShadow: false, focusable: false,
+    skipTaskbar: true, resizable: false, hasShadow: false, focusable: false, enableLargerThanScreen: true,
     show: false, backgroundColor: '#00000000',
     webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
   });
   overlayWindow = win;
   win.setIgnoreMouseEvents(true, { forward: true });
-  win.once('ready-to-show', () => win.showInactive());
+  win.once('ready-to-show', () => {
+    win.showInactive();
+    // Windows can constrain the initial window to the work area (excluding taskbar).
+    win.setBounds(getDesktopBounds());
+  });
   const updateBounds = () => win.setBounds(getDesktopBounds());
   screen.on('display-added', updateBounds);
   screen.on('display-removed', updateBounds);
   screen.on('display-metrics-changed', updateBounds);
-  win.webContents.on('did-start-loading', () => win.setIgnoreMouseEvents(true, { forward: true }));
+  win.webContents.on('did-start-loading', () => {
+    resetPanelHitTest();
+    win.setIgnoreMouseEvents(true, { forward: true });
+  });
   win.on('closed', () => {
     screen.removeListener('display-added', updateBounds);
     screen.removeListener('display-removed', updateBounds);

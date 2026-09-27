@@ -1,13 +1,14 @@
-import { StrictMode } from 'react';
+import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
-import { KiteView } from './components/KiteView';
+import { KiteRenderer } from './kite/KiteRenderer';
 import { SettingsView } from './components/SettingsView';
-import { useCursorTracking } from './hooks/useCursorTracking';
 import './styles.css';
 
+const DevPanel = import.meta.env.DEV ? lazy(() => import('./kite/DevPanel')) : null;
 function Overlay() {
-  useCursorTracking();
-  return <main className="overlay"><KiteView /></main>;
+  return <main className="overlay"><KiteRenderer />
+    {DevPanel && <Suspense fallback={null}><DevPanel /></Suspense>}
+  </main>;
 }
 const isSettings = window.location.hash === '#settings';
 document.documentElement.dataset.view = isSettings ? 'settings' : 'overlay';

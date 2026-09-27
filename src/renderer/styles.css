@@ -3,11 +3,20 @@
 html, body, #root { margin: 0; width: 100%; height: 100%; }
 html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .overlay { width: 100vw; height: 100vh; pointer-events: none; background: transparent; }
-.kite-position { position: absolute; top: 0; left: 0; width: 64px; height: 96px; transition: transform .15s ease-out; will-change: transform; }
-.kite-float { width: 100%; height: 100%; pointer-events: auto; animation: float 3.8s ease-in-out infinite; opacity: .85; transition: opacity .15s; }
-.kite-float:hover { opacity: 1; }
-.kite-float svg { width: 100%; height: 100%; filter: drop-shadow(0 3px 5px #18364130); pointer-events: none; }
-@keyframes float { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
+:root { --kite-body: #ff426f; --kite-shade: #e92c59; --kite-spar: #b81d44; --kite-tail: #f53466; --kite-accent: #ff3969; }
+.kite-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
+.dev-panel { position: absolute; width: 300px; max-height: calc(100vh - 40px); overflow: auto; padding: 18px; border: 1px solid #b7d5cf; border-radius: 14px; background: #f5faf9f5; box-shadow: 0 8px 32px #18364125; pointer-events: auto; }
+.dev-panel header { display: flex; align-items: center; justify-content: space-between; }
+.dev-panel header button { padding: 4px 10px; }
+.dev-panel output { display: block; font: 12px monospace; color: #527a79; margin: 12px 0; }
+.dev-buttons { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+.dev-buttons button { padding: 7px 9px; font-size: 11px; background: #e1eeeb; color: #255e59; }
+.dev-buttons button[aria-pressed='true'] { background: #255e59; color: white; }
+.dev-panel p { margin-bottom: 8px; }
+.dev-panel input[type='range'] { padding: 0; accent-color: #255e59; }
+.dev-panel .dev-check { display: flex; align-items: center; gap: 8px; }
+.dev-check input { width: auto; margin: 0; }
+.dev-panel small { display: block; font-size: 11px; line-height: 1.5; color: #667b80; }
 html[data-view='settings'] { background: #f5f8f7; }
 .settings { max-width: 520px; padding: 32px; margin: 0 auto; }
 .eyebrow { font-size: 11px; letter-spacing: .18em; color: #527a79; font-weight: 700; }
@@ -19,4 +28,3 @@ input:focus-visible, button:focus-visible { outline: 2px solid #478e87; outline-
 .save-row { display: flex; align-items: center; gap: 14px; margin-top: 22px; }
 button { background: #255e59; color: white; border: 0; border-radius: 7px; padding: 11px 24px; cursor: pointer; }
 .save-row span { font-size: 11px; color: #667b80; }
-@media (prefers-reduced-motion: reduce) { .kite-position { transition: none; } .kite-float { animation: none; } }
