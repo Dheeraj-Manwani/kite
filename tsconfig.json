@@ -1,6 +1,7 @@
 {
   "compilerOptions": {
     "target": "ESNext",
+    "jsx": "react-jsx",
     "module": "commonjs",
     "allowJs": true,
     "skipLibCheck": true,
