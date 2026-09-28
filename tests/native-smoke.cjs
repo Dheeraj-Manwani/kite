@@ -1,0 +1,58 @@
+const { app, safeStorage } = require('electron');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const temporary = fs.mkdtempSync(path.join(os.tmpdir(),'kite-voice-test-'));
+app.setPath('userData',temporary);
+require(path.join(__dirname,'../tests/register.cjs'));
+app.whenReady().then(() => {
+  try {
+    const { openSecrets } = require('../src/main/settings/secrets.ts');
+    const { openDatabase } = require('../src/main/storage/database.ts');
+    const key = 'smoke-test-key-not-a-provider-credential';
+    const secrets = openSecrets();
+    assert.equal(safeStorage.isEncryptionAvailable(),true);
+    secrets.setKey('groq',key);
+    const disk = fs.readFileSync(path.join(temporary,'settings.json'),'utf8');
+    assert.ok(!disk.includes(key));
+    assert.equal(openSecrets().getKey('groq'),key);
+    secrets.deleteKey('groq');assert.equal(openSecrets().hasKey('groq'),false);
+    const dbPath=path.join(temporary,'kite.db');
+    let db=openDatabase(dbPath);
+    db.createConversation('test',Date.now());
+    db.addMessage('test','user','hello',{transcribeMs:12,firstTokenMs:0,totalMs:0});
+    db.addMessage('test','assistant','hi',{transcribeMs:12,firstTokenMs:40,totalMs:90});
+    db.close();db=openDatabase(dbPath);
+    assert.deepEqual(db.recent().map(x=>[x.role,x.content]),[['user','hello'],['assistant','hi']]);
+    const row = db.addMessage('test','assistant','partial',{transcribeMs:12,firstTokenMs:40,totalMs:90,ttsFirstAudioMs:50,voiceToVoiceMs:900},{provider:'anthropic',id:'claude-sonnet-5'},true);
+    db.updateMessage(row,{transcribeMs:12,firstTokenMs:40,totalMs:110,ttsFirstAudioMs:50,voiceToVoiceMs:1000},true);
+    assert.equal(db.recent().at(-1).interrupted,1);assert.equal(db.recent().at(-1).provider,'anthropic');assert.equal(db.voiceAverage(),1000);
+    const reminder=db.addReminder(Date.now()+60000,'stretch after restart');
+    const cancelled=db.addReminder(Date.now()+120000,'cancel me');assert.equal(db.cancelReminder(cancelled),true);
+    const audit=db.beginTool(row,'open_app',{name:'Spotify'},'Open "Spotify"?',true);
+    db.finishTool(audit,'timeout',{ok:false,message:'Nothing ran'},null,30000);
+    db.close();db=openDatabase(dbPath);
+    assert.equal(db.listReminders().length,1);assert.equal(db.listReminders()[0].id,reminder);
+    assert.equal(db.claimReminder(reminder),true);assert.equal(db.claimReminder(reminder),false);assert.equal(db.listReminders().length,0);
+    assert.equal(db.recentTools()[0].decision,'timeout');assert.equal(db.recentTools()[0].dry_run,1);assert.equal(db.recentTools()[0].message_id,row);
+    db.close();
+    const Database=require('better-sqlite3');const legacyPath=path.join(temporary,'legacy.db');const legacy=new Database(legacyPath);
+    legacy.exec(`CREATE TABLE conversations (id TEXT PRIMARY KEY, started_at INTEGER NOT NULL);
+      CREATE TABLE messages (id INTEGER PRIMARY KEY, conversation_id TEXT, role TEXT, content TEXT, provider TEXT, model TEXT, created_at INTEGER, transcribe_ms REAL, first_token_ms REAL, total_ms REAL);
+      INSERT INTO conversations VALUES ('legacy',1); INSERT INTO messages VALUES (1,'legacy','assistant','keep me','moonshot','kimi-k2.6',1,0,0,0); PRAGMA user_version=1;`);
+    legacy.close();const upgraded=openDatabase(legacyPath);assert.equal(upgraded.recent()[0].content,'keep me');assert.equal(upgraded.recent()[0].interrupted,0);upgraded.close();
+    const { openPreferences } = require('../src/main/settings/preferences.ts');
+    const preferences=openPreferences(()=>true);let notifications=0;preferences.subscribe(()=>notifications++);
+    preferences.update({model:{provider:'google',id:'custom-test'},voiceId:'test-voice',ttsEnabled:true,speed:1.2});
+    assert.equal(notifications,1);assert.equal(openPreferences(()=>true).get().model.id,'custom-test');
+    assert.ok(preferences.snapshot().models.some(m=>m.id==='custom-test'));
+    assert.throws(()=>preferences.update({speed:10}));assert.throws(()=>preferences.update({model:{provider:'unknown',id:'x'}}));
+    assert.equal(preferences.get().speed,1.2);
+    const {createKiteTray}=require('../src/main/tray.ts');const tray=createKiteTray(preferences);tray.update();tray.destroy();
+    console.log('PASS safeStorage, SQLite migration/metrics/audit/reminders across restart, settings persistence and native tray');
+  } catch(error) { console.error(error);process.exitCode=1; }
+  finally {
+    app.exit(process.exitCode || 0);
+  }
+});

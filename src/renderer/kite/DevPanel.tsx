@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { KiteMood } from '../../shared/types';
+import type { KiteMood, ToolAudit } from '../../shared/types';
 import { useKiteStore } from '../store/kite';
 import { config } from './config';
 import { runtime } from './runtime';
 import { cursorInput } from './useKiteLoop';
 import type { OneShot } from './behaviors';
+import { voiceRuntime } from '../voice/runtime';
 
 const sliders = [
   { key: 'stiffness', label: 'Spring stiffness', min: 100, max: 700, step: 10 },
@@ -14,9 +15,12 @@ const sliders = [
 ] as const;
 
 export default function DevPanel() {
+  const [calls, setCalls] = useState<ToolAudit[]>([]), [dryRun, setDryRun] = useState(false);
+  useEffect(() => { void window.kite.getToolCalls().then(setCalls); void window.kite.getSettings().then(s => setDryRun(s.settings.dryRun)); const a = window.kite.onToolCallsChanged(setCalls), b = window.kite.onSettingsChanged(s => setDryRun(s.settings.dryRun)); return () => { a(); b(); }; }, []);
   const [open, setOpen] = useState(false);
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const panel = useRef<HTMLElement>(null), stats = useRef<HTMLOutputElement>(null);
+  const timing = useRef<HTMLOutputElement>(null);
   const mood = useKiteStore(state => state.mood);
   useEffect(() => window.kite.onDevPanelToggle(() => {
     const geometry = cursorInput.geometry;
@@ -43,6 +47,10 @@ export default function DevPanel() {
     window.addEventListener('resize', report);
     const timer = setInterval(() => {
       if (stats.current) stats.current.textContent = `${runtime.fps} FPS · ${runtime.behavior}`;
+      if (timing.current) {
+        const t = voiceRuntime.timing;
+        timing.current.textContent = t ? `STT ${Math.round(t.transcribeMs)}ms · first token ${Math.round(t.firstTokenMs)}ms · total ${Math.round(t.totalMs)}ms · first audio ${t.ttsFirstAudioMs === undefined ? '—' : Math.round(t.ttsFirstAudioMs) + 'ms'} · voice-to-voice ${t.voiceToVoiceMs === undefined ? '—' : Math.round(t.voiceToVoiceMs) + 'ms'} · avg (20) ${voiceRuntime.voiceAverageMs === undefined ? '—' : Math.round(voiceRuntime.voiceAverageMs) + 'ms'}` : 'Hold Ctrl + Win to speak';
+      }
     }, 500);
     return () => {
       observer.disconnect(); window.removeEventListener('resize', report); clearInterval(timer);
@@ -56,8 +64,15 @@ export default function DevPanel() {
     onPointerLeave={() => window.kite.setOverlayInteractive(false)}>
     <header><strong>Kite / Motion lab</strong><button onClick={() => setOpen(false)} aria-label="Close motion panel">×</button></header>
     <output ref={stats}>Measuring FPS…</output>
+    <output ref={timing}>Hold Ctrl + Win to speak</output>
+    <div className="dev-buttons">
+      <button onClick={() => window.kite.openSettings()}>API keys</button>
+      <button onClick={() => { void window.kite.printRecentMessages().then(result => { if (timing.current) timing.current.textContent = result.ok ? 'Last 10 messages printed in the main terminal.' : 'Could not read history.'; }); }}>Print last 10 messages</button>
+    </div>
     <div className="dev-buttons">{(['idle', 'listening', 'thinking', 'talking'] as KiteMood[]).map(value =>
       <button key={value} aria-pressed={mood === value} onClick={() => useKiteStore.getState().setMood(value)}>{value}</button>)}</div>
+    <label className="dev-check"><input type="checkbox" checked={dryRun} onChange={e => { void window.kite.setDryRun(e.target.checked); }} /> Dry-run actions (no OS effects)</label>
+    <details className="tool-audit"><summary>Last 20 tool calls ({calls.length})</summary>{calls.map(call => <div key={call.id}><strong>{call.tool} · {call.decision}{call.dry_run ? ' · dry run' : ''}</strong><div>{call.summary}</div><pre>{call.error ?? call.result_json ?? 'Waiting'}</pre></div>)}</details>
     <p>Preview a personality beat</p>
     <div className="dev-buttons">{(['gust', 'wake', 'dizzy'] as OneShot[]).map(value =>
       <button key={value} onClick={() => { useKiteStore.getState().setMood('idle'); runtime.trigger = value; }}>{value === 'wake' ? 'wake-up' : value}</button>)}</div>

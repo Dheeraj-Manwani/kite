@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import { loadRenderer, preloadPath } from './renderer';
 
 let settingsWindow: BrowserWindow | null = null;
+export const getSettingsWindow = () => settingsWindow;
 export function createSettingsWindow(): BrowserWindow {
   if (settingsWindow) {
     if (settingsWindow.isMinimized()) settingsWindow.restore();
@@ -10,7 +11,7 @@ export function createSettingsWindow(): BrowserWindow {
     return settingsWindow;
   }
   const win = new BrowserWindow({
-    width: 520, height: 660, minWidth: 400, minHeight: 560,
+    width: 700, height: 860, minWidth: 400, minHeight: 560,
     title: 'Kite settings', autoHideMenuBar: true, show: false,
     webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true },
   });

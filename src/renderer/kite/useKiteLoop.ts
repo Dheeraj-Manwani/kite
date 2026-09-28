@@ -8,6 +8,8 @@ import { blendMotion, moods } from './moods';
 import { bodySpring, spring, stepBody, stepSpring } from './physics/spring';
 import { clamp } from './physics/vector';
 import { runtime } from './runtime';
+import { positionBubble, reactionMotion, sampleVoice } from '../voice/frame';
+import { voiceRuntime } from '../voice/runtime';
 
 export interface KiteElements {
   svg: RefObject<SVGSVGElement | null>;
@@ -24,6 +26,8 @@ export function useKiteLoop(refs: KiteElements) {
     const svg = refs.svg.current, bodyNode = refs.body.current;
     const bowsNode = refs.bows.current, eyesNode = refs.eyes.current;
     if (!svg || !bodyNode || !bowsNode || !eyesNode) return;
+    const sparkle = bodyNode.querySelector<SVGPathElement>('.kite-sparkle');
+    const muted = bodyNode.querySelector<SVGTextElement>('.kite-muted');
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     let reduced = media.matches;
     const preferenceChanged = () => { reduced = media.matches; };
@@ -48,6 +52,9 @@ export function useKiteLoop(refs: KiteElements) {
       last = now;
       const dt = Math.min(Math.max(rawDt, 0.001), config.maxDt);
       time += dt;
+      sampleVoice(dt);
+      const reaction = reactionMotion(now, reduced);
+      const workingHard = voiceRuntime.waitingSince > 0 && now - voiceRuntime.waitingSince > 3000;
       fpsFrames++; fpsTime += rawDt;
       if (fpsTime >= 0.5) {
         runtime.fps = Math.round(fpsFrames / fpsTime);
@@ -86,13 +93,13 @@ export function useKiteLoop(refs: KiteElements) {
       const fakeSpeech = runtime.fakeLevels ? Math.max(0, Math.sin(time * 6)) : 0;
       const audio = clamp(runtime.audioLevel ?? fakeAudio, 0, 1);
       const speech = clamp(runtime.speechLevel ?? fakeSpeech, 0, 1);
-      wagPhase += dt * config.wagFrequency * motion.frequency;
+      wagPhase += dt * (mood === 'listening' ? 10 : workingHard ? 5 : config.wagFrequency * motion.frequency);
       bobPhase += dt * motion.bobFrequency * Math.PI * 2;
       const wake = mood === 'idle' && behavior.name === 'wake' && !reduced;
       const bob = Math.sin(bobPhase) * motion.bob * config.personalityAmount * (reduced ? 0.25 : 1) * (mood === 'talking' ? 0.5 + speech : 1);
       const target = {
         x: cursor.x + (config.offsetX + motion.driftX * config.personalityAmount) * scale,
-        y: cursor.y + (config.offsetY + bob + (wake ? behaviorResult.motion.driftY : motion.driftY) * config.personalityAmount) * scale,
+        y: cursor.y + (config.offsetY + bob + reaction.y + (mood === 'talking' && speech < 0.06 ? 1.4 : -speech * 2) + (wake ? behaviorResult.motion.driftY : motion.driftY) * config.personalityAmount) * scale,
       };
       body = stepBody(body, target, config.stiffness * (1 + (motion.stiffness - 1) * config.personalityAmount), reduced ? Math.max(40, config.damping) : config.damping, dt);
       const bodySpeed = Math.hypot(body.x.velocity, body.y.velocity);
@@ -107,20 +114,24 @@ export function useKiteLoop(refs: KiteElements) {
         lastSpin = behaviorResult.spin;
       }
       const tilt = reduced ? 0 : motion.tilt * config.personalityAmount * Math.sin(time * (mood === 'thinking' ? 1.7 : 2.5));
-      rotation = stepSpring(rotation, config.baseAngle + bank + tilt + spinBase + lastSpin, config.rotationStiffness, config.rotationDamping, dt);
+      rotation = stepSpring(rotation, config.baseAngle + bank + tilt + reaction.tilt + spinBase + lastSpin, config.rotationStiffness, config.rotationDamping, dt);
       const desiredStretch = reduced ? 1 : wake ? behaviorResult.motion.stretch : Math.min(config.maxStretch, 1 + bodySpeed * config.stretchGain);
       stretch = stepSpring(stretch, desiredStretch, wake ? 1000 : 240, wake ? 42 : 26, dt);
-      const along = reduced ? 1 : clamp(stretch.value, 0.75, config.maxStretch);
+      const along = reduced ? 1 : clamp(stretch.value * reaction.stretch, 0.75, Math.max(config.maxStretch, 1.1));
       const direction = wake ? Math.PI / 2 : Math.atan2(body.y.velocity, body.x.velocity);
+      bodyNode.style.filter = reaction.flash > 0 ? `brightness(${1 + reaction.flash * 2})` : '';
+      if (sparkle) sparkle.style.opacity = reaction.happy ? String(reaction.flash) : '0';
+      if (muted) muted.style.opacity = now < voiceRuntime.mutedUntil ? '1' : '0';
       svg.style.visibility = 'visible';
       svg.style.opacity = String(1 + (motion.opacity - 1) * config.personalityAmount);
-      bodyNode.setAttribute('transform', `translate(${body.x.value} ${body.y.value}) rotate(${direction * 180 / Math.PI}) scale(${along} ${1 / along}) rotate(${rotation.value - direction * 180 / Math.PI}) scale(${scale})`);
+      bodyNode.setAttribute('transform', `translate(${body.x.value} ${body.y.value}) rotate(${direction * 180 / Math.PI}) scale(${along} ${1 / along}) rotate(${rotation.value + reaction.spin - direction * 180 / Math.PI}) scale(${scale})`);
       // Keep the two dots attached to the body's local frame: no rope can fold
       // back into the silhouette or leave a stray dot behind during fast movement.
       const signal = mood === 'listening' ? 0.3 + audio : mood === 'talking' ? 0.5 + speech : 1;
-      const wag = reduced ? 0 : Math.sin(wagPhase * Math.PI * 2)
-        * Math.min(config.tailWagLimit, config.wagAmplitude * motion.wag * signal);
-      bowsNode.setAttribute('transform', `translate(${wag} 0)`);
+      const amplitude = now < voiceRuntime.alarmUntil ? 4 : voiceRuntime.toolPose === 'proposing' ? .15 : voiceRuntime.toolPose === 'executing' ? 1.5 : mood === 'listening' ? 0.2 + audio * 1.6 : workingHard ? 0.9 : reaction.happy ? 0.6 : Math.min(config.tailWagLimit, config.wagAmplitude * motion.wag * signal);
+      const wag = reduced ? 0 : Math.sin(wagPhase * Math.PI * 2) * amplitude;
+      bowsNode.setAttribute('transform', `translate(${wag} ${reaction.tailY})`);
+      positionBubble(body.x.value, body.y.value, geometry, now);
       if (time >= blinkAt) {
         blinkStart = time; blinkAt = time + config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin);
       }

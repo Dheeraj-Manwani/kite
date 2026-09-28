@@ -22,6 +22,8 @@ export const KiteRenderer = memo(function KiteRenderer() {
         <path d="M-5 -16 Q12 -7 20 9 Q4 7 -1 16 Q-10 11 -19 17 Q-17 -1 -5 -16 Z"
           transform={`scale(${config.bodyWidth / 39} ${config.bodyHeight / 33})`} fill="url(#kite-pink)" />
         <g ref={eyes} fill="var(--kite-spar)"><circle cx="-2.4" cy="-2" r=".85" /><circle cx="2.4" cy="-2" r=".85" /></g>
+        <path className="kite-sparkle" d="M28 -25 L30 -19 L36 -17 L30 -15 L28 -9 L26 -15 L20 -17 L26 -19 Z" fill="#ffd577" opacity="0" />
+        <text className="kite-muted" x="23" y="-15" fontSize="12" opacity="0">🔇</text>
       </g>
   </svg>;
 });

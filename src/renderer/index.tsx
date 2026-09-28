@@ -3,10 +3,11 @@ import { createRoot } from 'react-dom/client';
 import { KiteRenderer } from './kite/KiteRenderer';
 import { SettingsView } from './components/SettingsView';
 import './styles.css';
+import { SpeechBubble } from './voice/SpeechBubble';
 
 const DevPanel = import.meta.env.DEV ? lazy(() => import('./kite/DevPanel')) : null;
 function Overlay() {
-  return <main className="overlay"><KiteRenderer />
+  return <main className="overlay"><KiteRenderer /><SpeechBubble />
     {DevPanel && <Suspense fallback={null}><DevPanel /></Suspense>}
   </main>;
 }

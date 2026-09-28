@@ -1,0 +1,10 @@
+import { z } from 'zod';
+export const emptyInput = z.object({}).strict();
+export const nameInput = z.object({ name: z.string().trim().min(1).max(200) }).strict();
+export const urlInput = z.object({ url: z.string().url().max(2048).refine(value => { try { const u = new URL(value); return ['http:', 'https:'].includes(u.protocol) && !u.username && !u.password; } catch { return false; } }, 'Only http/https URLs without credentials are allowed') }).strict();
+export const searchInput = z.object({ query: z.string().trim().min(1).max(500) }).strict();
+export const textInput = z.object({ text: z.string().min(1).max(5000) }).strict();
+export const timerInput = z.object({ minutes: z.number().finite().positive().max(525600), label: z.string().trim().min(1).max(200) }).strict();
+export const reminderInput = z.object({ at: z.string().datetime({ offset: true }).refine(s => Date.parse(s) > Date.now(), 'Time must be in the future'), label: z.string().trim().min(1).max(200) }).strict();
+export const cancelInput = z.object({ id: z.number().int().positive() }).strict();
+export const noteInput = z.object({ title: z.string().trim().min(1).max(120), content: z.string().min(1).max(20000) }).strict();

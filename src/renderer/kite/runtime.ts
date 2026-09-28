@@ -4,7 +4,7 @@ export const runtime = {
   trigger: null as OneShot | null,
   audioLevel: undefined as number | undefined,
   speechLevel: undefined as number | undefined,
-  fakeLevels: true,
+  fakeLevels: false,
   fps: 0,
   behavior: 'content',
   panelOpen: false,

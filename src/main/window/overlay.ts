@@ -20,7 +20,7 @@ export function createOverlayWindow(): BrowserWindow {
     ...getDesktopBounds(), transparent: true, frame: false, alwaysOnTop: true,
     skipTaskbar: true, resizable: false, hasShadow: false, focusable: false, enableLargerThanScreen: true,
     show: false, backgroundColor: '#00000000',
-    webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false },
+    webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' },
   });
   overlayWindow = win;
   win.setIgnoreMouseEvents(true, { forward: true });

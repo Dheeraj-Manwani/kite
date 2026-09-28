@@ -12,7 +12,12 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
-    "test": "node --require ./tests/register.cjs --test tests/physics.test.cjs"
+    "test": "node --require ./tests/register.cjs --test tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs",
+    "test:native": "electron tests/native-smoke.cjs",
+    "test:clipboard": "electron tests/clipboard-native.cjs",
+    "test:notepad": "electron tests/notepad-focus.cjs",
+    "test:renderer": "electron tests/renderer-smoke.cjs",
+    "test:startup": "electron tests/startup-smoke.cjs"
   },
   "keywords": [],
   "author": {
@@ -30,9 +35,11 @@
     "@electron-forge/plugin-fuses": "^7.11.2",
     "@electron-forge/plugin-vite": "^7.11.2",
     "@electron/fuses": "^1.8.0",
+    "@types/better-sqlite3": "^9.6.0",
     "@types/electron-squirrel-startup": "^1.0.2",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/ws": "^8.18.1",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "@vitejs/plugin-react": "^4.7.0",
@@ -43,10 +50,22 @@
     "vite": "^5.4.21"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^4.0.65",
+    "@ai-sdk/google": "^4.0.82",
+    "@ai-sdk/groq": "^4.0.50",
+    "@ai-sdk/openai": "^4.0.78",
+    "@ai-sdk/openai-compatible": "^3.0.57",
+    "@cartesia/cartesia-js": "^4.2.0",
+    "ai": "^7.0.118",
+    "better-sqlite3": "^13.0.3",
     "electron-squirrel-startup": "^1.0.1",
     "electron-store": "^11.0.2",
+    "fuse.js": "^7.5.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "uiohook-napi": "^1.5.5",
+    "ws": "^8.22.0",
+    "zod": "^4.6.5",
     "zustand": "^5.0.15"
   }
 }
