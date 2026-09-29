@@ -18,6 +18,7 @@ export default function DevPanel() {
   const [calls, setCalls] = useState<ToolAudit[]>([]), [dryRun, setDryRun] = useState(false);
   useEffect(() => { void window.kite.getToolCalls().then(setCalls); void window.kite.getSettings().then(s => setDryRun(s.settings.dryRun)); const a = window.kite.onToolCallsChanged(setCalls), b = window.kite.onSettingsChanged(s => setDryRun(s.settings.dryRun)); return () => { a(); b(); }; }, []);
   const [open, setOpen] = useState(false);
+  const [captureResult, setCaptureResult] = useState('');
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const panel = useRef<HTMLElement>(null), stats = useRef<HTMLOutputElement>(null);
   const timing = useRef<HTMLOutputElement>(null);
@@ -49,7 +50,7 @@ export default function DevPanel() {
       if (stats.current) stats.current.textContent = `${runtime.fps} FPS · ${runtime.behavior}`;
       if (timing.current) {
         const t = voiceRuntime.timing;
-        timing.current.textContent = t ? `STT ${Math.round(t.transcribeMs)}ms · first token ${Math.round(t.firstTokenMs)}ms · total ${Math.round(t.totalMs)}ms · first audio ${t.ttsFirstAudioMs === undefined ? '—' : Math.round(t.ttsFirstAudioMs) + 'ms'} · voice-to-voice ${t.voiceToVoiceMs === undefined ? '—' : Math.round(t.voiceToVoiceMs) + 'ms'} · avg (20) ${voiceRuntime.voiceAverageMs === undefined ? '—' : Math.round(voiceRuntime.voiceAverageMs) + 'ms'}` : 'Hold Ctrl + Win to speak';
+        timing.current.textContent = t ? `Capture ${Math.round(t.captureMs ?? 0)}ms · STT ${Math.round(t.transcribeMs)}ms · first token ${Math.round(t.firstTokenMs)}ms · total ${Math.round(t.totalMs)}ms · first audio ${t.ttsFirstAudioMs === undefined ? '—' : Math.round(t.ttsFirstAudioMs) + 'ms'} · voice-to-voice ${t.voiceToVoiceMs === undefined ? '—' : Math.round(t.voiceToVoiceMs) + 'ms'} · avg (20) ${voiceRuntime.voiceAverageMs === undefined ? '—' : Math.round(voiceRuntime.voiceAverageMs) + 'ms'}` : 'Hold Ctrl + Win to speak';
       }
     }, 500);
     return () => {
@@ -67,8 +68,10 @@ export default function DevPanel() {
     <output ref={timing}>Hold Ctrl + Win to speak</output>
     <div className="dev-buttons">
       <button onClick={() => window.kite.openSettings()}>API keys</button>
+      <button onClick={() => { void window.kite.testCapture().then(result => { setCaptureResult(result.ok ? `Saved test capture: ${result.path}` : result.error); }); }}>Test capture (save PNG)</button>
       <button onClick={() => { void window.kite.printRecentMessages().then(result => { if (timing.current) timing.current.textContent = result.ok ? 'Last 10 messages printed in the main terminal.' : 'Could not read history.'; }); }}>Print last 10 messages</button>
     </div>
+    {captureResult && <output style={{ overflowWrap: 'anywhere' }}>{captureResult}</output>}
     <div className="dev-buttons">{(['idle', 'listening', 'thinking', 'talking'] as KiteMood[]).map(value =>
       <button key={value} aria-pressed={mood === value} onClick={() => useKiteStore.getState().setMood(value)}>{value}</button>)}</div>
     <label className="dev-check"><input type="checkbox" checked={dryRun} onChange={e => { void window.kite.setDryRun(e.target.checked); }} /> Dry-run actions (no OS effects)</label>

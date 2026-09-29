@@ -1,3 +1,4 @@
+import { visionRuntime as vr } from '../vision/runtime';
 import { RefObject, useEffect } from 'react';
 import type { CursorGeometry, CursorPoint } from '../../shared/types';
 import { useKiteStore } from '../store/kite';
@@ -101,7 +102,10 @@ export function useKiteLoop(refs: KiteElements) {
         x: cursor.x + (config.offsetX + motion.driftX * config.personalityAmount) * scale,
         y: cursor.y + (config.offsetY + bob + reaction.y + (mood === 'talking' && speech < 0.06 ? 1.4 : -speech * 2) + (wake ? behaviorResult.motion.driftY : motion.driftY) * config.personalityAmount) * scale,
       };
-      body = stepBody(body, target, config.stiffness * (1 + (motion.stiffness - 1) * config.personalityAmount), reduced ? Math.max(40, config.damping) : config.damping, dt);
+      if (vr.drawing && vr.pen) { target.x = vr.pen.x; target.y = vr.pen.y; }
+      const look = vr.target && (mood === 'thinking' || now < vr.glanceUntil);
+      if (look) { target.x += clamp(vr.target.x - target.x, -50, 50) * .35; target.y += clamp(vr.target.y - target.y, -50, 50) * .35; }
+      body = stepBody(body, target, config.stiffness * (vr.drawing ? 4 : 1) * (1 + (motion.stiffness - 1) * config.personalityAmount), reduced ? Math.max(40, config.damping) : config.damping, dt);
       const bodySpeed = Math.hypot(body.x.velocity, body.y.velocity);
       const bank = reduced ? 0 : clamp(body.x.velocity * config.bankGain, -config.bankLimit, config.bankLimit);
       // Keep complete turns in a continuous angle domain so recovery never unwinds.
@@ -119,12 +123,13 @@ export function useKiteLoop(refs: KiteElements) {
       stretch = stepSpring(stretch, desiredStretch, wake ? 1000 : 240, wake ? 42 : 26, dt);
       const along = reduced ? 1 : clamp(stretch.value * reaction.stretch, 0.75, Math.max(config.maxStretch, 1.1));
       const direction = wake ? Math.PI / 2 : Math.atan2(body.y.velocity, body.x.velocity);
-      bodyNode.style.filter = reaction.flash > 0 ? `brightness(${1 + reaction.flash * 2})` : '';
+      const captureBlink = now < vr.blinkUntil;
+      bodyNode.style.filter = captureBlink ? 'brightness(2.5) drop-shadow(0 0 5px #fff)' : reaction.flash > 0 ? `brightness(${1 + reaction.flash * 2})` : '';
       if (sparkle) sparkle.style.opacity = reaction.happy ? String(reaction.flash) : '0';
       if (muted) muted.style.opacity = now < voiceRuntime.mutedUntil ? '1' : '0';
       svg.style.visibility = 'visible';
       svg.style.opacity = String(1 + (motion.opacity - 1) * config.personalityAmount);
-      bodyNode.setAttribute('transform', `translate(${body.x.value} ${body.y.value}) rotate(${direction * 180 / Math.PI}) scale(${along} ${1 / along}) rotate(${rotation.value + reaction.spin - direction * 180 / Math.PI}) scale(${scale})`);
+      bodyNode.setAttribute('transform', `translate(${body.x.value} ${body.y.value}) rotate(${direction * 180 / Math.PI}) scale(${along} ${1 / along}) rotate(${rotation.value + reaction.spin - direction * 180 / Math.PI}) scale(${scale}) scale(1 ${captureBlink ? .65 : vr.drawing ? .88 : look && mood === 'thinking' ? .78 : 1})`);
       // Keep the two dots attached to the body's local frame: no rope can fold
       // back into the silhouette or leave a stray dot behind during fast movement.
       const signal = mood === 'listening' ? 0.3 + audio : mood === 'talking' ? 0.5 + speech : 1;
@@ -135,9 +140,9 @@ export function useKiteLoop(refs: KiteElements) {
       if (time >= blinkAt) {
         blinkStart = time; blinkAt = time + config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin);
       }
-      const blinking = time - blinkStart < config.blinkDuration;
+      const blinking = captureBlink || time - blinkStart < config.blinkDuration;
       eyesNode.style.display = config.eyes ? '' : 'none';
-      eyesNode.setAttribute('transform', `translate(${clamp(body.x.velocity / 900, -1, 1)} 0) scale(1 ${blinking ? 0.1 : 1})`);
+      eyesNode.setAttribute('transform', `translate(${look ? clamp((vr.target.x - body.x.value) / 100, -2, 2) : clamp(body.x.velocity / 900, -1, 1)} 0) scale(1 ${blinking ? 0.1 : 1})`);
     }
     frame = requestAnimationFrame(tick);
     return () => {

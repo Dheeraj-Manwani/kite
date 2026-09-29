@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, session } = require('electron');
+const { app, BrowserWindow, ipcMain, session, nativeImage } = require('electron');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -9,13 +9,14 @@ require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,cartesia:true} };
-Object.assign(snapshot.settings,{dryRun:false,searchEngine:'google'});
+Object.assign(snapshot.settings,{dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
 getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
+onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
 approveTool:(id,approved)=>ipcRenderer.invoke('test:approve',{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
 onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true})});`);
@@ -35,7 +36,7 @@ app.whenReady().then(async()=>{
     };
     const settings=await create('settings');
     assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('.provider-row').length"),6);
-    assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('optgroup').length"),10);
+    assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('optgroup').length"),15);
     await settings.webContents.executeJavaScript("[...document.querySelectorAll('button')].find(b=>b.textContent==='Test').click()");await delay(100);
     assert.equal(await settings.webContents.executeJavaScript("document.querySelector('.key-test').textContent"),'ok');
     await settings.webContents.executeJavaScript("const s=document.querySelector('select:has(optgroup)');s.value='anthropic:claude-sonnet-5';s.dispatchEvent(new Event('change',{bubbles:true}));");await delay(100);
@@ -82,8 +83,44 @@ app.whenReady().then(async()=>{
     await overlay.webContents.executeJavaScript("document.querySelectorAll('.approval-buttons button')[1].click()");await delay(50);
     assert.deepEqual(decisions[1],{id:'second',approved:false});
     fs.writeFileSync(path.join(temporary,'approval.png'),(await overlay.webContents.capturePage()).toPNG());
+    // Exercise real OffscreenCanvas JPEG composition with a generated fixture (no desktop capture).
+    const prepared = new Map(); ipcMain.on('test:prepared', (_e, token, images) => prepared.set(token, images));
+    const png = await overlay.webContents.executeJavaScript(`(()=>{const c=document.createElement('canvas');c.width=2000;c.height=1000;const x=c.getContext('2d');x.fillStyle='white';x.fillRect(0,0,2000,1000);x.fillStyle='black';x.font='40px sans-serif';x.fillText('Marked word',300,300);return c.toDataURL('image/png').split(',')[1];})()`);
+    overlay.webContents.send('screen:event',{type:'prepare',token:'fixture',png:new Uint8Array(Buffer.from(png,'base64')),display:{id:1,bounds:{x:-1600,y:0,width:1600,height:800},scaleFactor:1.25},strokes:[[{x:-1300,y:250,t:0}]]});
+    for(let i=0;i<100&&!prepared.has('fixture');i++)await delay(30);
+    const images=prepared.get('fixture');assert.ok(images?.overview&&images.zoom);
+    assert.deepEqual(nativeImage.createFromBuffer(Buffer.from(images.overview)).getSize(),{width:1568,height:784});
+    assert.deepEqual(nativeImage.createFromBuffer(Buffer.from(images.zoom)).getSize(),{width:300,height:300});
+    const pixels=nativeImage.createFromBuffer(Buffer.from(images.zoom)).toBitmap();let magenta=0;
+    for(let i=0;i<pixels.length;i+=4)if(pixels[i]>120&&pixels[i+2]>160&&pixels[i+1]<110)magenta++;
+    assert.ok(magenta>100,'tap ring must be composited into zoom');
+    overlay.webContents.send('screen:event',{type:'looking',active:true,hidden:true});await delay(60);
+    assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.kite-canvas')).opacity"),'0');
+    overlay.webContents.send('screen:event',{type:'looking',active:true,hidden:false});await delay(60);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.screen-looking').textContent"),'Kite is looking');
+    overlay.webContents.send('test:voice',{id:3,type:'ptt:start'});await delay(60);
+    overlay.webContents.send('screen:event',{type:'annotate',id:3,display:{id:1,bounds:{x:0,y:0,width:760,height:960},scaleFactor:1},origin:{x:0,y:0}});await delay(60);
+    assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).cursor"),'crosshair');
+    for(let stroke=0;stroke<6;stroke++){
+      const x=100+stroke*40,y=700;
+      overlay.webContents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});
+      overlay.webContents.sendInputEvent({type:'mouseMove',x:x+15,y:y+20,button:'left'});
+      overlay.webContents.sendInputEvent({type:'mouseUp',x:x+15,y:y+20,button:'left',clickCount:1});
+      await delay(30);
+    }
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),5);
+    overlay.webContents.send('test:voice',{id:3,type:'ptt:stop'});await delay(50);
+    assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).pointerEvents"),'none');
+    overlay.webContents.send('test:voice',{id:3,type:'tool:approvalRequired',approval:{...card,approvalId:'vision-approval'}});await delay(50);
+    overlay.webContents.send('test:voice',{id:4,type:'ptt:start'});await delay(50);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),5,'marks stay visible during voice approval');
+    overlay.webContents.send('test:voice',{id:4,type:'ptt:stop'});
+    overlay.webContents.send('test:voice',{id:3,type:'approval:resume',text:'Continuing'});await delay(50);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),5,'marks survive approval resume');
+    overlay.webContents.send('test:voice',{id:3,type:'vision:done'});await delay(900);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),0);
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
-    console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny. Screenshots: '+temporary);
+    console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding. Screenshots: '+temporary);
   } catch(error) {console.error(error);process.exitCode=1;}
   finally {windows.forEach(w=>w.destroy());app.exit(process.exitCode||0);}
 });

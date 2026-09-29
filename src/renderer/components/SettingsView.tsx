@@ -56,13 +56,13 @@ export function SettingsView() {
       </div>
     </div>;
   }
-  function picker(label: string, value: ModelSelection, change: (model: ModelSelection) => void) {
+  function picker(label: string, value: ModelSelection, change: (model: ModelSelection) => void, visionOnly = false) {
     const models = snapshot.models.filter(m => snapshot.keys[m.provider]);
     const selected = models.some(m => encode(m) === encode(value));
     return <label className="setting-field">{label}<select value={encode(value)} onChange={e => change(decode(e.target.value))}>
       {!selected && <option value={encode(value)}>{value.id} {snapshot.keys[value.provider] ? '(custom)' : '(save provider key)'}</option>}
       {providers.filter(p => snapshot.keys[p.id]).map(p => <optgroup key={p.id} label={p.label}>
-        {models.filter(m => m.provider === p.id).map(m => <option key={m.id} value={encode(m)}>{m.label} · {m.tier}{m.supportsVision ? ' · ◉ Vision' : ''}{m.supportsTools ? ' · Actions' : ' · Chat only'}</option>)}
+        {models.filter(m => m.provider === p.id && (!visionOnly || m.supportsVision)).map(m => <option key={m.id} value={encode(m)}>{m.label} · {m.tier}{m.supportsVision ? ' · ◉ Vision' : ''}{m.supportsTools ? ' · Actions' : ' · Chat only'}</option>)}
       </optgroup>)}
     </select></label>;
   }
@@ -83,6 +83,12 @@ export function SettingsView() {
         <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.fallbackEnabled} onChange={e => update({ fallbackEnabled: e.target.checked })} />Retry once on a fallback model</label>
         {picker('Fallback model', snapshot.settings.fallback, fallback => update({ fallback }))}
         <small>Only connection errors, server errors, or rate limits before the first token trigger fallback.</small>
+      </section>
+      <section><h2>Screen vision</h2>
+        {picker('Vision model', snapshot.settings.visionModel, visionModel => update({ visionModel }), true)}
+        <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.screenWithoutAsking} onChange={e => update({ screenWithoutAsking: e.target.checked })} />Let Kite look at my screen without asking</label>
+        <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.keepScreenshots} onChange={e => update({ keepScreenshots: e.target.checked })} />Keep screenshots in history</label>
+        <small>Hold Ctrl + Win and draw to ask about a mark. Kite is looking appears on every capture. Screenshots stay in memory unless history is enabled.</small>
       </section>
       <section><h2>Voice</h2>{keyRow('cartesia', 'Cartesia')}
         <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.ttsEnabled} onChange={e => update({ ttsEnabled: e.target.checked })} />Speak replies</label>

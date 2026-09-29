@@ -1,3 +1,4 @@
+import { Annotation } from './vision/Annotation';
 import { StrictMode, lazy, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KiteRenderer } from './kite/KiteRenderer';
@@ -7,7 +8,7 @@ import { SpeechBubble } from './voice/SpeechBubble';
 
 const DevPanel = import.meta.env.DEV ? lazy(() => import('./kite/DevPanel')) : null;
 function Overlay() {
-  return <main className="overlay"><KiteRenderer /><SpeechBubble />
+  return <main className="overlay"><Annotation /><KiteRenderer /><SpeechBubble />
     {DevPanel && <Suspense fallback={null}><DevPanel /></Suspense>}
   </main>;
 }

@@ -96,3 +96,7 @@ Additional acceptance checks:
 - Mute from the tray during playback. Text should remain available and a small mute glyph should appear.
 - Use a retryable failure before the first token with fallback enabled; verify the bubble attribution and persisted provider/model. Fail after a token and verify no fallback.
 - Ask for code or a long list. Kite gives a short spoken introduction; details remain in the bubble and appear immediately on hover.
+
+## Screen vision
+
+Hold Ctrl + Win, wait for the crosshair, and mark the screen while speaking. Ask “what’s on my screen?” to use the confirmed `read_screen` tool. Configure the vision model and optional screenshot history in Settings → Screen vision. See [screen vision implementation and verification](docs/vision.md).

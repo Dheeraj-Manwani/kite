@@ -18,7 +18,7 @@ export function getModel(providerId: ProviderId, modelId: string, source: Secret
     case 'google': return createGoogleGenerativeAI({ apiKey })(modelId);
     case 'groq': return createGroq({ apiKey })(modelId);
     case 'moonshot': return createOpenAICompatible({ name: 'moonshot', baseURL: 'https://api.moonshot.ai/v1', apiKey,
-      transformRequestBody: body => modelId === 'kimi-k2.6' ? ({ ...body, thinking: { type: 'disabled' } }) : body,
+      transformRequestBody: body => ['kimi-k2.5', 'kimi-k2.6'].includes(modelId) ? ({ ...body, thinking: { type: 'disabled' } }) : body,
     })(modelId);
     default: throw new Error('Unsupported provider');
   }

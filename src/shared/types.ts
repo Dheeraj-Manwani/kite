@@ -8,13 +8,13 @@ export type SecretId = ProviderId | 'cartesia';
 export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }
 export interface VoiceChoice { id: string; name: string }
-export interface AppSettings { model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo' }
+export interface AppSettings { visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo' }
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
-export interface Timing { transcribeMs: number; firstTokenMs: number; totalMs: number; ttsFirstAudioMs?: number; voiceToVoiceMs?: number; voiceAverageMs?: number }
+export interface Timing { captureMs?: number; transcribeMs: number; firstTokenMs: number; totalMs: number; ttsFirstAudioMs?: number; voiceToVoiceMs?: number; voiceAverageMs?: number }
 export type VoiceEventType = 'ptt:start' | 'ptt:stop' | 'ptt:cancel' | 'ptt:tooShort'
   | 'voice:thinking' | 'voice:transcript' | 'voice:empty' | 'voice:aborted'
-  | 'llm:delta' | 'llm:done' | 'llm:error' | 'model:changed' | 'model:fallback' | 'voice:muted' | 'voice:metrics'
+  | 'vision:routed' | 'vision:done' | 'llm:delta' | 'llm:done' | 'llm:error' | 'model:changed' | 'model:fallback' | 'voice:muted' | 'voice:metrics'
   | 'tool:approvalRequired' | 'tool:decision' | 'tool:executing' | 'tool:result' | 'approval:resume' | 'reminder:fired'
   | 'tts:start' | 'tts:chunk' | 'tts:timestamps' | 'tts:done' | 'tts:stop' | 'tts:error';
 export interface VoiceEvent { type: VoiceEventType; id: number; text?: string; timing?: Timing; settings?: boolean;
@@ -26,6 +26,10 @@ export interface ToolAudit { id: number; message_id: number | null; tool: string
 export interface Reminder { id: number; at: number; label: string; status: 'pending' | 'fired' | 'cancelled' }
 export interface OperationResult { ok: boolean; error?: string }
 export interface KiteAPI {
+  onScreenEvent(callback: (event: import('./vision').ScreenEvent) => void): () => void;
+  screenPrepared(token: string, images: import('./vision').VisionImages | null): void;
+  screenHidden(token: string): void;
+  testCapture(): Promise<OperationResult & { path?: string }>;
   onCursorUpdate(callback: (point: CursorPoint, geometry: CursorGeometry) => void): () => void;
   onDevPanelToggle(callback: () => void): () => void;
   setDevPanelBounds(bounds: ScreenBounds | null): void;
@@ -49,7 +53,7 @@ export interface KiteAPI {
   previewVoice(): Promise<OperationResult>;
   reportPlayback(id: number, event: 'started' | 'ended' | 'failed'): void;
   onVoiceEvent(callback: (event: VoiceEvent) => void): () => void;
-  submitAudio(buffer: ArrayBuffer, interactionId: number): Promise<OperationResult>;
+  submitAudio(buffer: ArrayBuffer, interactionId: number, strokes?: import('./vision').Stroke[]): Promise<OperationResult>;
   reportAudioResult(interactionId: number, result: 'empty' | 'micDenied' | 'captureFailed'): void;
   setBubbleBounds(bounds: ScreenBounds | null): void;
   printRecentMessages(): Promise<OperationResult>;

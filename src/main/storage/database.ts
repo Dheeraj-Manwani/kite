@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3';
 import type { Timing, ModelSelection, ToolAudit, ToolDecision, Reminder } from '../../shared/types';
 import { modelIds } from '../ai/models';
-const migrations = [
+export const migrations = [
   `CREATE TABLE conversations (id TEXT PRIMARY KEY, started_at INTEGER NOT NULL);
    CREATE TABLE messages (
      id INTEGER PRIMARY KEY AUTOINCREMENT, conversation_id TEXT NOT NULL REFERENCES conversations(id),
@@ -18,6 +18,10 @@ const migrations = [
    CREATE TABLE reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, at INTEGER NOT NULL, label TEXT NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','fired','cancelled')));
    CREATE INDEX reminders_due ON reminders(status, at);`,
+  `ALTER TABLE messages ADD COLUMN annotation_json TEXT;
+   ALTER TABLE messages ADD COLUMN capture_ms REAL;
+   CREATE TABLE attachments (id INTEGER PRIMARY KEY AUTOINCREMENT, message_id INTEGER NOT NULL REFERENCES messages(id),
+     path TEXT NOT NULL, media_type TEXT NOT NULL, created_at INTEGER NOT NULL);`,
 ];
 export function openDatabase(filename: string) {
   const db = new Database(filename);
@@ -37,8 +41,11 @@ export function openDatabase(filename: string) {
     addMessage(conversationId: string, role: 'user' | 'assistant', content: string, timing: Timing, model?: ModelSelection, interrupted = false) {
       const row = insert.run({ conversationId, role, content, provider: model?.provider ?? (role === 'user' ? 'groq' : 'moonshot'),
         model: model?.id ?? (role === 'user' ? modelIds.transcription : modelIds.chat), createdAt: Date.now(), ...timing, interrupted: Number(interrupted), ttsFirstAudioMs: timing.ttsFirstAudioMs ?? null, voiceToVoiceMs: timing.voiceToVoiceMs ?? null });
+      if (timing.captureMs !== undefined) db.prepare('UPDATE messages SET capture_ms=? WHERE id=?').run(timing.captureMs, row.lastInsertRowid);
       return Number(row.lastInsertRowid);
     },
+    annotate(id: number, metadata: unknown, captureMs: number) { db.prepare('UPDATE messages SET annotation_json=COALESCE(annotation_json,?), capture_ms=? WHERE id=?').run(JSON.stringify(metadata), captureMs, id); },
+    attach(id: number, filename: string) { db.prepare("INSERT INTO attachments(message_id,path,media_type,created_at) VALUES(?,?,'image/jpeg',?)").run(id, filename, Date.now()); },
     updateMessage(id: number, timing: Timing, interrupted: boolean) {
       db.prepare('UPDATE messages SET interrupted=?, tts_first_audio_ms=?, voice_to_voice_ms=?, total_ms=? WHERE id=?')
         .run(Number(interrupted), timing.ttsFirstAudioMs ?? null, timing.voiceToVoiceMs ?? null, timing.totalMs, id);

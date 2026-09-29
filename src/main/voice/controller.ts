@@ -1,3 +1,4 @@
+import { asksForScreen, markInstruction, type Stroke, type VisionTurn } from '../../shared/vision';
 import type { ApprovalCard, ToolDecision, Reminder, AppSettings, ModelEntry, ModelSelection, ProviderId, Timing, VoiceEvent } from '../../shared/types';
 import { classifyApproval, ApprovalBroker } from '../tools/approval';
 import type { ToolSession } from '../tools/registry';
@@ -6,6 +7,13 @@ import { friendlyError, MissingKeyError } from './errors';
 import { describeModel } from '../ai/catalog';
 import { withFallback } from '../ai/fallback';
 interface Dependencies {
+  vision?: {
+    start(id: number, signal: AbortSignal, ready: () => boolean, measured: (ms: number) => void): void;
+    leave(): void; clear(id: number): void;
+    prepare(id: number, strokes: Stroke[], signal: AbortSignal): Promise<VisionTurn | undefined>;
+    route(active: ModelEntry): ModelEntry;
+    persist(row: number, turn: VisionTurn, signal: AbortSignal): Promise<void>;
+  };
   emit(event: VoiceEvent): void;
   getKey(provider: ProviderId): string | undefined;
   transcribe(audio: Uint8Array, key: string, signal: AbortSignal): Promise<string>;
@@ -19,12 +27,13 @@ interface Dependencies {
   describe?(model: ModelSelection): ModelEntry;
   tts?: { start(id: number, settings: AppSettings): void; push(id: number, text: string): void; finish(id: number): void; cancel(): void };
   approvals?: ApprovalBroker;
-  tools?(messageId: number | null, signal: AbortSignal, activity: () => void): ToolSession;
+  tools?(messageId: number | null, signal: AbortSignal, activity: () => void, model?: ModelEntry, captureTiming?: (ms: number) => void): ToolSession;
   now?: () => number;
 }
 interface Interaction {
   id: number; phase: 'listening' | 'awaiting' | 'processing'; controller: AbortController;
   releasedAt: number; timing: Timing; timeout?: ReturnType<typeof setTimeout>;
+  visualContent?: ChatMessage['content']; markTypes?: string;
   text: string; session?: string; userRow?: number; toolsStarted?: boolean; tools?: ToolSession; speechStarted?: boolean; approvalReply?: boolean; reminder?: boolean; model?: ModelEntry; row?: number; saved: boolean;
   llmDone: boolean; playbackDone: boolean; speaking: boolean; ttsStartedAt?: number;
 }
@@ -63,6 +72,10 @@ export class VoiceController {
     this.deps.emit({ type, id: job.id, timing: { ...job.timing, totalMs: job.releasedAt ? this.now() - job.releasedAt : 0 }, ...extra });
   }
   private finish(job: Interaction) {
+    if (job.visualContent) this.deps.conversation.scrubImages(job.text, job.markTypes, job.visualContent);
+    this.deps.vision?.clear(job.id);
+    this.deps.vision?.leave();
+    if (this.deps.vision) this.emit('vision:done', job);
     clearTimeout(job.timeout);
     if (this.active === job) { this.active = undefined; this.deps.setEscape(false, () => undefined);
       if (!this.closing && this.reminderQueue.length) queueMicrotask(() => { if (!this.active && this.reminderQueue.length) this.reminder(this.reminderQueue.shift()); });
@@ -92,7 +105,9 @@ export class VoiceController {
       releasedAt: 0, timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text: '', approvalReply: !!this.suspended, saved: false, llmDone: false, playbackDone: true, speaking: false };
     this.active = job; this.deps.setEscape(true, () => this.cancel('voice:aborted'));
     job.timeout = setTimeout(() => this.cancel('ptt:cancel'), 60000);
-    this.emit('ptt:start', job); return job.id;
+    this.emit('ptt:start', job);
+    if (!job.approvalReply) this.deps.vision?.start(job.id, job.controller.signal, () => this.active === job && job.phase === 'listening', ms => { job.timing.captureMs = ms; this.emit('voice:metrics', job); });
+    return job.id;
   }
   stop() {
     const job = this.active; if (!job || job.phase !== 'listening') return;
@@ -102,6 +117,7 @@ export class VoiceController {
       this.emit('llm:error', job, { text: 'The microphone didn’t finish recording. Please try again.' });
       if (job.approvalReply) this.cancel('voice:aborted'); else { job.controller.abort(); this.finish(job); }
     }, 10000);
+    this.deps.vision?.leave();
     this.emit('ptt:stop', job);
   }
   cancel(type: 'ptt:cancel' | 'ptt:tooShort' | 'voice:aborted' = 'ptt:cancel') {
@@ -156,7 +172,7 @@ export class VoiceController {
     else this.emit('llm:error', job, { text: result === 'micDenied' ? 'Please allow microphone access in Windows Settings → Privacy & security → Microphone, including desktop apps.' : 'I couldn’t record your microphone. Check the input device and try again.' });
     if (job.approvalReply) this.cancel('voice:aborted'); else { job.controller.abort(); this.finish(job); }
   }
-  async submit(id: number, buffer: ArrayBuffer) {
+  async submit(id: number, buffer: ArrayBuffer, strokes: Stroke[] = []) {
     const job = this.active; if (!job || id !== job.id || job.phase !== 'awaiting') return;
     clearTimeout(job.timeout); job.phase = 'processing';
     job.timeout = setTimeout(() => {
@@ -167,9 +183,13 @@ export class VoiceController {
     const current = () => this.active === job && !job.controller.signal.aborted;
     this.emit('voice:thinking', job); let provider: ProviderId = 'groq';
     try {
-      const groqKey = this.deps.getKey('groq'); if (!groqKey) throw new MissingKeyError('groq');
+      const vision = job.approvalReply ? undefined : await this.deps.vision?.prepare(id, strokes, job.controller.signal);
+      if (!current()) return;
+      if (vision) job.timing.captureMs = vision.captureMs;
+      const groqKey = this.deps.getKey('groq'); if (buffer.byteLength && !groqKey) throw new MissingKeyError('groq');
       const started = this.now();
-      const text = (await this.deps.transcribe(new Uint8Array(buffer), groqKey, job.controller.signal)).trim();
+      const transcript = buffer.byteLength ? (await this.deps.transcribe(new Uint8Array(buffer), groqKey, job.controller.signal)).trim() : '';
+      const text = transcript || (vision ? 'What is this?' : '');
       if (!current()) return;
       job.timing.transcribeMs = this.now() - started;
       if (!text) { this.emit('voice:empty', job); if (job.approvalReply) this.cancel('voice:aborted'); else this.finish(job); return; }
@@ -193,12 +213,31 @@ export class VoiceController {
       this.deps.history.createConversation(session.id, Date.now());
       const userRow = this.deps.history.addMessage(session.id, 'user', text, job.timing);
       job.userRow = typeof userRow === 'number' ? userRow : undefined;
-      this.deps.conversation.add({ role: 'user', content: text }, Date.now());
+      if (vision && job.userRow !== undefined) await this.deps.vision.persist(job.userRow, vision, job.controller.signal);
+      if (!current()) return;
+      const userMessage: ChatMessage = { role: 'user', content: vision ? [
+        { type: 'text', text: `${text}\n${markInstruction(vision.analysis)}` },
+        { type: 'image', image: vision.images.overview, mediaType: 'image/jpeg' },
+        ...(vision.images.zoom ? [{ type: 'image' as const, image: vision.images.zoom, mediaType: 'image/jpeg' }] : []),
+      ] : text };
+      if (vision) { job.visualContent = userMessage.content; job.markTypes = vision.analysis.marks.map(m => m.markType).join(', '); }
+      this.deps.conversation.add(userMessage, Date.now());
       const settings = this.deps.settings?.();
       const describe = this.deps.describe ?? describeModel;
       job.model = describe(settings?.model ?? { provider: 'moonshot', id: 'kimi-k2.6' });
+      const needsVision = !!vision || asksForScreen(text);
+      const selectVision = () => {
+        if (!needsVision || !this.deps.vision) return;
+        const active = job.model; job.model = this.deps.vision.route(active);
+        if (active.provider !== job.model.provider || active.id !== job.model.id) this.emit('vision:routed', job, { text: job.model.label });
+      };
+      selectVision();
+      let usedModelCalls = 0;
       const run = async () => {
-        if (job.model.supportsTools && !job.tools) job.tools = this.deps.tools?.(job.userRow ?? null, job.controller.signal, () => { job.toolsStarted = true; });
+        if (job.model.supportsTools && !job.tools) {
+          job.tools = this.deps.tools?.(job.userRow ?? null, job.controller.signal, () => { job.toolsStarted = true; }, job.model, ms => { job.timing.captureMs = (job.timing.captureMs ?? 0) + ms; this.emit('voice:metrics', job); });
+          if (job.tools) job.tools.modelCalls = usedModelCalls;
+        }
         provider = job.model.provider;
         const key = this.deps.getKey(provider); if (!key) throw new MissingKeyError(provider);
         return this.deps.ask(this.deps.conversation.context(), key, job.controller.signal, delta => {
@@ -210,14 +249,14 @@ export class VoiceController {
         }, job.model, job.tools);
       };
       const answer = await withFallback(run, run, () => !!job.text || !!job.toolsStarted, !!settings?.fallbackEnabled, job.controller.signal, () => {
-        job.model = describe(settings.fallback); this.emit('model:fallback', job, { text: job.model.label });
+        usedModelCalls = job.tools?.modelCalls ?? 0; job.tools?.close(); job.tools = undefined; job.model = describe(settings.fallback); selectVision(); this.emit('model:fallback', job, { text: job.model.label });
       });
       if (!current()) return;
-      job.text = answer; job.llmDone = true; this.save(job);
+      job.text = answer; job.llmDone = true; if (job.visualContent) this.deps.conversation.scrubImages(answer, job.markTypes, job.visualContent); this.save(job);
       if (job.speaking) this.deps.tts.finish(job.id);
       this.emit('llm:done', job); this.complete(job);
     } catch (error) {
       if (current()) { if (job.approvalReply) { this.cancel('voice:aborted'); return; } this.deps.tts?.cancel(); this.save(job, !!job.text); this.emit('llm:error', job, friendlyError(error, provider)); this.finish(job); }
-    }
+    } finally { if (job.visualContent) this.deps.conversation.scrubImages(job.text, job.markTypes, job.visualContent); this.deps.vision?.clear(job.id); }
   }
 }

@@ -1,9 +1,11 @@
+import { VisionUnavailableError } from '../../shared/vision';
 import type { SecretId } from '../../shared/types';
 export class MissingKeyError extends Error {
   constructor(public provider: SecretId) { super('Missing provider key'); }
 }
 /** Never forward raw SDK errors: they can contain request headers or bodies. */
 export function friendlyError(error: unknown, provider?: SecretId): { text: string; settings?: boolean } {
+  if (error instanceof VisionUnavailableError) return { text: 'I need a configured vision model to look at your screen. Open settings?', settings: true };
   const name = provider === 'groq' ? 'Groq' : provider === 'moonshot' ? 'Moonshot' : provider ?? 'The provider';
   if (error instanceof MissingKeyError) return {
     text: error.provider === 'groq' ? 'I need a Groq key to hear you. Open settings?' : `I need a ${error.provider} key to reply. Open settings?`,

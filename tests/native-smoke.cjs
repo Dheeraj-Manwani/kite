@@ -36,6 +36,9 @@ app.whenReady().then(() => {
     assert.equal(db.listReminders().length,1);assert.equal(db.listReminders()[0].id,reminder);
     assert.equal(db.claimReminder(reminder),true);assert.equal(db.claimReminder(reminder),false);assert.equal(db.listReminders().length,0);
     assert.equal(db.recentTools()[0].decision,'timeout');assert.equal(db.recentTools()[0].dry_run,1);assert.equal(db.recentTools()[0].message_id,row);
+    db.annotate(row,{marks:[{markType:'tap',region:{x:-40,y:50,width:0,height:0}}]},35);
+    db.attach(row,'fixture.jpg');
+    assert.equal(db.recent().at(-1).capture_ms,35);assert.match(db.recent().at(-1).annotation_json,/tap/);
     db.close();
     const Database=require('better-sqlite3');const legacyPath=path.join(temporary,'legacy.db');const legacy=new Database(legacyPath);
     legacy.exec(`CREATE TABLE conversations (id TEXT PRIMARY KEY, started_at INTEGER NOT NULL);
@@ -43,7 +46,7 @@ app.whenReady().then(() => {
       INSERT INTO conversations VALUES ('legacy',1); INSERT INTO messages VALUES (1,'legacy','assistant','keep me','moonshot','kimi-k2.6',1,0,0,0); PRAGMA user_version=1;`);
     legacy.close();const upgraded=openDatabase(legacyPath);assert.equal(upgraded.recent()[0].content,'keep me');assert.equal(upgraded.recent()[0].interrupted,0);upgraded.close();
     const { openPreferences } = require('../src/main/settings/preferences.ts');
-    const preferences=openPreferences(()=>true);let notifications=0;preferences.subscribe(()=>notifications++);
+    const preferences=openPreferences(()=>true);assert.equal(preferences.get().keepScreenshots,false);assert.equal(preferences.get().screenWithoutAsking,false);assert.equal(preferences.get().visionModel.id,'kimi-k2.5');let notifications=0;preferences.subscribe(()=>notifications++);
     preferences.update({model:{provider:'google',id:'custom-test'},voiceId:'test-voice',ttsEnabled:true,speed:1.2});
     assert.equal(notifications,1);assert.equal(openPreferences(()=>true).get().model.id,'custom-test');
     assert.ok(preferences.snapshot().models.some(m=>m.id==='custom-test'));

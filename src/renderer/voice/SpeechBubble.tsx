@@ -7,7 +7,7 @@ import { voiceRuntime, react } from './runtime';
 import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
-interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean }
+interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean }
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
 function Markdown({ text }: { text: string }) {
   return <>{displayText(text).split(/(```[\s\S]*?(?:```|$))/g).map((block, i) => block.startsWith('```')
@@ -102,6 +102,7 @@ export function SpeechBubble() {
         case 'tool:executing': voiceRuntime.toolPose = 'executing'; update({ ...state.current, toolStatus: 'Working…' }); break;
         case 'tool:result': voiceRuntime.toolPose = null; update({ ...state.current, toolStatus: event.text ?? '' }); react(event.success ? 'success' : 'tangled'); break;
         case 'reminder:fired': voiceRuntime.alarmUntil = performance.now() + 10000; update({ ...state.current, alarm: true }); react('alarm'); break;
+        case 'vision:routed': react('costume', .5); update({ ...state.current, vision: event.text }); break;
         case 'model:fallback': react('phew'); update({ ...state.current, fallback: event.text ?? '' }); break;
         case 'llm:delta':
           if (!speaking && useKiteStore.getState().mood !== 'talking') { if (!['costume', 'phew', 'success', 'denied', 'tangled', 'approved'].includes(voiceRuntime.reaction?.kind)) react('aha'); useKiteStore.getState().setMood('talking'); }
@@ -147,6 +148,7 @@ export function SpeechBubble() {
     {bubble.approval && <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />}
     {bubble.toolStatus && <div className="bubble-tool-status" role="status">{bubble.toolStatus}</div>}
     {bubble.alarm && <button onClick={() => { voiceRuntime.alarmUntil = 0; voiceRuntime.reaction = null; window.kite.dismissReminder(); update({ ...state.current, alarm: false }); }}>Dismiss reminder</button>}
+    {bubble.vision && <div className="bubble-fallback">(looked using {bubble.vision})</div>}
     {bubble.fallback && <div className="bubble-fallback">(answered by {bubble.fallback})</div>}
     {bubble.voiceStatus && <div className="bubble-voice-status">{bubble.voiceStatus}</div>}
     {bubble.settings && <button onClick={() => window.kite.openSettings()}>Open settings</button>}

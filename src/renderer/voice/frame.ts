@@ -29,6 +29,9 @@ export function reactionMotion(now: number, reduced: boolean) {
     case 'phew': result.tilt = Math.sin(t * 15) * 8 * envelope; break;
     case 'flinch': result.y = -2 * Math.sin(Math.min(1, t / 0.25) * Math.PI); break;
   }
+  const amount = reaction.intensity ?? 1;
+  result.y *= amount; result.tilt *= amount; result.tailY *= amount;
+  result.spin *= amount; result.flash *= amount; result.stretch = 1 + (result.stretch - 1) * amount;
   return result;
 }
 let lastReport = 0;

@@ -2,6 +2,10 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type { CursorPoint, CursorGeometry, KiteAPI, VoiceEvent, VoiceEventType } from '../shared/types';
 
 const api: KiteAPI = {
+  onScreenEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/vision').ScreenEvent) => callback(event); ipcRenderer.on('screen:event', listener); return () => ipcRenderer.removeListener('screen:event', listener); },
+  screenPrepared: (token, images) => ipcRenderer.send('screen:prepared', token, images),
+  screenHidden: token => ipcRenderer.send('screen:hidden', token),
+  testCapture: () => ipcRenderer.invoke('screen:test'),
   onCursorUpdate(callback) {
     const listener = (_event: IpcRendererEvent, point: CursorPoint, geometry: CursorGeometry) => callback(point, geometry);
     ipcRenderer.on('cursor:update', listener);
@@ -38,13 +42,13 @@ const api: KiteAPI = {
   hasKey: provider => ipcRenderer.invoke('secrets:has', provider),
   setKey: (provider, key) => ipcRenderer.invoke('secrets:set', provider, key),
   deleteKey: provider => ipcRenderer.invoke('secrets:delete', provider),
-  submitAudio: (buffer, id) => ipcRenderer.invoke('voice:submit', buffer, id),
+  submitAudio: (buffer, id, strokes) => ipcRenderer.invoke('voice:submit', buffer, id, strokes),
   reportAudioResult: (id, result) => ipcRenderer.send('voice:audioResult', id, result),
   setBubbleBounds: bounds => ipcRenderer.send('bubble:bounds', bounds),
   printRecentMessages: () => ipcRenderer.invoke('dev:recentMessages'),
   copyText: text => ipcRenderer.invoke('bubble:copy', text),
   onVoiceEvent(callback) {
-    const channels: VoiceEventType[] = ['ptt:start', 'ptt:stop', 'ptt:cancel', 'ptt:tooShort',
+    const channels: VoiceEventType[] = ['vision:routed', 'vision:done', 'ptt:start', 'ptt:stop', 'ptt:cancel', 'ptt:tooShort',
       'voice:thinking', 'voice:transcript', 'voice:empty', 'voice:aborted', 'llm:delta', 'llm:done', 'llm:error', 'model:changed', 'model:fallback', 'voice:muted', 'voice:metrics', 'tool:approvalRequired', 'tool:decision', 'tool:executing', 'tool:result', 'approval:resume', 'reminder:fired', 'tts:start', 'tts:chunk', 'tts:timestamps', 'tts:done', 'tts:stop', 'tts:error'];
     const listener = (_event: IpcRendererEvent, event: VoiceEvent) => callback(event);
     channels.forEach(channel => ipcRenderer.on(channel, listener));

@@ -1,9 +1,9 @@
 import type { z } from 'zod';
 import type { Reminder, ToolAudit, ToolDecision } from '../../shared/types';
-export interface ToolResult { ok: boolean; message: string; data?: unknown; dryRun?: boolean }
+export interface ToolResult { ok: boolean; message: string; data?: unknown; dryRun?: boolean; image?: Uint8Array }
 export interface ToolContext { dryRun: boolean; signal: AbortSignal }
 export interface ToolDefinition<T = unknown> {
-  name: string; description: string; inputSchema: z.ZodType<T>; kind: 'info' | 'action';
+  name: string; description: string; inputSchema: z.ZodType<T>; kind: 'info' | 'action' | 'sensitive-read'; approvalRequired?: boolean;
   summarize(input: T): string; execute(input: T, ctx: ToolContext): Promise<ToolResult>;
 }
 export interface AuditStore {

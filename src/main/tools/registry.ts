@@ -8,10 +8,14 @@ let executionQueue: Promise<unknown> = Promise.resolve();
 export async function waitForTools() { await executionQueue; }
 interface Call { row: number; tool: string; input: unknown; summary: string; decision: ToolDecision; granted: boolean; finished: boolean; executing?: boolean; started: number }
 export interface ToolSessionOptions {
+  imageToolResults?: boolean;
   definitions: ToolDefinition[]; broker: ApprovalBroker; audit: AuditStore; messageId: number | null; context: ToolContext;
   activity(): void; changed(): void; event(type: 'tool:executing' | 'tool:result', toolName: string, result?: ToolResult): void;
 }
 export class ToolSession {
+  private images: Uint8Array[] = [];
+  get hasImages() { return this.images.length > 0; }
+  takeImages() { const images = this.images; this.images = []; return images; }
   private calls = new Map<string, Call>();
   private queue: Promise<unknown> = Promise.resolve();
   private pendingApproval?: string;
@@ -31,7 +35,7 @@ export class ToolSession {
   }
   private finish(call: Call, result: ToolResult | null, error: string | null) {
     call.finished = true;
-    this.options.audit.finishTool(call.row, call.decision, result, error, performance.now() - call.started); this.options.changed();
+    this.options.audit.finishTool(call.row, call.decision, result ? { ...result, image: undefined } : null, error, performance.now() - call.started); this.options.changed();
   }
   invalid(id: string, name: string, input: unknown) { const call = this.observe(id, name, input); if (!call.finished) this.finish(call, null, 'Invalid tool name or arguments; nothing ran.'); }
   async approve(id: string, name: string, input: unknown, budgetAvailable: boolean) {
@@ -54,6 +58,13 @@ export class ToolSession {
   }
   tools(): ToolSet {
     return Object.fromEntries(this.options.definitions.map(def => [def.name, tool({ description: def.description, inputSchema: def.inputSchema,
+      toModelOutput: ({ output }) => {
+        const result = output as ToolResult;
+        if (result.image && this.options.imageToolResults) return { type: 'content' as const, value: [
+          { type: 'text' as const, text: result.message }, { type: 'file' as const, data: { type: 'data' as const, data: result.image }, mediaType: 'image/jpeg' },
+        ] };
+        return { type: 'text' as const, value: JSON.stringify({ ...result, image: undefined }) };
+      },
       needsApproval: () => needsApproval(def),
       execute: async (input, { toolCallId }) => {
         const run = async (): Promise<ToolResult> => {
@@ -71,6 +82,7 @@ export class ToolSession {
           this.options.event('tool:executing', def.name);
           try {
             const result = await def.execute(parsed.data, this.options.context);
+            if (result.image && !this.options.imageToolResults) this.images.push(result.image);
             this.finish(call, result, result.ok ? null : result.message); this.options.event('tool:result', def.name, result); return result;
           } catch (error) {
             const result = { ok: false, message: this.options.context.signal.aborted ? 'Action interrupted. Any completed side effects cannot be undone.' : 'The action failed. No success is confirmed.' };
@@ -85,6 +97,7 @@ export class ToolSession {
   }
   async settled() { await this.queue; }
   close() {
+    this.images = [];
     if (this.pendingApproval && this.options.broker.current?.approvalId === this.pendingApproval) this.options.broker.deny();
     for (const call of this.calls.values()) if (!call.finished && !call.executing) { call.granted = false; call.decision = 'denied'; this.finish(call, null, 'Interaction ended before execution.'); }
   }

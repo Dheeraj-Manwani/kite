@@ -1,7 +1,7 @@
 import Store from 'electron-store';
 import type { AppSettings, ModelEntry, SettingsSnapshot, SecretId, VoiceChoice, ModelSelection } from '../../shared/types';
 import { catalog, mergeCatalog, providerIds } from '../ai/catalog';
-export const defaultSettings: AppSettings = { model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
+export const defaultSettings: AppSettings = { visionModel: { provider: 'moonshot', id: 'kimi-k2.5' }, screenWithoutAsking: false, keepScreenshots: false, model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
   fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google' };
 export function validModel(value: unknown): value is ModelSelection {
   if (!value || typeof value !== 'object') return false;
@@ -22,13 +22,14 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
       if (!patch || typeof patch !== 'object' || Array.isArray(patch)) throw new Error('Invalid settings');
       const old = get(); const next = { ...old };
       for (const [key, value] of Object.entries(patch)) {
-        if (key === 'model' || key === 'fallback') { if (!validModel(value) || !hasKey(value.provider)) throw new Error('Save a key for this provider first.'); next[key] = value; }
-        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
+        if (key === 'model' || key === 'fallback' || key === 'visionModel') { if (!validModel(value) || !hasKey(value.provider)) throw new Error('Save a key for this provider first.'); next[key] = value; }
+        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun' || key === 'screenWithoutAsking' || key === 'keepScreenshots') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
         else if (key === 'searchEngine') { if (!['google', 'bing', 'duckduckgo'].includes(value as string)) throw new Error('Invalid search engine'); next.searchEngine = value as AppSettings['searchEngine']; }
         else if (key === 'speed') { if (typeof value !== 'number' || !Number.isFinite(value) || value < 0.6 || value > 1.5) throw new Error('Invalid speed'); next.speed = value; }
         else if (key === 'voiceId') { if (typeof value !== 'string' || value.length > 200) throw new Error('Invalid voice'); next.voiceId = value; }
         else throw new Error('Unknown setting');
       }
+      if (patch.visionModel && !snapshot().models.some(m => m.provider === next.visionModel.provider && m.id === next.visionModel.id && m.supportsVision)) throw new Error('Choose a vision-capable model.');
       if (next.ttsEnabled && (!hasKey('cartesia') || !next.voiceId)) throw new Error('Save a Cartesia key and select a voice first.');
       if ((patch.fallbackEnabled === true || patch.fallback) && next.fallbackEnabled && !hasKey(next.fallback.provider)) throw new Error('Save a key for the fallback provider.');
       const custom = [next.model, next.fallback].filter(m => hasKey(m.provider)).map(m => ({ ...m, label: m.id, supportsVision: false, supportsTools: false, tier: 'fast' as const }));
