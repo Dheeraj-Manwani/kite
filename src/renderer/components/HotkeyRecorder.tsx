@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react';
 import { hotkeyLabel, hotkeyWarning, modifiers, validateHotkey, type Modifier } from '../../shared/release';
-export function HotkeyRecorder({ value, change }: { value: Modifier[]; change(value: Modifier[]): void }) {
+export function HotkeyRecorder({ value, change, suppressVoice = false }: { value: Modifier[]; change(value: Modifier[]): void; suppressVoice?: boolean }) {
   const [recording, setRecording] = useState(false), [candidate, setCandidate] = useState<Modifier[]>([]), [error, setError] = useState('');
-  useEffect(()=>{window.kite.setHotkeyRecording(recording);return()=>window.kite.setHotkeyRecording(false);},[recording]);
+  useEffect(()=>{window.kite.setHotkeyRecording(recording || suppressVoice);return()=>window.kite.setHotkeyRecording(false);},[recording, suppressVoice]);
   return <div className="hotkey-recorder"><p>Push to talk: <strong>{hotkeyLabel(value)}</strong></p><button
     onClick={e => { setRecording(true); setCandidate([]); setError(''); e.currentTarget.focus(); }}
     onBlur={() => setRecording(false)} onKeyDown={e => {

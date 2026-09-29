@@ -3,6 +3,15 @@ import { updateElectronApp, UpdateSourceType } from 'update-electron-app';
 import { repository, repositoryURL, type AppEvent } from '../shared/release';
 import { getOverlayWindow } from './window/overlay';
 import { logEvent } from './logging';
+import path from 'node:path';
+import fs from 'node:fs';
+export function setLaunchOnStartup(enabled: boolean) {
+  if (process.env.KITE_TEST_MODE) return;
+  // Squirrel's stable stub launches the latest version after an update.
+  const stub = path.resolve(path.dirname(process.execPath), '..', path.basename(process.execPath));
+  const executable = app.isPackaged && fs.existsSync(stub) ? stub : process.execPath;
+  app.setLoginItemSettings({ openAtLogin: enabled, path: executable, args: app.isPackaged ? [] : [app.getAppPath()] });
+}
 export const appRuntime = { pausedUntil: 0, updateReady: false, updateStatus: 'Idle', changed: () => undefined as void, cancel: () => undefined as void };
 let pauseTimer: ReturnType<typeof setTimeout>;
 export function appEvent(event: AppEvent) { for (const win of BrowserWindow.getAllWindows()) if (!win.isDestroyed()) win.webContents.send('app:event', event); }

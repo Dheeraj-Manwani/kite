@@ -83,7 +83,7 @@ export function SettingsView({ onboarding = false }: { onboarding?: boolean } = 
         <p>Typing, reading or writing the clipboard, and reading the screen always ask in v1.</p></section>
       <section><h2>Actions</h2><label className="setting-field">Search engine<select value={snapshot.settings.searchEngine} onChange={e => update({ searchEngine: e.target.value as AppSettings['searchEngine'] })}><option value="google">Google</option><option value="bing">Bing</option><option value="duckduckgo">DuckDuckGo</option></select></label>
         <button onClick={() => { void operation(() => window.kite.rescanApps(), 'App index ready. Scans are cached for 10 minutes.'); }}>Rescan apps</button>
-        <p>Every action requires your confirmation. For typing, focus the destination app and say yes.</p></section>
+        <p>Sensitive actions always require confirmation. For typing, focus the destination app and say yes.</p></section>
       <section><h2>Model</h2>{picker('Powered by', snapshot.settings.model, model => update({ model }))}
         <div className="custom-model"><label>Custom provider<select value={customProvider} onChange={e => setCustomProvider(e.target.value as ProviderId)}>
           {providers.map(p => <option key={p.id} value={p.id} disabled={!snapshot.keys[p.id]}>{p.label}</option>)}

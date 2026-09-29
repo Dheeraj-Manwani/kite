@@ -7,7 +7,7 @@ Kite captures the display under the cursor before enabling ink. Early clicks are
 Ask “what’s on my screen?” without drawing to use `read_screen`. The tool requests confirmation by default. **Settings → Screen vision** includes:
 
 - **Vision model:** Kimi K2.5 by default, with configured vision models including Groq Llama 4 Scout available in the picker.
-- **Let Kite look at my screen without asking:** off by default. This changes only `read_screen` approval.
+- **Screen-read approval:** always required in v1. The earlier opt-out setting is disabled; sensitive screen reads remain confirmed.
 - **Keep screenshots in history:** off by default. Enabling it writes prepared JPEGs to `userData/screens/` and records their paths in `attachments`.
 
 The “Kite is looking” indicator is always shown. During capture, content protection temporarily excludes the overlay, and the renderer also hides every overlay layer except the indicator. A renderer acknowledgment and approximately 40 ms of settling precede capture. Protection and visibility restore in `finally`. Captures are serialized, and canceled queued captures are skipped.
