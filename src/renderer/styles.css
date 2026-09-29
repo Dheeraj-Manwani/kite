@@ -58,7 +58,7 @@ button { background: #255e59; color: white; border: 0; border-radius: 7px; paddi
 .settings-view select, .settings-view input[type="password"], .custom-model input { width: 100%; box-sizing: border-box; padding: 10px; border: 1px solid #d9c5d1; border-radius: 8px; background: white; color: #3f303d; }
 .settings-view input[type="password"] { margin-bottom: 10px; }
 .settings-toggle { display: flex; align-items: center; gap: 8px; margin: 18px 0; }
-.settings-view .settings-toggle input { width: auto; }
+.settings-toggle input[type="checkbox"] { width: auto; flex: 0 0 auto; margin: 0; padding: 0; accent-color: #147d80; }
 .settings-view button { padding: 7px 12px; border: 1px solid #d9c5d1; border-radius: 8px; cursor: pointer; }
 .settings-view button:disabled { opacity: .45; cursor: default; }
 .settings-hint, .settings-view small, .settings-view footer { color: #7c6977; font-size: 12px; }
@@ -99,7 +99,7 @@ button { background: #255e59; color: white; border: 0; border-radius: 7px; paddi
 .history-message {background:white;border:1px solid #dce7e3;border-radius:16px;padding:20px;margin-bottom:18px;}.history-message p {white-space:pre-wrap;overflow-wrap:anywhere;}.history-message pre {white-space:pre-wrap;overflow-wrap:anywhere;}.annotation-badge {display:inline-block;background:#fbebc9;border-radius:12px;padding:4px 10px;color:#684518;font-size:.85rem;}
 .onboarding {max-width:740px;}.onboarding>p {font-size:1.1rem;line-height:1.7;}.onboarding-progress {display:flex;gap:6px;}.onboarding-progress span {height:4px;background:#d9e5e1;flex:1;border-radius:8px;}.onboarding-progress .done {background:#147d80;}.welcome-kite {font-size:72px;color:#147d80;display:inline-block;animation:welcome-fly 1.2s ease-out;position:relative;}.welcome-kite span {position:absolute;top:45px;left:25px;color:#d99437;}
 @keyframes welcome-fly {from{transform:translate(-100px,30px) rotate(-35deg);opacity:0;}to{transform:none;opacity:1;}}
-.onboarding footer {display:flex;gap:10px;margin-top:30px;}.onboarding .settings-view {padding:0;}.quiet-button {background:transparent;color:#526f70;}.tutorial-canvas {width:100%;touch-action:none;cursor:crosshair;}.onboarding blockquote {background:#e5f1ec;padding:24px;border-left:4px solid #147d80;min-height:90px;}.hotkey-recorder small {display:block;margin:10px 0;color:#725521;}
+.onboarding footer {display:flex;flex-wrap:wrap;gap:10px;margin-top:30px;}.onboarding .settings-view {padding:0;}.quiet-button {background:transparent;color:#526f70;}.tutorial-canvas {width:100%;touch-action:none;cursor:crosshair;}.onboarding blockquote {background:#e5f1ec;padding:24px;border-left:4px solid #147d80;min-height:90px;}.hotkey-recorder small {display:block;margin:10px 0;color:#725521;}
 .app-notice {position:fixed;right:24px;bottom:24px;padding:12px 20px;background:#164e57;color:#fff;border-radius:14px;max-width:350px;pointer-events:none;}.kite-paused .kite-canvas {transition:transform .6s ease-in;transform:translateY(-120vh) rotate(-12deg);}
 .reduce-motion *, .reduce-motion *::before {animation:none!important;transition:none!important;}.speech-bubble {font-size:max(13px,.85rem);}.speech-bubble button:focus-visible,button:focus-visible {outline:3px solid #cb741d;outline-offset:3px;}
 @media(max-width:650px){.history-layout{grid-template-columns:1fr}.window-nav{padding:10px;gap:5px}.history-toolbar{flex-wrap:wrap}}

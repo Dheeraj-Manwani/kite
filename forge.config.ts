@@ -2,6 +2,7 @@ import { AutoUnpackNativesPlugin } from '@electron-forge/plugin-auto-unpack-nati
 import { PublisherGithub } from '@electron-forge/publisher-github';
 import { copyRuntimeModules } from './build/runtimeModules';
 import path from 'node:path';
+import fs from 'node:fs/promises';
 import type { ForgeConfig } from '@electron-forge/shared-types';
 import { MakerSquirrel } from '@electron-forge/maker-squirrel';
 import { MakerZIP } from '@electron-forge/maker-zip';
@@ -17,6 +18,8 @@ const config: ForgeConfig = {
   rebuildConfig: { force: true },
   hooks: { packageAfterCopy: async (_config, buildPath, version, _platform, arch) => {
     await copyRuntimeModules(buildPath);
+    // Vite's Forge plugin excludes source assets from its package allowlist.
+    await fs.cp(path.resolve('assets'), path.join(buildPath, 'assets'), { recursive: true });
     console.log(`[native] Forge rebuild target: Electron ${version}, ${arch}; force rebuild enabled`);
   } },
   publishers: [new PublisherGithub({ repository: { owner: 'Dheeraj-Manwani', name: 'kite' }, draft: true, generateReleaseNotes: true })],

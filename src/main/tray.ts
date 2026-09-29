@@ -1,9 +1,8 @@
 import { appRuntime, pauseKite, restartToUpdate, openLogs, reportProblem } from './runtime';
 import { hotkeyLabel } from '../shared/release';
 import { getOverlayWindow } from './window/overlay';
-import { nativeTheme } from 'electron';
 import path from 'node:path';
-import { app, Menu, nativeImage, Tray } from 'electron';
+import { app, Menu, nativeImage, nativeTheme, Tray } from 'electron';
 import { createSettingsWindow } from './window/settings';
 import type { openPreferences } from './settings/preferences';
 import { providerLabels } from './ai/catalog';

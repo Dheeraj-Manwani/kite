@@ -6,10 +6,11 @@ async function packageRoot(name: string, from: string) {
   try { return path.dirname(require.resolve(`${name}/package.json`, { paths: [from] })); }
   catch {
     let folder = path.dirname(require.resolve(name, { paths: [from] }));
-    while (true) {
+    while (folder) {
       try { const pkg = JSON.parse(await fs.readFile(path.join(folder, 'package.json'), 'utf8')); if (pkg.name === name) return folder; } catch { /* Walk up through exports-only packages. */ }
       const parent = path.dirname(folder); if (parent === folder) throw new Error(`Package root not found: ${name}`); folder = parent;
     }
+    throw new Error(`Package root not found: ${name}`);
   }
 }
 export async function copyRuntimeModules(buildPath: string, source = process.cwd()) {

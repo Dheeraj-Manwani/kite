@@ -1,6 +1,6 @@
 import { registerHistoryIPC } from '../ipc/history';
 import { createSettingsWindow, getSettingsWindow } from '../window/settings';
-import { appRuntime, appEvent, startUpdates, onResume } from '../runtime';
+import { appRuntime, appEvent, startUpdates, onResume, setLaunchOnStartup } from '../runtime';
 import { logEvent } from '../logging';
 import { ScreenSession, registerScreenIPC, captureUnderCursor, prepareImages } from '../vision/service';
 import { routeVision, type VisionTurn } from '../../shared/vision';
@@ -138,7 +138,7 @@ export function startVoiceService() {
     if (snapshot.settings.dryRun !== old.dryRun) { controller.cancel('voice:aborted'); reminders.refresh(); }
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('settings:changed', snapshot);
     tray.update();
-    if (snapshot.settings.launchOnStartup !== old.launchOnStartup) app.setLoginItemSettings({ openAtLogin: snapshot.settings.launchOnStartup, path: process.execPath });
+    if (snapshot.settings.launchOnStartup !== old.launchOnStartup) setLaunchOnStartup(snapshot.settings.launchOnStartup);
     if (JSON.stringify(snapshot.settings.hotkey) !== JSON.stringify(old.hotkey)) restartHook();
     if (old.ttsEnabled && !snapshot.settings.ttsEnabled) controller.mute();
     if (old.model.provider !== snapshot.settings.model.provider || old.model.id !== snapshot.settings.model.id) {

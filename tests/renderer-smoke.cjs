@@ -9,12 +9,12 @@ require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,cartesia:true} };
-Object.assign(snapshot.settings,{dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
-reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
+listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
@@ -35,6 +35,8 @@ app.whenReady().then(async()=>{
       await win.loadFile(path.join(__dirname,'../.vite/renderer/main_window/index.html'),{hash:view});await delay(350);return win;
     };
     const settings=await create('settings');
+    // Lazy view and asynchronous settings hydration may complete on different frames.
+    for(let i=0;i<100 && await settings.webContents.executeJavaScript("document.querySelectorAll('.provider-row').length")!==6;i++)await delay(30);
     assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('.provider-row').length"),6);
     assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('optgroup').length"),15);
     await settings.webContents.executeJavaScript("[...document.querySelectorAll('button')].find(b=>b.textContent==='Test').click()");await delay(100);
@@ -44,6 +46,23 @@ app.whenReady().then(async()=>{
     fs.writeFileSync(path.join(temporary,'settings.png'),(await settings.webContents.capturePage()).toPNG());
     await settings.webContents.executeJavaScript('window.scrollTo(0,document.body.scrollHeight)');await delay(100);
     fs.writeFileSync(path.join(temporary,'voice-settings.png'),(await settings.webContents.capturePage()).toPNG());
+    const tutorial=await create('onboarding');
+    assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Hello, I’m Kite');
+    const next=async()=>{await tutorial.webContents.executeJavaScript("[...document.querySelectorAll('.onboarding footer button')].find(b=>b.textContent==='Continue').click()");await delay(100);};
+    await next();await next();await next();
+    tutorial.webContents.send('app:event',{type:'hotkey:detected'});await delay(100);
+    assert.match(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding').textContent"),/Nice — I felt that/);
+    await next();await next();await next();
+    assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Make yourself at home');
+    fs.writeFileSync(path.join(temporary,'onboarding.png'),(await tutorial.webContents.capturePage()).toPNG());
+    tutorial.destroy();
+    const history=await create('history');await delay(200);
+    await history.webContents.executeJavaScript("document.querySelector('.history-item').click()");await delay(100);
+    assert.match(await history.webContents.executeJavaScript("document.querySelector('.annotation-badge').textContent"),/enclosure/);
+    assert.match(await history.webContents.executeJavaScript("document.querySelector('.history-message details summary').textContent"),/create_note · approved/);
+    await history.webContents.executeJavaScript("[...document.querySelectorAll('button')].find(b=>b.textContent==='Export Markdown').click()");await delay(60);
+    assert.match(await history.webContents.executeJavaScript("document.querySelector('.history-view [role=status]').textContent"),/Exported/);
+    fs.writeFileSync(path.join(temporary,'history.png'),(await history.webContents.capturePage()).toPNG());history.destroy();
     const overlay=await create('overlay');
     overlay.webContents.send('cursor:update',{x:350,y:250},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});
     await overlay.webContents.executeJavaScript("window.audioContexts=[];const AC=window.AudioContext;window.AudioContext=class extends AC{constructor(o){super(o);window.audioContexts.push(this);}};window.framesRun=0;function frame(){window.framesRun++;requestAnimationFrame(frame)}requestAnimationFrame(frame);");
@@ -120,6 +139,7 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('test:voice',{id:3,type:'vision:done'});await delay(900);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),0);
     // Repeated interactions reuse playback's AudioContext instead of leaking one per turn.
+    const listenerBaseline=await overlay.webContents.executeJavaScript("window.kite.listenerCounts()");
     for(let i=0;i<50;i++){
       const id=100+i;overlay.webContents.send('test:voice',{id,type:'model:changed',text:'Voice preview'});
       overlay.webContents.send('test:voice',{id,type:'tts:start'});
@@ -129,8 +149,9 @@ app.whenReady().then(async()=>{
       await delay(70);
     }
     assert.ok(await overlay.webContents.executeJavaScript("window.audioContexts.filter(c=>c.state!=='closed').length<=1"),'50 playback turns must reuse one live context');
+    assert.deepEqual(await overlay.webContents.executeJavaScript("window.kite.listenerCounts()"),listenerBaseline,'50 turns must not add IPC listeners');
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
     console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding. Screenshots: '+temporary);
   } catch(error) {console.error(error);process.exitCode=1;}
-  finally {windows.forEach(w=>w.destroy());app.exit(process.exitCode||0);}
+  finally {windows.forEach(w=>{if(!w.isDestroyed())w.destroy();});app.exit(process.exitCode||0);}
 });

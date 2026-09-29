@@ -1,0 +1,290 @@
+{
+  "measuredAt": "2026-09-29T15:06:27.317Z",
+  "os": "10.0.26200",
+  "cpu": "Intel(R) Core(TM) i7-14650HX",
+  "electron": "44.4.5",
+  "method": "Production Vite bundle in Electron, fresh profile, microphone denied, no model/TTS keys, synthetic stationary cursor after 35s then moving cursor; 12 one-second samples per phase. MB is process working-set sum (shared pages may be counted more than once). CPU is summed Electron process percentCPUUsage, not system-wide CPU.",
+  "idle": {
+    "cpuPercent": 0.6619030850565046,
+    "totalMB": 430.2994791666667,
+    "mainMB": 80.25911458333333,
+    "rendererMB": 88.62369791666667,
+    "fps": 20
+  },
+  "moving": {
+    "cpuPercent": 1.888233000554137,
+    "totalMB": 436.5950520833333,
+    "fps": 60,
+    "frameWorkMs": 0.07500000049670537
+  },
+  "voiceMedianMs": null,
+  "voiceSamples": 0,
+  "idleSamples": [
+    {
+      "mainMB": 81.09765625,
+      "rendererMB": 88.3046875,
+      "rendererFPS": 20,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 430.4375,
+      "cpu": 0.6674770638410528,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 81.10546875,
+      "rendererMB": 88.43359375,
+      "rendererFPS": 20,
+      "frameMs": 0,
+      "totalMB": 430.58203125,
+      "cpu": 0.7142405523726709,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 81.11328125,
+      "rendererMB": 88.49609375,
+      "rendererFPS": 20,
+      "frameMs": 0.20000001788139343,
+      "totalMB": 430.69921875,
+      "cpu": 0.7444482514396928,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.9140625,
+      "rendererMB": 88.6953125,
+      "rendererFPS": 20,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 430.05859375,
+      "cpu": 0.6271228314712326,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.91796875,
+      "rendererMB": 88.8359375,
+      "rendererFPS": 20,
+      "frameMs": 0,
+      "totalMB": 430.20703125,
+      "cpu": 0.6639496631245873,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.91796875,
+      "rendererMB": 89.0390625,
+      "rendererFPS": 20,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 430.48046875,
+      "cpu": 0.6885486682344999,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.921875,
+      "rendererMB": 88.3359375,
+      "rendererFPS": 20,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 429.83984375,
+      "cpu": 0.7177080511874074,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.921875,
+      "rendererMB": 88.46875,
+      "rendererFPS": 20,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 429.9765625,
+      "cpu": 0.570400789065536,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.921875,
+      "rendererMB": 88.59375,
+      "rendererFPS": 20,
+      "frameMs": 0,
+      "totalMB": 430.1640625,
+      "cpu": 0.6638776808148639,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.921875,
+      "rendererMB": 88.65625,
+      "rendererFPS": 20,
+      "frameMs": 0.10000002384185791,
+      "totalMB": 430.23046875,
+      "cpu": 0.5846387163703373,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.17578125,
+      "rendererMB": 88.71875,
+      "rendererFPS": 20,
+      "frameMs": 0,
+      "totalMB": 430.35546875,
+      "cpu": 0.6277110880520504,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.1796875,
+      "rendererMB": 88.90625,
+      "rendererFPS": 20,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 430.5625,
+      "cpu": 0.6727136647041249,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    }
+  ],
+  "movingSamples": [
+    {
+      "mainMB": 80.16015625,
+      "rendererMB": 90.48828125,
+      "rendererFPS": 60,
+      "frameMs": 0,
+      "totalMB": 433.76171875,
+      "cpu": 2.161828624639819,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.41796875,
+      "rendererMB": 90.82421875,
+      "rendererFPS": 60,
+      "frameMs": 0,
+      "totalMB": 434.25390625,
+      "cpu": 1.9377222727992207,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.41796875,
+      "rendererMB": 91.55078125,
+      "rendererFPS": 60,
+      "frameMs": 0.20000001788139343,
+      "totalMB": 435.09765625,
+      "cpu": 2.1721368698278836,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.41796875,
+      "rendererMB": 92.1015625,
+      "rendererFPS": 60,
+      "frameMs": 0.10000002384185791,
+      "totalMB": 435.73046875,
+      "cpu": 1.933435695446183,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.93359375,
+      "rendererMB": 92.578125,
+      "rendererFPS": 60,
+      "frameMs": 0,
+      "totalMB": 436.3671875,
+      "cpu": 1.8192267885197166,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.93359375,
+      "rendererMB": 93.16015625,
+      "rendererFPS": 60,
+      "frameMs": 0,
+      "totalMB": 437.50390625,
+      "cpu": 2.233744811463321,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 80.93359375,
+      "rendererMB": 93.28515625,
+      "rendererFPS": 60,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 437.65625,
+      "cpu": 1.8668313964772352,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 81.18359375,
+      "rendererMB": 93.7890625,
+      "rendererFPS": 60,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 438.29296875,
+      "cpu": 1.6457506113632911,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 81.18359375,
+      "rendererMB": 94.2578125,
+      "rendererFPS": 60,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 438.34765625,
+      "cpu": 1.6410905513659904,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 81.18359375,
+      "rendererMB": 94.828125,
+      "rendererFPS": 60,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 438.43359375,
+      "cpu": 1.6070441452111737,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.4453125,
+      "rendererMB": 95.109375,
+      "rendererFPS": 60,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 437.1953125,
+      "cpu": 1.7825698133429824,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    },
+    {
+      "mainMB": 79.8359375,
+      "rendererMB": 94.67578125,
+      "rendererFPS": 60,
+      "frameMs": 0.09999999403953552,
+      "totalMB": 436.5,
+      "cpu": 1.8574144261928323,
+      "processes": 5,
+      "voiceSamples": 0,
+      "voiceMedianMs": null
+    }
+  ]
+}

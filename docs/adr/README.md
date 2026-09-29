@@ -1,0 +1,14 @@
+# Decision records
+
+Short records of the constraints, alternatives, decisions, and costs behind Kite.
+
+- [Electron over Tauri](001-electron.md)
+- [Direct BYOK without a backend](002-direct-byok.md)
+- [Vercel AI SDK](003-ai-sdk.md)
+- [Groq batch transcription](004-batch-stt.md)
+- [Native push-to-talk over VAD](005-ptt.md)
+- [DOM/SVG overlay](006-dom-overlay.md)
+- [Drop general desktop automation](007-no-nutjs.md)
+- [Deterministic approval summaries](008-approval.md)
+- [Temporary capture exclusion](009-capture-exclusion.md)
+- [Screenshots are not persisted by default](010-screenshot-retention.md)

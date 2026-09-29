@@ -72,7 +72,7 @@ export default function DevPanel() {
     <div className="dev-buttons">
       <button onClick={() => window.kite.openSettings()}>API keys</button>
       <button onClick={() => { void window.kite.testCapture().then(result => { setCaptureResult(result.ok ? `Saved test capture: ${result.path}` : result.error); }); }}>Test capture (save PNG)</button>
-      <button onClick={() => { void window.kite.printRecentMessages().then(result => { if (timing.current) timing.current.textContent = result.ok ? 'Last 10 messages printed in the main terminal.' : 'Could not read history.'; }); }}>Print last 10 messages</button>
+      <button onClick={() => { void window.kite.printRecentMessages().then(result => { if (timing.current) timing.current.textContent = result.ok ? 'Recent message count recorded in the logs; message contents are never logged.' : 'Could not read history.'; }); }}>Log recent message count</button>
     </div>
     {captureResult && <output style={{ overflowWrap: 'anywhere' }}>{captureResult}</output>}
     <div className="dev-buttons">{(['idle', 'listening', 'thinking', 'talking'] as KiteMood[]).map(value =>

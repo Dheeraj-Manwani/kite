@@ -6,7 +6,7 @@ import { uIOhook } from 'uiohook-napi';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { app, dialog, globalShortcut } from 'electron';
+import { app, dialog, globalShortcut, nativeImage } from 'electron';
 import started from 'electron-squirrel-startup';
 import { createOverlayWindow, getOverlayWindow } from './main/window/overlay';
 import { registerOverlayIPC } from './main/ipc/overlay';
@@ -20,6 +20,9 @@ if (smoke) {
   app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'kite-packaged-smoke-')));
   app.whenReady().then(() => {
     try { const db = openDatabase(path.join(app.getPath('userData'), 'smoke.db')); db.createConversation('smoke', Date.now()); db.close();
+      for (const icon of ['tray-light.png', 'tray-dark.png', 'tray-update.png']) {
+        if (nativeImage.createFromPath(path.join(app.getAppPath(), 'assets', icon)).isEmpty()) throw new Error('Missing tray asset');
+      }
       uIOhook.start(); uIOhook.stop(); process.stdout.write('ok\n'); app.exit(0);
     } catch { process.stderr.write('smoke failed\n'); app.exit(1); }
   });
