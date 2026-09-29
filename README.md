@@ -50,7 +50,7 @@ The tray offers pause for 15 minutes, an hour, or until restart; mute; logs; and
 
 ## Measured performance
 
-See [measurement results](docs/performance/README.md) and [raw samples](docs/performance/latest.json). These describe this workstation and method, not guaranteed performance. Voice-to-voice latency is **not yet measured with live providers**. The dev panel computes the median of non-interrupted SQLite samples after real interactions: key release to playback acknowledgement, not acoustic latency.
+On the measured workstation: **0.66% idle CPU, 430 MB process working set, 60 fps while moving**. See [measurement results](docs/performance/README.md) and [raw samples](docs/performance/latest.json). These describe this workstation and method, not guaranteed performance. Voice-to-voice latency is **not yet measured with live providers**. The dev panel computes the median of non-interrupted SQLite samples after real interactions: key release to playback acknowledgement, not acoustic latency.
 
 Cursor polling changes from 16 ms while moving to 100 ms after two stationary seconds. Dozing physics updates reduce to about 20 fps. Settings are destroyed on close; annotation, image preparation, history, and settings views load lazily. The renderer smoke test exercises 50 playback interactions and checks AudioContext reuse.
 

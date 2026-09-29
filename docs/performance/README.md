@@ -2,7 +2,7 @@
 
 Measured 2026-09-29 on Windows 11 build 26200, Intel Core i7-14650HX, Electron 44.4.5. Reproduce with `npm run perf` after completing `npm run make`. Raw per-second samples and method are in [latest.json](latest.json).
 
-The first local run averaged **0.72% idle CPU**, **454 MB total process working set**, and **20 rendered physics frames/s** when dozing. With a moving cursor it averaged **60 fps**, **1.77% CPU**, and **0.14 ms of JavaScript frame work**. A packaging process was also running on the workstation during this first sample; repeat on a quiet workstation before treating it as a release baseline.
+The quiet local run averaged **0.66% idle CPU**, **430 MB total process working set**, and **20 rendered physics frames/s** when dozing. With a moving cursor it averaged **60 fps**, **1.89% CPU**, **437 MB working set**, and **0.075 ms of JavaScript frame work**. Packaging and smoke tests had finished before sampling. This meets the approximate idle CPU and moving-frame-rate targets on this workstation; the memory cost remains substantial.
 
 The test loads the production Vite bundle in Electron with a fresh profile, denies microphone access, and uses no provider keys. It settles for 35 seconds, samples 12 times at one-second intervals with a stationary cursor, then repeats with a synthetic moving cursor. It is not a clean-VM installed-app benchmark or a voice-workload benchmark.
 

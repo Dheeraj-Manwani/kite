@@ -35,6 +35,8 @@ app.whenReady().then(async()=>{
       await win.loadFile(path.join(__dirname,'../.vite/renderer/main_window/index.html'),{hash:view});await delay(350);return win;
     };
     const settings=await create('settings');
+    // Lazy view and asynchronous settings hydration may complete on different frames.
+    for(let i=0;i<100 && await settings.webContents.executeJavaScript("document.querySelectorAll('.provider-row').length")!==6;i++)await delay(30);
     assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('.provider-row').length"),6);
     assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('optgroup').length"),15);
     await settings.webContents.executeJavaScript("[...document.querySelectorAll('button')].find(b=>b.textContent==='Test').click()");await delay(100);
