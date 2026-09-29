@@ -1,3 +1,7 @@
+import { registerHistoryIPC } from '../ipc/history';
+import { createSettingsWindow, getSettingsWindow } from '../window/settings';
+import { appRuntime, appEvent, startUpdates, onResume } from '../runtime';
+import { logEvent } from '../logging';
 import { ScreenSession, registerScreenIPC, captureUnderCursor, prepareImages } from '../vision/service';
 import { routeVision, type VisionTurn } from '../../shared/vision';
 import { setAnnotationInteractive } from '../ipc/overlay';
@@ -41,7 +45,7 @@ export function startVoiceService() {
   configureProviders(secrets);
   const preferences = openPreferences(id => secrets.hasKey(id));
   let ownsEscape = false;
-  const emit = (event: import('../../shared/types').VoiceEvent) => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send(event.type, event); };
+  const emit = (event: import('../../shared/types').VoiceEvent) => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send(event.type, event); const setup = getSettingsWindow(); if (setup?.webContents.getURL().endsWith('#onboarding')) setup.webContents.send(event.type, event); logEvent(event.type, event.timing); };
   const tts = new TTSService(() => secrets.getKey('cartesia'), event => controller.ttsEvent(event));
   const apps = new AppIndex(); void apps.scan();
   const approvals = new ApprovalBroker(card => controller.presentApproval(card), (card, decision) => controller.approvalDecision(card, decision));
@@ -59,6 +63,7 @@ export function startVoiceService() {
   const persist = (row: number, turn: VisionTurn, signal: AbortSignal) => persistVision({
     userData: app.getPath('userData'), keep: preferences.get().keepScreenshots, row, turn, signal, history,
   });
+  const conversation = new Conversation(randomUUID, settingsConfig.contextMessages, settingsConfig.inactivityMs);
   const controller = new VoiceController({
     vision: {
       start: (id, signal, ready, measured) => {
@@ -73,7 +78,7 @@ export function startVoiceService() {
     approvals,
     tools: (messageId, signal, activity, model, captureTiming) => new ToolSession({
       imageToolResults: ['anthropic', 'openai', 'google'].includes(model?.provider),
-      definitions: [...createTools(apps, history, preferences.get()), ...(model?.supportsVision ? [readScreen(preferences.get().screenWithoutAsking, async captureSignal => {
+      definitions: [...createTools(apps, history, preferences.get()), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
         captureSignal.throwIfAborted(); const captured = await captureUnderCursor(captureSignal); captureSignal.throwIfAborted();
         captureTiming?.(captured.captureMs);
         const images = await prepareImages(captured, [], captureSignal);
@@ -83,7 +88,7 @@ export function startVoiceService() {
       audit: history, messageId, context: { dryRun: preferences.get().dryRun, signal }, activity, changed: auditChanged,
       event: (type, name, result) => { if (!signal.aborted) controller.toolEvent(type, name, result); } }),
     getKey: provider => secrets.getKey(provider), history,
-    conversation: new Conversation(randomUUID, settingsConfig.contextMessages, settingsConfig.inactivityMs),
+    conversation,
     transcribe: transcribeAudio, ask, tts,
     settings: preferences.get, describe: model => describeModel(model, preferences.snapshot().models),
     emit,
@@ -97,6 +102,19 @@ export function startVoiceService() {
     },
   });
   const tray = createKiteTray(preferences);
+  appRuntime.changed = tray.update; appRuntime.cancel = () => controller.cancel();
+  const stopUpdates = startUpdates();
+  registerHistoryIPC(history, async () => { controller.cancel(); await waitForTools(); conversation.reset(); });
+  let rendererFPS=0, frameMs=0;
+  ipcMain.on('perf:frame',(event,fps,ms)=>{if(trusted(event,'overlay')&&Number.isFinite(fps)&&Number.isFinite(ms)&&fps>=0&&fps<=1000&&ms>=0&&ms<=10000){rendererFPS=fps;frameMs=ms;}});
+  ipcMain.handle('dev:perf', async event => {
+    if (!trusted(event, 'either')) return null;
+    const own = await process.getProcessMemoryInfo(), processes = app.getAppMetrics();
+    return { mainMB: own.private / 1024, rendererMB: processes.filter(p=>p.type==='Tab').reduce((n,p)=>n+p.memory.workingSetSize,0)/1024, rendererFPS, frameMs, totalMB: processes.reduce((n,p)=>n+p.memory.workingSetSize,0)/1024,
+      cpu: processes.reduce((n,p)=>n+p.cpu.percentCPUUsage,0), processes: processes.length, ...history.voiceStats() };
+  });
+  ipcMain.on('log:event', (event, name, data) => { if (trusted(event, 'either') && ['renderer:ready','renderer:error'].includes(name)) logEvent(name, data); });
+  if (!preferences.get().onboardingComplete && !process.env.KITE_TEST_MODE) createSettingsWindow('onboarding');
   // Wait until the overlay can receive restored overdue reminders.
   getOverlayWindow()?.webContents.once('did-finish-load', () => reminders.refresh());
   const decisionSchema = z.object({ id: z.string().uuid(), approved: z.boolean() }).strict();
@@ -120,6 +138,8 @@ export function startVoiceService() {
     if (snapshot.settings.dryRun !== old.dryRun) { controller.cancel('voice:aborted'); reminders.refresh(); }
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('settings:changed', snapshot);
     tray.update();
+    if (snapshot.settings.launchOnStartup !== old.launchOnStartup) app.setLoginItemSettings({ openAtLogin: snapshot.settings.launchOnStartup, path: process.execPath });
+    if (JSON.stringify(snapshot.settings.hotkey) !== JSON.stringify(old.hotkey)) restartHook();
     if (old.ttsEnabled && !snapshot.settings.ttsEnabled) controller.mute();
     if (old.model.provider !== snapshot.settings.model.provider || old.model.id !== snapshot.settings.model.id) {
       controller.preview(`Running on ${describeModel(snapshot.settings.model, snapshot.models).label} now!`, true);
@@ -184,7 +204,7 @@ export function startVoiceService() {
   });
   ipcMain.handle('dev:recentMessages', (event): OperationResult => {
     if (app.isPackaged || !trusted(event, 'overlay')) return { ok: false };
-    try { console.log('Kite last 10 messages:', history.recent()); return { ok: true }; }
+    try { logEvent('history:count', { count: history.recent().length }); return { ok: true }; }
     catch { return { ok: false, error: 'Could not read history.' }; }
   });
   ipcMain.handle('bubble:copy', async (event, text: unknown): Promise<OperationResult> => {
@@ -192,25 +212,32 @@ export function startVoiceService() {
     try { await clipboard.writeText(text); return { ok: true }; } catch { return { ok: false, error: 'Could not copy text.' }; }
   });
   session.defaultSession.setPermissionRequestHandler((webContents, permission, callback, details) => {
-    callback(permission === 'media' && webContents === getOverlayWindow()?.webContents
+    callback(permission === 'media' && (webContents === getOverlayWindow()?.webContents || (webContents === getSettingsWindow()?.webContents && webContents.getURL().endsWith('#onboarding')))
       && isAppURL(webContents.getURL()) && isAppURL(details.requestingUrl)
       && 'mediaTypes' in details && details.mediaTypes.every(type => type === 'audio'));
   });
   session.defaultSession.setPermissionCheckHandler((webContents, permission, _origin, details) =>
-    permission === 'media' && webContents === getOverlayWindow()?.webContents
+    permission === 'media' && (webContents === getOverlayWindow()?.webContents || (webContents === getSettingsWindow()?.webContents && webContents.getURL().endsWith('#onboarding')))
       && isAppURL(webContents.getURL()) && isAppURL(details.requestingUrl ?? webContents.getURL())
       && details.mediaType === 'audio');
-  const stopHook = startPttHook(action => {
+  let hotkeyRecording = false;
+  ipcMain.on('hotkey:recording', (event, active) => { if (trusted(event,'settings') && typeof active === 'boolean') { hotkeyRecording = active; if (active) controller.cancel(); } });
+  const hookAction = (action: import('../input/pttMachine').PttAction | 'escape') => {
+    if (action === 'start') appEvent({ type: 'hotkey:detected' });
+    if (appRuntime.pausedUntil || (hotkeyRecording && !!getSettingsWindow())) return;
     if (action === 'start') controller.start();
     else if (action === 'stop') controller.stop();
     else if (action === 'escape') controller.cancel('voice:aborted');
     else controller.cancel(action === 'tooShort' ? 'ptt:tooShort' : 'ptt:cancel');
-  });
+  };
+  let stopHook = startPttHook(hookAction, preferences.get().hotkey);
+  const restartHook = () => { controller.cancel(); stopHook(); try { stopHook = startPttHook(hookAction, preferences.get().hotkey); logEvent('hook:restart', { ok: true }); } catch { stopHook = () => undefined; logEvent('hook:restart', { ok: false }); appEvent({ type: 'fault' }); } };
+  const offResume = onResume(() => { restartHook(); if (appRuntime.pausedUntil && appRuntime.pausedUntil <= Date.now()) import('../runtime').then(m => m.pauseKite(0)); });
   const reset = () => controller.cancel();
   screen.on('display-metrics-changed', reset); screen.on('display-removed', reset); screen.on('display-added', reset);
   const overlay = getOverlayWindow();
   overlay?.webContents.on('did-start-loading', reset);
   overlay?.webContents.on('render-process-gone', reset);
   overlay?.on('closed', reset);
-  return async () => { screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
+  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
 }

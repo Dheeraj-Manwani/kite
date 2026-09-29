@@ -14,7 +14,7 @@ const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
-getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
+reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
@@ -119,6 +119,16 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),5,'marks survive approval resume');
     overlay.webContents.send('test:voice',{id:3,type:'vision:done'});await delay(900);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),0);
+    // Repeated interactions reuse playback's AudioContext instead of leaking one per turn.
+    for(let i=0;i<50;i++){
+      const id=100+i;overlay.webContents.send('test:voice',{id,type:'model:changed',text:'Voice preview'});
+      overlay.webContents.send('test:voice',{id,type:'tts:start'});
+      overlay.webContents.send('test:voice',{id,type:'llm:delta',text:'Test.'});
+      overlay.webContents.send('test:voice',{id,type:'tts:chunk',audio:new Float32Array(2205).buffer});
+      overlay.webContents.send('test:voice',{id,type:'tts:done'});overlay.webContents.send('test:voice',{id,type:'llm:done'});
+      await delay(70);
+    }
+    assert.ok(await overlay.webContents.executeJavaScript("window.audioContexts.filter(c=>c.state!=='closed').length<=1"),'50 playback turns must reuse one live context');
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
     console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding. Screenshots: '+temporary);
   } catch(error) {console.error(error);process.exitCode=1;}

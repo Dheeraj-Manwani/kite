@@ -11,6 +11,7 @@ app.on('browser-window-created', (_event, win) => {
   win.setOpacity(0);
   win.webContents.on('did-fail-load', (_e, code, description) => errors.push(`Renderer ${code}: ${description}`));
 });
+process.env.KITE_TEST_MODE='1';
 // Tests never activate a microphone or use the user's settings/credentials.
 app.whenReady().then(() => {
   const original = session.defaultSession.setPermissionRequestHandler.bind(session.defaultSession);

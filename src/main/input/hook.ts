@@ -2,12 +2,14 @@ import { uIOhook, UiohookKey } from 'uiohook-napi';
 import { initialPtt, stepPtt, PttAction } from './pttMachine';
 import { settingsConfig } from '../settings/config';
 
-export function startPttHook(onAction: (action: PttAction | 'escape') => void) {
+export function startPttHook(onAction: (action: PttAction | 'escape') => void, combo: readonly string[] = settingsConfig.pushToTalk) {
   let state = initialPtt();
   const physical = new Map<number, string>();
   const logical = (code: number) => {
     if (code === UiohookKey.Ctrl || code === UiohookKey.CtrlRight) return 'Control';
     if (code === UiohookKey.Meta || code === UiohookKey.MetaRight) return 'Meta';
+    if (code === UiohookKey.Alt || code === UiohookKey.AltRight) return 'Alt';
+    if (code === UiohookKey.Shift || code === UiohookKey.ShiftRight) return 'Shift';
     return String(code);
   };
   const handle = (code: number, down: boolean) => {
@@ -20,7 +22,7 @@ export function startPttHook(onAction: (action: PttAction | 'escape') => void) {
     } else {
       if (!physical.delete(code) || [...physical.values()].includes(key)) return;
     }
-    const result = stepPtt(state, { key, down, now: performance.now() }, settingsConfig.pushToTalk, settingsConfig.minHoldMs);
+    const result = stepPtt(state, { key, down, now: performance.now() }, combo, settingsConfig.minHoldMs);
     state = result.state;
     if (down && code === UiohookKey.Escape) onAction('escape');
     else if (result.action) onAction(result.action);

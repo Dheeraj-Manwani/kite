@@ -151,6 +151,7 @@ export function SpeechBubble() {
     {bubble.vision && <div className="bubble-fallback">(looked using {bubble.vision})</div>}
     {bubble.fallback && <div className="bubble-fallback">(answered by {bubble.fallback})</div>}
     {bubble.voiceStatus && <div className="bubble-voice-status">{bubble.voiceStatus}</div>}
+    {bubble.visible && <button className="bubble-copy" onClick={() => window.kite.focusOverlay()}>Keyboard controls</button>}
     {bubble.settings && <button onClick={() => window.kite.openSettings()}>Open settings</button>}
     {bubble.transcript && <button className="bubble-copy" aria-label="Copy reply" onClick={() => { void window.kite.copyText(displayText(bubble.text)); }}>Copy</button>}
   </aside>;

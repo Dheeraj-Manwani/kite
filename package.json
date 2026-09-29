@@ -1,8 +1,8 @@
 {
   "name": "kite",
-  "productName": "kite",
+  "productName": "Kite",
   "version": "1.0.0",
-  "description": "My Electron application description",
+  "description": "A voice companion beside your cursor. Hold, ask, or circle anything on screen.",
   "main": ".vite/build/main.js",
   "private": true,
   "scripts": {
@@ -18,9 +18,19 @@
     "test:clipboard": "electron tests/clipboard-native.cjs",
     "test:notepad": "electron tests/notepad-focus.cjs",
     "test:renderer": "electron tests/renderer-smoke.cjs",
-    "test:startup": "electron tests/startup-smoke.cjs"
+    "test:startup": "electron tests/startup-smoke.cjs",
+    "test:unit": "vitest run",
+    "test:packaged": "node scripts/smoke.cjs",
+    "assets": "python scripts/brand.py",
+    "perf": "electron scripts/perf.cjs"
   },
-  "keywords": [],
+  "keywords": [
+    "electron",
+    "voice-assistant",
+    "byok",
+    "desktop-companion",
+    "vision"
+  ],
   "author": {
     "name": "Dheeraj-Manwani",
     "email": "dkmanwani2000@gmail.com"
@@ -49,7 +59,8 @@
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
     "typescript": "~5.9.3",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^3.2.7"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.65",
@@ -72,5 +83,10 @@
     "ws": "^8.22.0",
     "zod": "^4.6.5",
     "zustand": "^5.0.15"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Dheeraj-Manwani/kite.git"
+  },
+  "homepage": "https://github.com/Dheeraj-Manwani/kite"
 }

@@ -2,6 +2,18 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type { CursorPoint, CursorGeometry, KiteAPI, VoiceEvent, VoiceEventType } from '../shared/types';
 
 const api: KiteAPI = {
+  setHotkeyRecording: active => ipcRenderer.send('hotkey:recording', active),
+  onViewChange(callback) { const listener = (_e: IpcRendererEvent, view: 'settings' | 'history' | 'onboarding') => callback(view); ipcRenderer.on('view:change', listener); return () => ipcRenderer.removeListener('view:change', listener); },
+  onAppEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/release').AppEvent) => callback(event); ipcRenderer.on('app:event', listener); return () => ipcRenderer.removeListener('app:event', listener); },
+  openView: view => ipcRenderer.send('view:open', view),
+  listHistory: query => ipcRenderer.invoke('history:list', query),
+  historyDetail: id => ipcRenderer.invoke('history:detail', id),
+  deleteHistory: id => ipcRenderer.invoke('history:delete', id),
+  exportHistory: id => ipcRenderer.invoke('history:export', id),
+  reportFrame: (fps, ms) => ipcRenderer.send('perf:frame', fps, ms),
+  getPerf: () => ipcRenderer.invoke('dev:perf'),
+  logEvent: (event, data) => ipcRenderer.send('log:event', event, data),
+  focusOverlay: () => ipcRenderer.send('overlay:focus'),
   onScreenEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/vision').ScreenEvent) => callback(event); ipcRenderer.on('screen:event', listener); return () => ipcRenderer.removeListener('screen:event', listener); },
   screenPrepared: (token, images) => ipcRenderer.send('screen:prepared', token, images),
   screenHidden: token => ipcRenderer.send('screen:hidden', token),

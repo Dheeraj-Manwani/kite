@@ -14,7 +14,7 @@ export function isAppURL(value: string) {
     return url.protocol === 'file:' && url.pathname === allowed.pathname && url.host === allowed.host;
   } catch { return false; }
 }
-export function loadRenderer(win: BrowserWindow, view: 'overlay' | 'settings') {
+export function loadRenderer(win: BrowserWindow, view: 'overlay' | 'settings' | 'history' | 'onboarding') {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', event => event.preventDefault());
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {

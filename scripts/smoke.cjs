@@ -1,0 +1,12 @@
+const { spawn } = require('node:child_process');
+const fs = require('node:fs');
+const path = require('node:path');
+const folder = fs.readdirSync(path.resolve('out')).find(n=>/^Kite-win32-/.test(n));
+if (!folder) throw Error('Run npm run make first');
+const exe = path.resolve('out', folder, 'Kite.exe');
+const env = {...process.env}; delete env.ELECTRON_RUN_AS_NODE;
+const child = spawn(exe, ['--smoke-test'], { env, windowsHide: true, stdio: ['ignore','pipe','pipe'] });
+let output='', errors='';child.stdout.on('data',b=>output+=b);child.stderr.on('data',b=>errors+=b);
+const timer=setTimeout(()=>{child.kill();console.error('Packaged smoke timed out');process.exitCode=1;},45000);
+child.on('error',()=>{clearTimeout(timer);console.error('Could not start packaged executable');process.exitCode=1;});
+child.on('exit',code=>{clearTimeout(timer);if(code!==0||!output.split(/\r?\n/).includes('ok')){console.error(`Packaged smoke failed (${code}): ${errors.slice(-1000)}`);process.exitCode=1;}else console.log('PASS packaged executable: database + uiohook; stdout: ok');});

@@ -8,7 +8,7 @@ export type SecretId = ProviderId | 'cartesia';
 export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }
 export interface VoiceChoice { id: string; name: string }
-export interface AppSettings { visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo' }
+export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo' }
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
 export interface Timing { captureMs?: number; transcribeMs: number; firstTokenMs: number; totalMs: number; ttsFirstAudioMs?: number; voiceToVoiceMs?: number; voiceAverageMs?: number }
@@ -26,6 +26,19 @@ export interface ToolAudit { id: number; message_id: number | null; tool: string
 export interface Reminder { id: number; at: number; label: string; status: 'pending' | 'fired' | 'cancelled' }
 export interface OperationResult { ok: boolean; error?: string }
 export interface KiteAPI {
+  setHotkeyRecording(active: boolean): void;
+  onViewChange(callback: (view: 'settings' | 'history' | 'onboarding') => void): () => void;
+  onAppEvent(callback: (event: import('./release').AppEvent) => void): () => void;
+  openView(view: 'settings' | 'history' | 'onboarding'): void;
+  listHistory(query?: string): Promise<import('./release').ConversationSummary[]>;
+  historyDetail(id: string): Promise<import('./release').HistoryDetail>;
+  deleteHistory(id: string | null): Promise<OperationResult>;
+  exportHistory(id: string): Promise<OperationResult>;
+  reportFrame(fps: number, frameMs: number): void;
+  getPerf(): Promise<import('./release').PerfSnapshot>;
+  logEvent(event: 'renderer:ready' | 'renderer:error', data?: { durationMs?: number }): void;
+  focusOverlay(): void;
+
   onScreenEvent(callback: (event: import('./vision').ScreenEvent) => void): () => void;
   screenPrepared(token: string, images: import('./vision').VisionImages | null): void;
   screenHidden(token: string): void;

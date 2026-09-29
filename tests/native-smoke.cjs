@@ -39,6 +39,12 @@ app.whenReady().then(() => {
     db.annotate(row,{marks:[{markType:'tap',region:{x:-40,y:50,width:0,height:0}}]},35);
     db.attach(row,'fixture.jpg');
     assert.equal(db.recent().at(-1).capture_ms,35);assert.match(db.recent().at(-1).annotation_json,/tap/);
+    assert.equal(db.listConversations('hello').length,1);
+    assert.equal(db.listConversations('" OR injection').length,0);
+    assert.ok(db.detail('test').messages.length>=3);
+    assert.equal(db.voiceStats().voiceMedianMs, null); // interrupted voice sample is excluded
+    const paths=db.deleteHistory('test');assert.deepEqual(paths,['fixture.jpg']);
+    assert.equal(db.listConversations('hello').length,0);assert.equal(db.detail('test').messages.length,0);assert.equal(db.recentTools().length,0);
     db.close();
     const Database=require('better-sqlite3');const legacyPath=path.join(temporary,'legacy.db');const legacy=new Database(legacyPath);
     legacy.exec(`CREATE TABLE conversations (id TEXT PRIMARY KEY, started_at INTEGER NOT NULL);

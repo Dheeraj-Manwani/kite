@@ -57,9 +57,9 @@ for(const fail of [false,true]) test(`capture resets protection and visibility w
 test('failed renderer hide restores protection without capturing',async()=>{
   const calls=[];await assert.rejects(()=>protectedCapture({protect:v=>calls.push(v),hide:async v=>{if(v)throw Error('hide failed');},wait:async()=>{},capture:async()=>assert.fail()}));assert.deepEqual(calls,[true,false]);
 });
-test('read_screen is sensitive by default, opt-in automatic, validated and respects dry-run',async()=>{
+test('read_screen is always confirmed in v1, validated and respects dry-run',async()=>{
   let count=0;const tool=readScreen(false,async()=>{count++;return {ok:true,message:'screen'};});
-  assert.equal(needsApproval(tool),true);assert.equal(needsApproval(readScreen(true,async()=>{})),false);
+  assert.equal(needsApproval(tool),true);assert.equal(needsApproval(readScreen(true,async()=>{})),true);
   assert.equal(tool.summarize({reason:'Describe the button'}),'Let me look at your screen? (Describe the button)');
   await tool.execute({reason:'test'},{dryRun:true,signal:new AbortController().signal});assert.equal(count,0);
   await assert.rejects(()=>tool.execute({reason:''},{dryRun:false,signal:new AbortController().signal}));

@@ -1,7 +1,8 @@
+import { validateHotkey, configurableTools } from '../../shared/release';
 import Store from 'electron-store';
 import type { AppSettings, ModelEntry, SettingsSnapshot, SecretId, VoiceChoice, ModelSelection } from '../../shared/types';
 import { catalog, mergeCatalog, providerIds } from '../ai/catalog';
-export const defaultSettings: AppSettings = { visionModel: { provider: 'moonshot', id: 'kimi-k2.5' }, screenWithoutAsking: false, keepScreenshots: false, model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
+export const defaultSettings: AppSettings = { onboardingComplete: false, hotkey: ['Control','Meta'], launchOnStartup: false, reducedMotion: false, toolApprovals: { get_datetime: false, list_reminders: false, open_app: true, web_search: true }, visionModel: { provider: 'moonshot', id: 'kimi-k2.5' }, screenWithoutAsking: false, keepScreenshots: false, model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
   fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google' };
 export function validModel(value: unknown): value is ModelSelection {
   if (!value || typeof value !== 'object') return false;
@@ -12,7 +13,7 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
   const store = new Store<{ preferences: AppSettings; models: ModelEntry[]; voices: VoiceChoice[] }>({ name: 'preferences',
     defaults: { preferences: defaultSettings, models: [], voices: [] } });
   const listeners = new Set<(snapshot: SettingsSnapshot, old: AppSettings) => void>();
-  const get = () => ({ ...defaultSettings, ...store.get('preferences') });
+  const get = () => ({ ...defaultSettings, ...store.get('preferences'), screenWithoutAsking: false });
   const snapshot = (): SettingsSnapshot => ({ settings: get(), models: mergeCatalog(catalog, store.get('models')), voices: store.get('voices'),
     keys: Object.fromEntries([...providerIds, 'cartesia'].map(id => [id, hasKey(id as SecretId)])) as Record<SecretId, boolean> });
   const notify = (old = get()) => { const value = snapshot(); listeners.forEach(fn => fn(value, old)); };
@@ -23,7 +24,13 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
       const old = get(); const next = { ...old };
       for (const [key, value] of Object.entries(patch)) {
         if (key === 'model' || key === 'fallback' || key === 'visionModel') { if (!validModel(value) || !hasKey(value.provider)) throw new Error('Save a key for this provider first.'); next[key] = value; }
-        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun' || key === 'screenWithoutAsking' || key === 'keepScreenshots') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
+        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun' || key === 'keepScreenshots' || key === 'onboardingComplete' || key === 'launchOnStartup' || key === 'reducedMotion') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
+        else if (key === 'hotkey') { if (!validateHotkey(value)) throw new Error('Use two or more modifiers only; other keys would type into the focused app.'); next.hotkey = [...value]; }
+        else if (key === 'screenWithoutAsking') { if (value !== false) throw new Error('Screen access always requires confirmation in v1.'); }
+        else if (key === 'toolApprovals') {
+          if (!value || typeof value !== 'object' || Array.isArray(value) || Object.entries(value).some(([k,v]) => !configurableTools.includes(k as typeof configurableTools[number]) || typeof v !== 'boolean')) throw new Error('Only low-risk tools have configurable trust.');
+          next.toolApprovals = { ...old.toolApprovals, ...value };
+        }
         else if (key === 'searchEngine') { if (!['google', 'bing', 'duckduckgo'].includes(value as string)) throw new Error('Invalid search engine'); next.searchEngine = value as AppSettings['searchEngine']; }
         else if (key === 'speed') { if (typeof value !== 'number' || !Number.isFinite(value) || value < 0.6 || value > 1.5) throw new Error('Invalid speed'); next.speed = value; }
         else if (key === 'voiceId') { if (typeof value !== 'string' || value.length > 200) throw new Error('Invalid voice'); next.voiceId = value; }

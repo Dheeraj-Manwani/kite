@@ -1,3 +1,5 @@
+import { HotkeyRecorder } from './HotkeyRecorder';
+import { configurableTools } from '../../shared/release';
 import { useEffect, useState } from 'react';
 import type { AppSettings, ModelSelection, OperationResult, ProviderId, SecretId, SettingsSnapshot } from '../../shared/types';
 const providers: { id: ProviderId; label: string }[] = [
@@ -6,7 +8,7 @@ const providers: { id: ProviderId; label: string }[] = [
 ];
 const encode = (m: ModelSelection) => `${m.provider}:${m.id}`;
 const decode = (s: string): ModelSelection => ({ provider: s.slice(0, s.indexOf(':')) as ProviderId, id: s.slice(s.indexOf(':') + 1) });
-export function SettingsView() {
+export function SettingsView({ onboarding = false }: { onboarding?: boolean } = {}) {
   const [snapshot, setSnapshot] = useState<SettingsSnapshot>();
   const [keys, setKeys] = useState<Partial<Record<SecretId, string>>>({});
   const [editing, setEditing] = useState<Partial<Record<SecretId, boolean>>>({});
@@ -71,6 +73,14 @@ export function SettingsView() {
     <p className="settings-status" role="status">{status}</p>
     <section><h2>Providers</h2><p className="settings-hint">Groq is also required for Ctrl + Win speech recognition.</p>{providers.map(p => keyRow(p.id, p.label))}</section>
     {snapshot && <>
+      {!onboarding && <section><h2>Make Kite yours</h2>
+        <HotkeyRecorder value={snapshot.settings.hotkey ?? ['Control','Meta']} change={hotkey => update({ hotkey })}/>
+        <label className="settings-toggle"><input type="checkbox" checked={!!snapshot.settings.launchOnStartup} onChange={e=>update({launchOnStartup:e.target.checked})}/>Launch on startup</label>
+        <label className="settings-toggle"><input type="checkbox" checked={!!snapshot.settings.reducedMotion} onChange={e=>update({reducedMotion:e.target.checked})}/>Reduced motion</label>
+        <p>Use the tray to pause Kite, replay the tutorial, or open diagnostic logs.</p>
+      </section>}
+      <section><h2>Trust</h2>{configurableTools.map(name=><label className="setting-field" key={name}>{name.replaceAll('_',' ')}<select value={String(snapshot.settings.toolApprovals?.[name] ?? !['get_datetime','list_reminders'].includes(name))} onChange={e=>update({toolApprovals:{[name]:e.target.value==='true'}})}><option value="true">Always ask</option><option value="false">Don't ask</option></select></label>)}
+        <p>Typing, reading or writing the clipboard, and reading the screen always ask in v1.</p></section>
       <section><h2>Actions</h2><label className="setting-field">Search engine<select value={snapshot.settings.searchEngine} onChange={e => update({ searchEngine: e.target.value as AppSettings['searchEngine'] })}><option value="google">Google</option><option value="bing">Bing</option><option value="duckduckgo">DuckDuckGo</option></select></label>
         <button onClick={() => { void operation(() => window.kite.rescanApps(), 'App index ready. Scans are cached for 10 minutes.'); }}>Rescan apps</button>
         <p>Every action requires your confirmation. For typing, focus the destination app and say yes.</p></section>
@@ -86,7 +96,7 @@ export function SettingsView() {
       </section>
       <section><h2>Screen vision</h2>
         {picker('Vision model', snapshot.settings.visionModel, visionModel => update({ visionModel }), true)}
-        <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.screenWithoutAsking} onChange={e => update({ screenWithoutAsking: e.target.checked })} />Let Kite look at my screen without asking</label>
+        <p>Screen access always asks for confirmation in v1.</p>
         <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.keepScreenshots} onChange={e => update({ keepScreenshots: e.target.checked })} />Keep screenshots in history</label>
         <small>Hold Ctrl + Win and draw to ask about a mark. Kite is looking appears on every capture. Screenshots stay in memory unless history is enabled.</small>
       </section>

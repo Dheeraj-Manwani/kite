@@ -22,9 +22,17 @@ export const migrations = [
    ALTER TABLE messages ADD COLUMN capture_ms REAL;
    CREATE TABLE attachments (id INTEGER PRIMARY KEY AUTOINCREMENT, message_id INTEGER NOT NULL REFERENCES messages(id),
      path TEXT NOT NULL, media_type TEXT NOT NULL, created_at INTEGER NOT NULL);`,
+  `CREATE VIRTUAL TABLE messages_fts USING fts5(content, content='messages', content_rowid='id');
+   INSERT INTO messages_fts(messages_fts) VALUES ('rebuild');
+   CREATE TRIGGER messages_ai AFTER INSERT ON messages BEGIN INSERT INTO messages_fts(rowid,content) VALUES(new.id,new.content); END;
+   CREATE TRIGGER messages_ad AFTER DELETE ON messages BEGIN INSERT INTO messages_fts(messages_fts,rowid,content) VALUES('delete',old.id,old.content); END;
+   CREATE TRIGGER messages_au AFTER UPDATE OF content ON messages BEGIN
+     INSERT INTO messages_fts(messages_fts,rowid,content) VALUES('delete',old.id,old.content);
+     INSERT INTO messages_fts(rowid,content) VALUES(new.id,new.content); END;`,
 ];
 export function openDatabase(filename: string) {
   const db = new Database(filename);
+  db.pragma('secure_delete = ON');
   db.pragma('journal_mode = WAL'); db.pragma('foreign_keys = ON');
   const version = db.pragma('user_version', { simple: true }) as number;
   if (version > migrations.length) { db.close(); throw new Error('Kite database is newer than this app.'); }
@@ -33,6 +41,7 @@ export function openDatabase(filename: string) {
       db.exec(migrations[i]); db.pragma(`user_version = ${i + 1}`);
     }
   })();
+  db.exec("INSERT INTO messages_fts(messages_fts,rank) VALUES('secure-delete',1)");
   const conversation = db.prepare('INSERT OR IGNORE INTO conversations(id, started_at) VALUES (?, ?)');
   const insert = db.prepare(`INSERT INTO messages(conversation_id, role, content, provider, model, created_at, transcribe_ms, first_token_ms, total_ms, interrupted, tts_first_audio_ms, voice_to_voice_ms)
     VALUES (@conversationId, @role, @content, @provider, @model, @createdAt, @transcribeMs, @firstTokenMs, @totalMs, @interrupted, @ttsFirstAudioMs, @voiceToVoiceMs)`);
@@ -64,6 +73,37 @@ export function openDatabase(filename: string) {
     cancelReminder(id: number) { return !!db.prepare("UPDATE reminders SET status='cancelled' WHERE id=? AND status='pending'").run(id).changes; },
     claimReminder(id: number) { return !!db.prepare("UPDATE reminders SET status='fired' WHERE id=? AND status='pending'").run(id).changes; },
     recent() { return db.prepare('SELECT * FROM messages ORDER BY id DESC LIMIT 10').all().reverse(); },
+    listConversations(query = '') {
+      const match = query.trim().split(/\s+/).filter(Boolean).map(s => '"' + s.replace(/"/g, '""') + '"').join(' AND ');
+      return db.prepare(`SELECT c.id,c.started_at,
+        (SELECT content FROM messages WHERE conversation_id=c.id ORDER BY id LIMIT 1) AS preview,
+        (SELECT group_concat(DISTINCT model) FROM messages WHERE conversation_id=c.id AND role='assistant') AS models,
+        (SELECT COUNT(*) FROM messages WHERE conversation_id=c.id) AS count FROM conversations c
+        ${match ? 'WHERE c.id IN (SELECT m.conversation_id FROM messages_fts f JOIN messages m ON m.id=f.rowid WHERE messages_fts MATCH ?)' : ''}
+        ORDER BY c.started_at DESC LIMIT 300`).all(...(match ? [match] : [])) as import('../../shared/release').ConversationSummary[];
+    },
+    detail(id: string): import('../../shared/release').HistoryDetail {
+      return { messages: db.prepare('SELECT * FROM messages WHERE conversation_id=? ORDER BY id').all(id) as import('../../shared/release').HistoryMessage[],
+        tools: db.prepare('SELECT t.* FROM tool_calls t JOIN messages m ON m.id=t.message_id WHERE m.conversation_id=? ORDER BY t.id').all(id) as ToolAudit[] };
+    },
+    deleteHistory(id: string | null) {
+      const filter = id === null ? '' : ' WHERE conversation_id=?', args = id === null ? [] : [id];
+      const ids = `SELECT id FROM messages${filter}`;
+      const files = db.prepare(`SELECT path FROM attachments WHERE message_id IN (${ids})`).all(...args) as { path: string }[];
+      db.transaction(() => {
+        db.prepare(`DELETE FROM attachments WHERE message_id IN (${ids})`).run(...args);
+        db.prepare(`DELETE FROM tool_calls WHERE message_id IN (${ids})`).run(...args);
+        if (id === null) db.prepare('DELETE FROM tool_calls WHERE message_id IS NULL').run();
+        db.prepare(`DELETE FROM messages${filter}`).run(...args);
+        db.prepare(`DELETE FROM conversations${id === null ? '' : ' WHERE id=?'}`).run(...args);
+      })();
+      db.exec("INSERT INTO messages_fts(messages_fts) VALUES('optimize')");
+      db.pragma('wal_checkpoint(TRUNCATE)'); return files.map(f => f.path);
+    },
+    voiceStats() {
+      const values = (db.prepare('SELECT voice_to_voice_ms AS value FROM messages WHERE role=\'assistant\' AND voice_to_voice_ms IS NOT NULL AND interrupted=0 ORDER BY voice_to_voice_ms').all() as {value:number}[]).map(r=>r.value);
+      const n=values.length; return { voiceSamples:n, voiceMedianMs:n ? (values[Math.floor((n-1)/2)]+values[Math.floor(n/2)])/2 : null };
+    },
     close() { db.close(); },
   };
 }

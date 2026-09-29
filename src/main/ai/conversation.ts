@@ -5,6 +5,7 @@ export class Conversation {
   private lastActivity = 0;
   private conversationId: string | undefined;
   constructor(private createId: () => string, private limit = 10, private inactivityMs = 300_000) {}
+  reset() { this.messages = []; this.conversationId = undefined; this.lastActivity = 0; }
   begin(now: number): { id: string; fresh: boolean } {
     const fresh = !this.conversationId || now - this.lastActivity >= this.inactivityMs;
     if (fresh) { this.messages = []; this.conversationId = this.createId(); }

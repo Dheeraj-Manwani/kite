@@ -12,6 +12,7 @@ app.whenReady().then(() => {
   const original = session.defaultSession.setPermissionRequestHandler.bind(session.defaultSession);
   session.defaultSession.setPermissionRequestHandler = () => original((_w, _p, cb) => cb(false));
 });
+process.env.KITE_TEST_MODE='1';
 require('../.vite/build/main.js');
 app.whenReady().then(async () => {
   let background;

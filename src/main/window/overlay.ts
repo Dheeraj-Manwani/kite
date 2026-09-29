@@ -23,6 +23,7 @@ export function createOverlayWindow(): BrowserWindow {
     webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: false, autoplayPolicy: 'no-user-gesture-required' },
   });
   overlayWindow = win;
+  win.on('blur', () => win.setFocusable(false));
   win.setIgnoreMouseEvents(true, { forward: true });
   win.once('ready-to-show', () => {
     win.showInactive();

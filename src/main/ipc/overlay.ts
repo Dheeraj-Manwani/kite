@@ -50,6 +50,8 @@ export function registerOverlayIPC() {
       win.setIgnoreMouseEvents(!isInteractive, { forward: true });
     }
   });
+  ipcMain.on('view:open', (event, view) => { if (trusted(event, 'either') && ['settings','history','onboarding'].includes(view)) createSettingsWindow(view); });
+  ipcMain.on('overlay:focus', event => { if (trusted(event, 'overlay')) { const win = getOverlayWindow(); win?.setFocusable(true); win?.focus(); } });
   ipcMain.on('settings:open', event => {
     if (trusted(event, 'either')) createSettingsWindow();
   });

@@ -30,7 +30,7 @@ export function useKiteLoop(refs: KiteElements) {
     const sparkle = bodyNode.querySelector<SVGPathElement>('.kite-sparkle');
     const muted = bodyNode.querySelector<SVGTextElement>('.kite-muted');
     const media = matchMedia('(prefers-reduced-motion: reduce)');
-    let reduced = media.matches;
+    let reduced = media.matches || runtime.reducedMotion;
     const preferenceChanged = () => { reduced = media.matches; };
     media.addEventListener('change', preferenceChanged);
     const unsubscribe = window.kite.onCursorUpdate((point, geometry) => {
@@ -49,6 +49,10 @@ export function useKiteLoop(refs: KiteElements) {
     let fpsTime = 0, fpsFrames = 0;
     function tick(now: number) {
       frame = requestAnimationFrame(tick);
+      reduced = media.matches || runtime.reducedMotion;
+      const dozing = runtime.behavior === 'dozing' && useKiteStore.getState().mood === 'idle' && !runtime.panelOpen && !vr.drawing;
+      if (dozing && last && now - last < 48 && cursorInput.point.x === previousCursor.x + previousOrigin.x && cursorInput.point.y === previousCursor.y + previousOrigin.y) return;
+      const renderStarted = performance.now();
       const rawDt = last ? (now - last) / 1000 : 1 / 60;
       last = now;
       const dt = Math.min(Math.max(rawDt, 0.001), config.maxDt);
@@ -59,6 +63,7 @@ export function useKiteLoop(refs: KiteElements) {
       fpsFrames++; fpsTime += rawDt;
       if (fpsTime >= 0.5) {
         runtime.fps = Math.round(fpsFrames / fpsTime);
+        window.kite.reportFrame(runtime.fps, runtime.frameMs);
         fpsFrames = 0; fpsTime = 0;
       }
       const geometry = cursorInput.geometry;
@@ -142,6 +147,7 @@ export function useKiteLoop(refs: KiteElements) {
       }
       const blinking = captureBlink || time - blinkStart < config.blinkDuration;
       eyesNode.style.display = config.eyes ? '' : 'none';
+      runtime.renderedFrames++; runtime.frameMs = performance.now() - renderStarted;
       eyesNode.setAttribute('transform', `translate(${look ? clamp((vr.target.x - body.x.value) / 100, -2, 2) : clamp(body.x.velocity / 900, -1, 1)} 0) scale(1 ${blinking ? 0.1 : 1})`);
     }
     frame = requestAnimationFrame(tick);

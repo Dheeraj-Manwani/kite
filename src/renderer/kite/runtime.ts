@@ -1,6 +1,7 @@
 import type { OneShot } from './behaviors';
 /** Ephemeral inputs and diagnostics: never React/Zustand animation state. */
 export const runtime = {
+  reducedMotion: false, frameMs: 0, renderedFrames: 0,
   trigger: null as OneShot | null,
   audioLevel: undefined as number | undefined,
   speechLevel: undefined as number | undefined,

@@ -1,5 +1,4 @@
 import { defineConfig } from 'vite';
-
-// Keep ws in Node: its optional native accelerators are guarded by try/catch.
-// Bundling it can turn those optional requires into eager, failing imports.
-export default defineConfig({ build: { rollupOptions: { external: ['uiohook-napi', 'better-sqlite3', 'ws'] } } });
+import { runtimeModules } from './build/runtimeModules';
+// Forge merges array externals with its Electron/Node defaults. A function would be replaced.
+export default defineConfig({ build: { rollupOptions: { external: [...runtimeModules, ...runtimeModules.map(name => new RegExp('^' + name + '/'))] } } });

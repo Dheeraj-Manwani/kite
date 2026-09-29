@@ -3,11 +3,12 @@ import { loadRenderer, preloadPath } from './renderer';
 
 let settingsWindow: BrowserWindow | null = null;
 export const getSettingsWindow = () => settingsWindow;
-export function createSettingsWindow(): BrowserWindow {
+export function createSettingsWindow(view: 'settings' | 'history' | 'onboarding' = 'settings'): BrowserWindow {
   if (settingsWindow) {
     if (settingsWindow.isMinimized()) settingsWindow.restore();
     settingsWindow.show();
     settingsWindow.focus();
+    settingsWindow.webContents.send('view:change', view);
     return settingsWindow;
   }
   const win = new BrowserWindow({
@@ -18,6 +19,6 @@ export function createSettingsWindow(): BrowserWindow {
   settingsWindow = win;
   win.once('ready-to-show', () => win.show());
   win.on('closed', () => { settingsWindow = null; });
-  void loadRenderer(win, 'settings');
+  void loadRenderer(win, view);
   return win;
 }

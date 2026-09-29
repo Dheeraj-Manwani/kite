@@ -1,0 +1,28 @@
+name: Windows CI
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npx vitest run
+      - run: npm test
+      - run: npm run make
+        env:
+          DEBUG: electron-rebuild
+      - run: npm run test:packaged
+      - run: npm run test:native
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Kite-Windows-unsigned
+          path: out/make/**
+          if-no-files-found: error

@@ -17,6 +17,8 @@ const sliders = [
 export default function DevPanel() {
   const [calls, setCalls] = useState<ToolAudit[]>([]), [dryRun, setDryRun] = useState(false);
   useEffect(() => { void window.kite.getToolCalls().then(setCalls); void window.kite.getSettings().then(s => setDryRun(s.settings.dryRun)); const a = window.kite.onToolCallsChanged(setCalls), b = window.kite.onSettingsChanged(s => setDryRun(s.settings.dryRun)); return () => { a(); b(); }; }, []);
+  const [perf,setPerf] = useState<import('../../shared/release').PerfSnapshot | null>(null);
+  useEffect(()=>{const timer=setInterval(()=>{if(runtime.panelOpen)void window.kite.getPerf().then(setPerf);},1500);return()=>clearInterval(timer);},[]);
   const [open, setOpen] = useState(false);
   const [captureResult, setCaptureResult] = useState('');
   const [position, setPosition] = useState({ x: 20, y: 20 });
@@ -64,6 +66,7 @@ export default function DevPanel() {
     onPointerEnter={() => window.kite.setOverlayInteractive(true)}
     onPointerLeave={() => window.kite.setOverlayInteractive(false)}>
     <header><strong>Kite / Motion lab</strong><button onClick={() => setOpen(false)} aria-label="Close motion panel">×</button></header>
+    <details><summary>Perf</summary>{perf&&<output>Main {perf.mainMB.toFixed(1)} MB · renderer {perf.rendererMB.toFixed(1)} MB · all processes {perf.totalMB.toFixed(1)} MB · CPU {perf.cpu.toFixed(2)}% · frame work {runtime.frameMs.toFixed(2)} ms · voice median {perf.voiceMedianMs===null?'no samples':Math.round(perf.voiceMedianMs)+' ms'} ({perf.voiceSamples})</output>}</details>
     <output ref={stats}>Measuring FPS…</output>
     <output ref={timing}>Hold Ctrl + Win to speak</output>
     <div className="dev-buttons">
