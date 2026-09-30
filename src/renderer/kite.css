@@ -15,4 +15,12 @@
 .sail-mark { flex: none; display: inline-block; vertical-align: -.2em; }
 .sail-mark path { fill: var(--kite-body); }
 .sail-mark rect { fill: var(--kite-shade); }
+/* The kite on the onboarding stage: always on deep ink, so it takes the light halo. */
+.kite-stage svg { display: block; width: 100%; height: 100%; }
+.kite-stage-string { fill: none; stroke: rgb(255 255 255 / .3); stroke-width: 1.2; stroke-dasharray: 1.5 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.kite-stage-sail { fill: url(#kite-stage-sail); stroke: rgb(255 255 255 / .35); stroke-width: 2; stroke-linejoin: round; paint-order: stroke; vector-effect: non-scaling-stroke; }
+.kite-stage-tail rect { fill: var(--kite-tail); }
+.kite-stage-flight { animation: kite-fly-in 1.2s ease-out; transform-box: fill-box; transform-origin: center; }
+@keyframes kite-fly-in { from { transform: translate(-100px, 30px) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .kite-stage-flight { animation: none; } }
 .kite-paused .kite-canvas { transition: transform .6s ease-in; transform: translateY(-120vh) rotate(-12deg); }

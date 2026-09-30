@@ -14,6 +14,7 @@ const api: KiteAPI = {
   getPerf: () => ipcRenderer.invoke('dev:perf'),
   logEvent: (event, data) => ipcRenderer.send('log:event', event, data),
   focusOverlay: () => ipcRenderer.send('overlay:focus'),
+  releaseOverlay: () => ipcRenderer.send('overlay:release'),
   onScreenEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/vision').ScreenEvent) => callback(event); ipcRenderer.on('screen:event', listener); return () => ipcRenderer.removeListener('screen:event', listener); },
   screenPrepared: (token, images) => ipcRenderer.send('screen:prepared', token, images),
   screenHidden: token => ipcRenderer.send('screen:hidden', token),

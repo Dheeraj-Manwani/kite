@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron';
 import type { CursorPoint, ScreenBounds } from '../../shared/types';
-import { getOverlayWindow } from '../window/overlay';
+import { focusOverlayControls, getOverlayWindow, releaseOverlayControls } from '../window/overlay';
 import { createSettingsWindow } from '../window/settings';
 import { trusted } from './trust';
 
@@ -53,7 +53,8 @@ export function registerOverlayIPC() {
     }
   });
   ipcMain.on('view:open', (event, view) => { if (trusted(event, 'either') && ['settings','history','onboarding'].includes(view)) createSettingsWindow(view); });
-  ipcMain.on('overlay:focus', event => { if (trusted(event, 'overlay')) { const win = getOverlayWindow(); win?.setFocusable(true); win?.focus(); } });
+  ipcMain.on('overlay:focus', event => { if (trusted(event, 'overlay')) focusOverlayControls(); });
+  ipcMain.on('overlay:release', event => { if (trusted(event, 'overlay')) releaseOverlayControls(); });
   ipcMain.on('settings:open', event => {
     if (trusted(event, 'either')) createSettingsWindow();
   });

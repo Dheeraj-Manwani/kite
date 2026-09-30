@@ -38,6 +38,7 @@ export interface KiteAPI {
   getPerf(): Promise<import('./release').PerfSnapshot>;
   logEvent(event: 'renderer:ready' | 'renderer:error', data?: { durationMs?: number }): void;
   focusOverlay(): void;
+  releaseOverlay(): void;
 
   onScreenEvent(callback: (event: import('./vision').ScreenEvent) => void): () => void;
   screenPrepared(token: string, images: import('./vision').VisionImages | null): void;

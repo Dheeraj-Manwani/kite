@@ -1,6 +1,6 @@
 import { appRuntime, pauseKite, restartToUpdate, openLogs, reportProblem } from './runtime';
 import { hotkeyLabel } from '../shared/release';
-import { getOverlayWindow } from './window/overlay';
+import { focusOverlayControls, keyboardControlsShortcut } from './window/overlay';
 import path from 'node:path';
 import { app, Menu, nativeImage, nativeTheme, Tray } from 'electron';
 import { createSettingsWindow } from './window/settings';
@@ -31,7 +31,7 @@ export function createKiteTray(preferences: ReturnType<typeof openPreferences>) 
       { label: appRuntime.updateReady ? 'Restart to update' : `Updates: ${appRuntime.updateStatus}`, enabled: appRuntime.updateReady, click: restartToUpdate },
       { label: 'History', click: () => createSettingsWindow('history') },
       { label: 'Replay tutorial', click: () => createSettingsWindow('onboarding') },
-      { label: 'Focus Kite controls (Tab to navigate)', click: () => { const win=getOverlayWindow();win?.setFocusable(true);win?.focus(); } },
+      { label: 'Keyboard controls', accelerator: keyboardControlsShortcut(), registerAccelerator: false, click: focusOverlayControls },
       { label: 'Open logs folder', click: () => { void openLogs(); } },
       { label: 'Report a problem', click: () => { void reportProblem(); } },
       { type: 'separator' }, { label: 'Settings', click: () => { createSettingsWindow(); } },

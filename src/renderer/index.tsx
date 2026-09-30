@@ -29,7 +29,20 @@ function Overlay() {
       if(e.type==='update:ready'){setNotice('Update ready · Restart from the tray when you’re ready.');react('costume',.5);}
       if(e.type==='fault'){setNotice('Something went wrong. Try again, or open the logs from the tray.');react('tangled');}
       clearTimeout(timer);timer=setTimeout(()=>setNotice(''),6000);
-    });return()=>{off();app();clearTimeout(timer);};
+    });
+    // Keyboard controls (tray, or Ctrl + Alt + K): focus the first control on screen. With nothing to control,
+    // hand focus straight back so the user's typing never disappears into a transparent window. Esc also hands it back.
+    const focused=()=>{
+      document.documentElement.classList.add('overlay-focused');
+      requestAnimationFrame(()=>{
+        const target=[...document.querySelectorAll<HTMLElement>('.overlay button:not(:disabled), .overlay summary')].find(el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}));
+        if(target)target.focus();else window.kite.releaseOverlay();
+      });
+    };
+    const blurred=()=>document.documentElement.classList.remove('overlay-focused');
+    const escape=(e:KeyboardEvent)=>{if(e.key==='Escape')window.kite.releaseOverlay();};
+    window.addEventListener('focus',focused);window.addEventListener('blur',blurred);window.addEventListener('keydown',escape);
+    return()=>{off();app();clearTimeout(timer);window.removeEventListener('focus',focused);window.removeEventListener('blur',blurred);window.removeEventListener('keydown',escape);};
   },[]);
   return <main className="overlay"><Suspense fallback={null}><Annotation /></Suspense><Suspense fallback={null}><Board /></Suspense><Suspense fallback={null}><Task /></Suspense><Suspense fallback={null}><Guide /></Suspense><KiteRenderer /><SpeechBubble />
     {notice&&<div className="app-notice" role="status">{notice}</div>}
@@ -39,7 +52,8 @@ function Overlay() {
 function DesktopWindow(){
   const [view,setView]=useState(location.hash.slice(1));
   useEffect(()=>window.kite.onViewChange(v=>{location.hash=v;setView(v);}),[]);
-  return <><nav className="window-nav" aria-label="Kite"><strong><SailMark size={18} />Kite</strong>{(['settings','history','onboarding'] as const).map(v=><button key={v} aria-current={view===v?'page':undefined} onClick={()=>{location.hash=v;setView(v);}}>{v==='onboarding'?'Tutorial':v==='history'?'History':'Settings'}</button>)}</nav>
+  // Onboarding is a guided path, so it hides the nav rather than offering exits to unrelated places (UX-60).
+  return <>{view!=='onboarding'&&<nav className="window-nav" aria-label="Kite"><strong><SailMark size={18} />Kite</strong>{(['settings','history','onboarding'] as const).map(v=><button key={v} aria-current={view===v?'page':undefined} onClick={()=>{location.hash=v;setView(v);}}>{v==='onboarding'?'Tutorial':v==='history'?'History':'Settings'}</button>)}</nav>}
     <Suspense fallback={<p className="loading">Opening Kite…</p>}>{view==='history'?<History/>:view==='onboarding'?<Onboarding/>:<Settings/>}</Suspense></>;
 }
 const isWindow=['settings','history','onboarding'].includes(location.hash.slice(1));

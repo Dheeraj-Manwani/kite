@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
 import { SailMark } from '../kite/SailMark';
+import { useHotkeyLabel } from '../hooks/useHotkeyLabel';
+import { approvalAction } from './approvalAction';
 import type { ApprovalCard as Card } from '../../shared/types';
 /** Planned guide steps, shown as plain text so the user can check the route before approving. */
 function guideSteps(input: unknown): string[] {
@@ -7,7 +9,7 @@ function guideSteps(input: unknown): string[] {
   return Array.isArray(steps) ? steps.map(s => (s as { instruction?: unknown })?.instruction).filter((s): s is string => typeof s === 'string').slice(0, 15) : [];
 }
 export function ApprovalCard({ card }: { card: Card }) {
-  const [now, setNow] = useState(Date.now()), [busy, setBusy] = useState(false);
+  const [now, setNow] = useState(Date.now()), [busy, setBusy] = useState(false), hotkey = useHotkeyLabel();
   useEffect(() => { setBusy(false); const timer = setInterval(() => setNow(Date.now()), 100); return () => clearInterval(timer); }, [card.approvalId]);
   const seconds = Math.max(0, Math.ceil((card.expiresAt - now) / 1000));
   const decide = async (approved: boolean, scope?: 'task' | 'once') => {
@@ -25,11 +27,11 @@ export function ApprovalCard({ card }: { card: Card }) {
     {card.dryRun && <small>Dry run: no action will be performed.</small>}
     {card.toolName === 'type_text' && <small>Focus the destination app first. Voice approval is recommended.</small>}
     {card.toolName === 'do_task'
-      ? <div className="approval-buttons"><button className="primary" disabled={busy || !seconds} onClick={() => { void decide(true, 'task'); }}>✓ Allow this task</button>
+      ? <div className="approval-buttons"><button className="primary" disabled={busy || !seconds} onClick={() => { void decide(true, 'task'); }}>{approvalAction(card)}</button>
         <button disabled={busy || !seconds} onClick={() => { void decide(true, 'once'); }}>Step by step</button>
-        <button className="ghost" disabled={busy || !seconds} onClick={() => { void decide(false); }}>✗ Cancel</button></div>
-      : <div className="approval-buttons"><button className="primary" disabled={busy || !seconds} onClick={() => { void decide(true); }}>✓ Do it</button><button className="ghost" disabled={busy || !seconds} onClick={() => { void decide(false); }}>✗ Cancel</button></div>}
+        <button className="ghost" disabled={busy || !seconds} onClick={() => { void decide(false); }}>Not now</button></div>
+      : <div className="approval-buttons"><button className="primary" disabled={busy || !seconds} onClick={() => { void decide(true); }}>{approvalAction(card)}</button><button className="ghost" disabled={busy || !seconds} onClick={() => { void decide(false); }}>Not now</button></div>}
     {card.toolName === 'do_task' && <small>“Allow this task” lets ordinary steps run; anything that sends, deletes, buys, or submits still asks. “Step by step” asks before every step.</small>}
-    <small>or hold Ctrl+Win and say yes/no</small>
+    <small>Or hold {hotkey || 'your shortcut'} and say “yes” or “no”.</small>
   </section>;
 }

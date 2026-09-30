@@ -23,7 +23,9 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .dev-panel small { display: block; font-size: var(--fs-caption); line-height: 1.5; color: var(--text-muted); }
 .speech-bubble { position: absolute; left: 0; top: 0; width: 320px; max-width: calc(100vw - 24px); max-height: min(420px, calc(100vh - 24px)); overflow: auto; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); opacity: 0; visibility: hidden; transition: opacity .22s, visibility .22s; pointer-events: none; user-select: text; font-size: max(var(--fs-body), .85rem); line-height: 1.6; }
 .speech-bubble.visible { opacity: 1; visibility: visible; pointer-events: auto; }
-.speech-bubble.question { width: 36px; padding: 6px; text-align: center; font-size: 16px; }
+/* Short status lines (a tap that was too short, silence) are a pill, not a card (UX-10). */
+.speech-bubble.compact { width: auto; max-width: 300px; padding: 7px 14px; border-radius: 999px; line-height: 1.4; }
+.speech-bubble.compact::before { display: none; }
 .speech-bubble::before { content: ''; position: absolute; left: 4px; top: 8px; border: 4px solid transparent; border-right-color: var(--border); }
 .speech-bubble[data-side='left']::before { left: auto; right: 4px; transform: rotate(180deg); }
 .bubble-transcript { font-size: var(--fs-caption); color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
@@ -31,11 +33,14 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .bubble-reply code { font-family: var(--font-mono); background: var(--surface-subtle); border-radius: 3px; padding: 1px 3px; }
 .speech-bubble button { font-size: var(--fs-caption); margin-top: 10px; padding: 6px 10px; }
 .speech-bubble .bubble-copy { color: var(--text-muted); margin-left: 8px; }
+/* Keyboard hints appear only while Kite's controls have focus (UX-11). */
+.bubble-keys { display: none; margin-top: 10px; font-size: var(--fs-caption); color: var(--text-muted); }
+.overlay-focused .bubble-keys { display: block; }
 .stream-caret { animation: caret-pulse 1s ease-in-out infinite; color: var(--text-muted); }
 @keyframes caret-pulse { 50% { opacity: .2; } }
 .saved-key { display: flex; align-items: center; gap: 10px; margin: 8px 0 18px; color: var(--success); }
 .saved-key button { padding: 6px 10px; }
-@media (prefers-reduced-motion: reduce) { .stream-caret { animation: none; } .speech-bubble { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .stream-caret { animation: none; } .speech-bubble, .kite-stage { transition: none; } }
 html[data-view='settings'] { background: var(--bg); color-scheme: light dark; }
 .settings { max-width: 520px; padding: 32px; margin: 0 auto; }
 h1 { font-size: var(--fs-display); margin: 14px 0 8px; }
@@ -107,7 +112,7 @@ button:disabled { opacity: .45; cursor: default; }
 .window-nav button { background: transparent; border-color: transparent; color: var(--text-muted); }
 .window-nav button[aria-current] { background: var(--surface-subtle); color: var(--text); font-weight: 600; }
 .loading { padding: 36px; }
-.history-view, .onboarding { max-width: 1050px; margin: auto; padding: 30px; }
+.history-view { max-width: 1050px; margin: auto; padding: 30px; }
 .history-toolbar { display: flex; gap: 12px; align-items: center; }
 .history-toolbar input { flex: 1; }
 .history-layout { display: grid; grid-template-columns: minmax(180px, 30%) 1fr; gap: 24px; }
@@ -120,17 +125,21 @@ button:disabled { opacity: .45; cursor: default; }
 .history-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
 .history-message pre { white-space: pre-wrap; overflow-wrap: anywhere; }
 .annotation-badge { display: inline-block; background: color-mix(in srgb, var(--sun) 24%, transparent); border-radius: 12px; padding: 4px 10px; color: var(--text); font-size: var(--fs-caption); }
-.onboarding { max-width: 740px; }
-.onboarding > p { font-size: var(--fs-lead); line-height: 1.7; }
-.onboarding-progress { display: flex; gap: 6px; }
-.onboarding-progress span { height: 4px; background: var(--border); flex: 1; border-radius: 8px; }
-.onboarding-progress .done { background: var(--text); }
-.onboarding-progress .done:not(:has(+ .done)) { background: var(--accent); }
-.welcome-kite { display: inline-block; margin-top: 18px; animation: welcome-fly 1.2s ease-out; }
-@keyframes welcome-fly { from { transform: translate(-100px, 30px) rotate(-35deg); opacity: 0; } to { transform: none; opacity: 1; } }
-.onboarding footer { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+/* Onboarding (UX-60): the stage carries the character (kite.css); the step below it is a plain form. */
+.onboarding { min-height: 100%; }
+.kite-stage { position: relative; overflow: hidden; background: var(--stage); border-bottom: 1px solid var(--border); transition: height .3s ease; }
+.onboarding-body { max-width: 620px; margin: 0 auto; padding: 24px 28px 36px; }
+.onboarding-body > p { font-size: var(--fs-lead); line-height: 1.6; }
+.onboarding-progress { display: flex; align-items: center; gap: 10px; font-size: var(--fs-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.progress-dots { display: flex; gap: 5px; }
+.progress-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.progress-dots .done { background: var(--text); }
+.progress-dots .current { background: var(--accent); }
+.onboarding footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 30px; }
+.onboarding footer .spacer { flex: 1; }
 .onboarding .settings-view { padding: 0; }
-.quiet-button { color: var(--text-muted); }
+button.link { background: transparent; border-color: transparent; color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; padding-inline: 6px; }
+button.link:where(:hover:not(:disabled)) { background: transparent; color: var(--text); }
 .tutorial-canvas { width: 100%; touch-action: none; cursor: crosshair; }
 .onboarding blockquote { background: var(--surface-subtle); padding: 24px; border-left: 4px solid var(--border); min-height: 90px; }
 .hotkey-recorder small { display: block; margin: 10px 0; color: var(--text-muted); }

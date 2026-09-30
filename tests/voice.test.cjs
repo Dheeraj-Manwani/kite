@@ -177,3 +177,14 @@ test('installed AI SDK sends WebM to Groq and streams Kimi instant-mode text', a
     assert.equal(await transcribeAudio(bytes,'mock-groq',new AbortController().signal),'');
   } finally { global.fetch=original; }
 });
+
+const { approvalAction } = require('../src/renderer/voice/approvalAction.ts');
+test('approval buttons name the action they approve', () => {
+  assert.equal(approvalAction({ toolName: 'open_app', summary: 'Open "Spotify"?' }), 'Open Spotify');
+  assert.equal(approvalAction({ toolName: 'open_app', summary: 'Open "Microsoft Visual Studio Code Insiders"?' }), 'Open app', 'long names fall back');
+  assert.equal(approvalAction({ toolName: 'open_app', summary: 'Find matching apps for "note"? No app will open until a match is chosen.' }), 'Find apps');
+  assert.equal(approvalAction({ toolName: 'open_url', summary: 'Open github.com?' }), 'Open github.com');
+  assert.equal(approvalAction({ toolName: 'type_text', summary: 'Paste "hi" into the currently focused app?' }), 'Paste text');
+  assert.equal(approvalAction({ toolName: 'show_me_how', summary: 'Guide you through "x" in Word?' }), 'Start guide');
+  assert.equal(approvalAction({ toolName: 'something_new', summary: 'Do a new thing?' }), 'Allow');
+});

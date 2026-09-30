@@ -7,7 +7,7 @@ import { voiceRuntime, react } from './runtime';
 import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
-interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean }
+interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean }
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
 function Markdown({ text }: { text: string }) {
   return <>{displayText(text).split(/(```[\s\S]*?(?:```|$))/g).map((block, i) => block.startsWith('```')
@@ -114,7 +114,9 @@ export function SpeechBubble() {
           if (words.length) offsets = wordOffsets(state.current.text.slice(textBase), words); break;
         case 'llm:done': voiceRuntime.waitingSince = 0; llmDone = true; update({ ...state.current, streaming: false }); complete(); break;
         case 'ptt:tooShort': case 'voice:empty':
-          recorder.cancel(); player.stop(); voiceRuntime.waitingSince = 0; update({ ...empty, id: event.id, visible: true, text: '?' }); react('puzzled'); idle(1200); life(1200); break;
+          // A short status pill rather than a card: say what happened, then what to do.
+          recorder.cancel(); player.stop(); voiceRuntime.waitingSince = 0; react('puzzled'); idle(1200); life(2600);
+          update({ ...empty, id: event.id, visible: true, compact: true, text: event.type === 'ptt:tooShort' ? 'Hold a bit longer while you speak.' : 'I didn’t hear anything. Hold and speak again.' }); break;
         case 'ptt:cancel': case 'voice:aborted':
           recorder.cancel(); player.stop(); voiceRuntime.waitingSince = 0; voiceRuntime.toolPose = null; update({ ...empty, id: event.id }); react('flinch'); idle(); break;
         case 'llm:error':
@@ -135,6 +137,12 @@ export function SpeechBubble() {
       voiceRuntime.tickAudio = null; voiceRuntime.bubble = null; voiceRuntime.hover = false; runtime.speechLevel = 0; window.kite.setBubbleBounds(null);
     };
   }, []);
+  // Esc closes the bubble while Kite's controls have focus; a pending approval stays until it is answered or times out.
+  useEffect(() => {
+    const escape = (e: KeyboardEvent) => { if (e.key === 'Escape' && state.current.visible && !state.current.approval) update({ ...state.current, visible: false }); };
+    window.addEventListener('keydown', escape);
+    return () => window.removeEventListener('keydown', escape);
+  }, []);
   useEffect(() => {
     voiceRuntime.bubble = bubble.visible ? element.current : null;
     if (!bubble.visible) { voiceRuntime.hover = false; window.kite.setBubbleBounds(null); window.kite.setOverlayInteractive(false); }
@@ -144,7 +152,7 @@ export function SpeechBubble() {
     if (value) { remaining.current = Math.max(0, expires.current - performance.now()); expires.current = Infinity; }
     else expires.current = performance.now() + remaining.current;
   };
-  return <aside ref={element} className={`speech-bubble ${bubble.visible ? 'visible' : ''} ${bubble.text === '?' && !bubble.transcript ? 'question' : ''}`}
+  return <aside ref={element} className={`speech-bubble ${bubble.visible ? 'visible' : ''} ${bubble.compact ? 'compact' : ''}`}
     aria-live="polite" aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
     {bubble.transcript && <div className="bubble-transcript">You: {bubble.transcript}</div>}
     <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <span className="stream-caret">▍</span>}</div>
@@ -154,8 +162,8 @@ export function SpeechBubble() {
     {bubble.vision && <div className="bubble-fallback">(looked using {bubble.vision})</div>}
     {bubble.fallback && <div className="bubble-fallback">(answered by {bubble.fallback})</div>}
     {bubble.voiceStatus && <div className="bubble-voice-status">{bubble.voiceStatus}</div>}
-    {bubble.visible && <button className="ghost bubble-copy" onClick={() => window.kite.focusOverlay()}>Keyboard controls</button>}
     {bubble.settings && <button className="primary" onClick={() => window.kite.openSettings()}>Open settings</button>}
     {bubble.transcript && <button className="ghost bubble-copy" aria-label="Copy reply" onClick={() => { void window.kite.copyText(displayText(bubble.text)); }}>Copy</button>}
+    {!bubble.compact && <div className="bubble-keys">Tab to move · Esc to close</div>}
   </aside>;
 }

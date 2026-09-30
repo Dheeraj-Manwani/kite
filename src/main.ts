@@ -8,7 +8,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { app, dialog, globalShortcut, nativeImage } from 'electron';
 import started from 'electron-squirrel-startup';
-import { createOverlayWindow, getOverlayWindow } from './main/window/overlay';
+import { createOverlayWindow, getOverlayWindow, registerKeyboardControlsShortcut } from './main/window/overlay';
 import { registerOverlayIPC } from './main/ipc/overlay';
 import { startCursorTracking, stopCursorTracking } from './main/cursor';
 import { startVoiceService } from './main/voice/service';
@@ -36,6 +36,8 @@ else {
     if (process.platform === 'win32') app.setAppUserModelId('com.squirrel.kite.Kite');
     registerOverlayIPC();
     createOverlayWindow();
+    // Before the voice service builds the tray, so its menu can show the shortcut.
+    if (!registerKeyboardControlsShortcut()) logEvent('shortcut:unavailable');
     try { stopVoice = startVoiceService(); }
     catch { dialog.showErrorBox('Kite voice could not start', 'Check that the native keyboard and SQLite modules are built for this Electron version. Restart Kite after repairing the installation.'); }
     startCursorTracking();

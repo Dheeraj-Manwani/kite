@@ -14,7 +14,7 @@ const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
-listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
+listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
@@ -50,6 +50,11 @@ app.whenReady().then(async()=>{
     fs.writeFileSync(path.join(temporary,'voice-settings.png'),(await settings.webContents.capturePage()).toPNG());
     const tutorial=await create('onboarding');
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Hello, I’m Kite');
+    // Onboarding is a guided path: no nav, a labeled progress row, and the kite on its stage.
+    assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.window-nav')"),null);
+    assert.match(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding-progress').textContent"),/1 of 7 · Welcome/);
+    assert.ok(await tutorial.webContents.executeJavaScript("!!document.querySelector('.kite-stage .kite-stage-sail')"));
+    assert.equal(await tutorial.webContents.executeJavaScript("[...document.querySelectorAll('.onboarding footer button')].some(b=>b.textContent==='Back')"),false,'Back is hidden on step 1');
     const next=async()=>{await tutorial.webContents.executeJavaScript("[...document.querySelectorAll('.onboarding footer button')].find(b=>b.textContent==='Continue').click()");await delay(100);};
     await next();await next();await next();
     tutorial.webContents.send('app:event',{type:'hotkey:detected'});await delay(100);
@@ -81,6 +86,11 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').getAttribute('aria-hidden')"),'true');
     assert.ok(reports.some(r=>r.event==='started'));
     assert.ok(!reports.some(r=>r.event==='failed'));
+    // A tap that is too short gets a one-line pill that says what to do, not a clipped "?" card.
+    overlay.webContents.send('test:voice',{id:50,type:'ptt:start'});await delay(50);
+    overlay.webContents.send('test:voice',{id:50,type:'ptt:tooShort'});await delay(80);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-reply').textContent"),'Hold a bit longer while you speak.');
+    assert.equal(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.speech-bubble button')].some(b=>/Keyboard controls/.test(b.textContent))"),false);
     overlay.webContents.send('test:voice',{id:2,type:'model:changed',text:'Preview'});
     overlay.webContents.send('test:voice',{id:2,type:'tts:start'});
     overlay.webContents.send('test:voice',{id:2,type:'llm:delta',text:'Streaming without timestamps.'});
@@ -96,6 +106,9 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-summary').textContent"),card.summary);
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card pre').textContent"),/meeting at 5/);
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-countdown').textContent"),/30|29/);
+    // The primary button names the action; the voice hint follows the user's shortcut.
+    assert.deepEqual(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['Paste text','Not now']);
+    assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card').textContent"),/Or hold Ctrl \+ Win and say “yes” or “no”/);
     await overlay.webContents.executeJavaScript("document.querySelector('.approval-buttons button').click()");await delay(100);
     assert.deepEqual(decisions,[{id:card.approvalId,approved:true}]);
     overlay.webContents.send('test:voice',{id:2,type:'tool:decision',approval:card,decision:'approved'});await delay(50);
@@ -230,7 +243,7 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('test:voice',{id:300,type:'model:changed',text:'Preview'});await delay(50);
     const taskCard={approvalId:'task-approval',toolName:'do_task',summary:'Let me do this in Notepad: "Write a haiku"? I\'ll click and type in Notepad only, never move your mouse, ask before anything that sends, deletes, buys, or submits, and stop after 15 steps.',input:{goal:'Write a haiku',app:'Notepad'},expiresAt:Date.now()+30000,dryRun:false};
     overlay.webContents.send('test:voice',{id:300,type:'tool:approvalRequired',approval:taskCard});await delay(100);
-    assert.deepEqual(await js("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['✓ Allow this task','Step by step','✗ Cancel']);
+    assert.deepEqual(await js("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['Allow this task','Step by step','Not now']);
     await js("[...document.querySelectorAll('.approval-buttons button')].find(b=>b.textContent==='Step by step').click()");await delay(100);
     assert.deepEqual(decisions.at(-1),{id:'task-approval',approved:true,scope:'once'});
     overlay.webContents.send('test:voice',{id:300,type:'tool:decision',approval:taskCard,decision:'approved'});overlay.webContents.send('test:voice',{id:300,type:'voice:aborted'});await delay(100);
