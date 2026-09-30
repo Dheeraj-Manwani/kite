@@ -7,7 +7,9 @@ import { createSettingsWindow } from './window/settings';
 import type { openPreferences } from './settings/preferences';
 import { providerLabels } from './ai/catalog';
 export function createKiteTray(preferences: ReturnType<typeof openPreferences>) {
-  const icon = () => nativeImage.createFromPath(path.join(app.getAppPath(), 'assets', appRuntime.updateReady ? 'tray-update.png' : nativeTheme.shouldUseDarkColors ? 'tray-dark.png' : 'tray-light.png'));
+  // The sail, drawn per taskbar theme at 16–32 px (scripts/brand.py): an outline while paused, with a gold dot when an update is ready.
+  const icon = () => nativeImage.createFromPath(path.join(app.getAppPath(), 'assets', 'tray',
+    `${nativeTheme.shouldUseDarkColors ? 'dark' : 'light'}${appRuntime.pausedUntil ? '-paused' : ''}${appRuntime.updateReady ? '-update' : ''}.ico`));
   const tray = new Tray(icon());
   const update = () => {
     tray.setImage(icon());

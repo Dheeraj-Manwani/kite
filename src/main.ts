@@ -20,8 +20,8 @@ if (smoke) {
   app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'kite-packaged-smoke-')));
   app.whenReady().then(() => {
     try { const db = openDatabase(path.join(app.getPath('userData'), 'smoke.db')); db.createConversation('smoke', Date.now()); db.close();
-      for (const icon of ['tray-light.png', 'tray-dark.png', 'tray-update.png']) {
-        if (nativeImage.createFromPath(path.join(app.getAppPath(), 'assets', icon)).isEmpty()) throw new Error('Missing tray asset');
+      for (const theme of ['light', 'dark']) for (const state of ['', '-paused', '-update', '-paused-update']) {
+        if (nativeImage.createFromPath(path.join(app.getAppPath(), 'assets', 'tray', `${theme}${state}.ico`)).isEmpty()) throw new Error('Missing tray asset');
       }
       uIOhook.start(); uIOhook.stop(); process.stdout.write('ok\n'); app.exit(0);
     } catch { process.stderr.write('smoke failed\n'); app.exit(1); }

@@ -12,4 +12,7 @@
 .kite-sail { fill: url(#kite-sail); stroke: var(--kite-halo); stroke-width: 2; stroke-linejoin: round; paint-order: stroke; vector-effect: non-scaling-stroke; }
 .kite-tail rect { fill: var(--kite-tail); stroke: var(--kite-halo); stroke-width: 1; paint-order: stroke; vector-effect: non-scaling-stroke; }
 .kite-sparkle { fill: var(--sun); }
+.sail-mark { flex: none; display: inline-block; vertical-align: -.2em; }
+.sail-mark path { fill: var(--kite-body); }
+.sail-mark rect { fill: var(--kite-shade); }
 .kite-paused .kite-canvas { transition: transform .6s ease-in; transform: translateY(-120vh) rotate(-12deg); }

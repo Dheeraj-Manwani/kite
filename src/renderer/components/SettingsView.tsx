@@ -51,10 +51,10 @@ export function SettingsView({ onboarding = false }: { onboarding?: boolean } = 
         onChange={e => setKeys(s => ({ ...s, [id]: e.target.value }))} placeholder="Paste API key" />}
       <div className="settings-actions">
         {saved && !editing[id] ? <button disabled={busy[id]} onClick={() => setEditing(s => ({ ...s, [id]: true }))}>Replace</button>
-          : <button disabled={busy[id] || !keys[id]?.trim()} onClick={() => { void rowAction(id, 'save'); }}>Save</button>}
+          : <button className="primary" disabled={busy[id] || !keys[id]?.trim()} onClick={() => { void rowAction(id, 'save'); }}>Save</button>}
         <button disabled={!saved || busy[id]} onClick={() => { void rowAction(id, 'test'); }}>Test</button>
         <button disabled={!saved || busy[id]} onClick={() => { void rowAction(id, 'refresh'); }}>{id === 'cartesia' ? 'Refresh voices' : 'Refresh models'}</button>
-        {saved && <button disabled={busy[id]} onClick={() => { void rowAction(id, 'delete'); }}>Remove</button>}
+        {saved && <button className="danger" disabled={busy[id]} onClick={() => { void rowAction(id, 'delete'); }}>Remove</button>}
       </div>
     </div>;
   }

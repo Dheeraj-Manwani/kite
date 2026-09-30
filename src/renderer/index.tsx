@@ -1,6 +1,7 @@
 import { StrictMode, lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KiteRenderer } from './kite/KiteRenderer';
+import { SailMark } from './kite/SailMark';
 import { SpeechBubble } from './voice/SpeechBubble';
 import { runtime } from './kite/runtime';
 import { react } from './voice/runtime';
@@ -38,7 +39,7 @@ function Overlay() {
 function DesktopWindow(){
   const [view,setView]=useState(location.hash.slice(1));
   useEffect(()=>window.kite.onViewChange(v=>{location.hash=v;setView(v);}),[]);
-  return <><nav className="window-nav" aria-label="Kite"><strong>◇ Kite</strong>{(['settings','history','onboarding'] as const).map(v=><button key={v} aria-current={view===v?'page':undefined} onClick={()=>{location.hash=v;setView(v);}}>{v==='onboarding'?'Tutorial':v==='history'?'History':'Settings'}</button>)}</nav>
+  return <><nav className="window-nav" aria-label="Kite"><strong><SailMark size={18} />Kite</strong>{(['settings','history','onboarding'] as const).map(v=><button key={v} aria-current={view===v?'page':undefined} onClick={()=>{location.hash=v;setView(v);}}>{v==='onboarding'?'Tutorial':v==='history'?'History':'Settings'}</button>)}</nav>
     <Suspense fallback={<p className="loading">Opening Kite…</p>}>{view==='history'?<History/>:view==='onboarding'?<Onboarding/>:<Settings/>}</Suspense></>;
 }
 const isWindow=['settings','history','onboarding'].includes(location.hash.slice(1));

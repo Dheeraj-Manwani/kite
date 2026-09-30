@@ -1,4 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { SailMark } from '../kite/SailMark';
 import { boardColors, canvas, elementBounds, elementsAt, fitView, lineHeight, sceneBounds, type BoardAction, type BoardView, type LaidElement, type TextBlock } from '../../shared/board';
 import type { ScreenBounds } from '../../shared/types';
 import { cursorInput } from '../kite/useKiteLoop';
@@ -139,7 +140,7 @@ export function BoardLayer() {
   return <section className={`board ${view.status}`} aria-label={`Whiteboard: ${view.title}`}
     style={{ transform: `translate(${frame.x}px, ${frame.y}px)`, width: frame.width, height: frame.height }}>
     <header onPointerDown={drag('move')}>
-      <span className="board-mark" aria-hidden="true">◇</span><strong className="board-title">{view.title}</strong>
+      <SailMark size={18} /><strong className="board-title">{view.title}</strong>
       <span className="board-progress">{view.status === 'done' ? `${view.total} of ${view.total}` : `${view.beat + 1} of ${view.total}`}</span>
       <div className="board-tools">
         {view.status !== 'done' && <button onClick={() => control(playing ? 'pause' : 'resume')}>{playing ? 'Pause' : 'Resume'}</button>}

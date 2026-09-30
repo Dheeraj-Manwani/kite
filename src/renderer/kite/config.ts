@@ -4,8 +4,8 @@ export const KITE_SCALE = 1;
 /** Mutable dev tuning. The frame loop reads this object without React updates. */
 export const config = {
   stiffness: 420, damping: 38, wagAmplitude: 0.15, wagFrequency: 0.65,
-  // At rest the nose leans back toward the cursor, which sits up and to the left.
-  scale: KITE_SCALE, baseAngle: -11,
+  // At rest the nose leans back toward the cursor, which sits up and to the left; the tail streams away from it.
+  scale: KITE_SCALE, baseAngle: -35,
   offsetX: 32, offsetY: 28,
   bankLimit: 3, bankGain: 0.003,
   rotationStiffness: 160, rotationDamping: 28, stretchGain: 0, maxStretch: 1,

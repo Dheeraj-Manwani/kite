@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { SailMark } from '../kite/SailMark';
 import type { SettingsSnapshot } from '../../shared/types';
 import { hotkeyLabel } from '../../shared/release';
 import { HotkeyRecorder } from './HotkeyRecorder';
@@ -26,7 +27,7 @@ export default function Onboarding() {
     }catch{if(generation === micGeneration.current)setMic('Microphone blocked. Enable desktop microphone access in Windows Privacy & security, then retry.');}
   };
   const finish=async()=>{const result=await window.kite.updateSettings({onboardingComplete:true});if(result.ok)window.kite.openView('settings');};
-  return <main className="onboarding"><div className="onboarding-progress" aria-label={`Step ${step+1} of 7`}>{steps.map((s,i)=><span key={s} className={i<=step?'done':''}/>)}</div><div className="welcome-kite" aria-hidden="true">◇<span>⌁</span></div><h1>{steps[step]}</h1>
+  return <main className="onboarding"><div className="onboarding-progress" aria-label={`Step ${step+1} of 7`}>{steps.map((s,i)=><span key={s} className={i<=step?'done':''}/>)}</div><div className="welcome-kite" aria-hidden="true"><SailMark size={64} /></div><h1>{steps[step]}</h1>
     {step===0&&<><p>I’m a little company beside your cursor. Hold a shortcut to talk, or circle something on your screen and ask about it.</p><p>Your keys stay on this computer. I ask before taking actions or looking at your screen.</p></>}
     {step===1&&<><p>I listen only while you hold your shortcut. This check uses the microphone locally; nothing is sent.</p><svg viewBox="0 0 320 100" role="img" aria-label="Live microphone level"><path ref={meter} d="M30 50H290" stroke="var(--text)" strokeWidth="3" fill="none"/></svg><button onClick={()=>void checkMic()}>Check microphone</button><p role="status">{mic}</p></>}
     {step===2&&<><p>Groq powers speech recognition. Add a model provider for replies; Cartesia adds spoken replies. Test each key below.</p><SettingsView onboarding /></>}
@@ -38,6 +39,6 @@ export default function Onboarding() {
         <polyline points={ink.map(p=>`${p.x},${p.y}`).join(' ')} fill="none" stroke="var(--sun)" strokeWidth="4"/>
       </svg><p role="status">{marked?'That’s it. Marks tell me exactly what “this” means. This practice stays local.':'Circle the chart with your pointer.'}</p></>}
     {step===6&&snapshot&&<><p>You’re ready. Find settings, history, pause, and help in the tray.</p>{(['ttsEnabled','launchOnStartup','reducedMotion'] as const).map(k=><label className="settings-toggle" key={k}><input type="checkbox" checked={snapshot.settings[k]} onChange={e=>void window.kite.updateSettings({[k]:e.target.checked})}/>{k==='ttsEnabled'?'Speak replies (requires Cartesia and a voice)':k==='launchOnStartup'?'Launch on startup':'Reduce motion'}</label>)}</>}
-    <footer><button disabled={step===0} onClick={()=>setStep(s=>s-1)}>Back</button>{step<6?<button onClick={()=>setStep(s=>s+1)}>Continue</button>:<button onClick={()=>void finish()}>Let’s fly</button>}<button className="quiet-button" onClick={()=>void finish()}>Finish later in Settings</button></footer>
+    <footer>{step>0&&<button className="ghost" onClick={()=>setStep(s=>s-1)}>Back</button>}{step<6?<button className="primary" onClick={()=>setStep(s=>s+1)}>Continue</button>:<button className="primary" onClick={()=>void finish()}>Let’s fly</button>}<button className="ghost quiet-button" onClick={()=>void finish()}>Finish later in Settings</button></footer>
   </main>;
 }

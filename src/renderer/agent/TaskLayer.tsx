@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { SailMark } from '../kite/SailMark';
 import { layoutGuide } from '../../shared/guide';
 import type { TaskAction, TaskView } from '../../shared/agent';
 import type { ScreenBounds } from '../../shared/types';
@@ -61,21 +62,21 @@ export function TaskLayer() {
       {paths.map((d, i) => <path key={i} d={d} pathLength={1} className={`pass-${i}`} />)}
     </svg>}
     <section ref={card} className={`task-card ${view.status}`} aria-label="Kite is doing a task" style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
-      <header><span aria-hidden="true">◇</span><strong>{heading[view.status] ?? 'Doing it'} · {view.app}</strong>
+      <header><SailMark /><strong>{heading[view.status] ?? 'Doing it'} · {view.app}</strong>
         <span className="task-progress">Step {view.step} of {view.budget}</span></header>
       <div className="task-meter" aria-hidden="true"><span style={{ width: `${Math.min(100, view.step / view.budget * 100)}%` }} /></div>
       <p className="task-goal">{view.goal}</p>
       {view.action && <p className="task-action"><span>{view.status === 'approval' ? 'Next' : 'Now'}</span>{view.action}</p>}
       {view.message && <p className="task-message" role="status" aria-live="polite">{view.message}</p>}
       {view.status === 'approval' && <div className="task-approval">
-        <button onClick={() => control('allow')}>{view.risk ? 'Allow' : 'Allow once'}</button>
+        <button className="primary" onClick={() => control('allow')}>{view.risk ? 'Allow' : 'Allow once'}</button>
         {view.scope === 'once' && !view.risk && <button onClick={() => control('allowAll')}>Allow the rest</button>}
         <button onClick={() => control('skip')}>Skip</button>
       </div>}
       {view.log.length > 0 && <ol className="task-log">{view.log.map((entry, i) => <li key={i} className={entry.ok ? 'ok' : 'bad'}>{entry.text}</li>)}</ol>}
       {!finished && <div className="task-actions">
         <button onClick={() => control(view.status === 'paused' ? 'resume' : 'pause')}>{view.status === 'paused' ? 'Resume' : 'Pause'}</button>
-        <button className="task-stop" onClick={() => control('stop')}>Stop</button>
+        <button className="task-stop danger" onClick={() => control('stop')}>Stop</button>
       </div>}
       {!finished && <small className="task-hint">Say “stop” or press Esc anytime. Touching your mouse or keyboard pauses me. I never move your pointer.</small>}
     </section>

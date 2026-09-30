@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { SailMark } from '../kite/SailMark';
 import { layoutGuide, type GuideAction, type GuideView } from '../../shared/guide';
 import type { ScreenBounds } from '../../shared/types';
 import { cursorInput } from '../kite/useKiteLoop';
@@ -62,7 +63,7 @@ export function GuideLayer() {
       {paths.map((d, i) => <path key={i} d={d} pathLength={1} className={`pass-${i}`} />)}
     </svg>}
     <section ref={card} className={`guide-card ${view.status}`} aria-label="Show me how" style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
-      <header><span aria-hidden="true">◇</span><strong>Show me how</strong>
+      <header><SailMark /><strong>Show me how</strong>
         <span className="guide-progress">{view.status === 'done' ? `${view.total} of ${view.total}` : `Step ${view.index + 1} of ${view.total}`}</span></header>
       <div className="guide-dots" aria-hidden="true">{Array.from({ length: view.total }, (_, i) =>
         <span key={i} className={view.status === 'done' || i < view.index ? 'done' : i === view.index ? 'current' : ''} />)}</div>
@@ -75,7 +76,7 @@ export function GuideLayer() {
         <button onClick={() => control('back')} disabled={view.index === 0}>Back</button>
         <button onClick={() => control(view.status === 'paused' ? 'resume' : 'pause')}>{view.status === 'paused' ? 'Resume' : 'Pause'}</button>
         <button onClick={() => control('next')}>{last ? 'Finish' : 'Skip'}</button>
-        <button className="guide-stop" onClick={() => control('stop')}>Stop</button>
+        <button className="guide-stop ghost" onClick={() => control('stop')}>Stop</button>
       </div>}
       {view.status !== 'done' && <small className="guide-hint">Say “wait”, “next”, or “stop” anytime. I only point; you click.</small>}
     </section>

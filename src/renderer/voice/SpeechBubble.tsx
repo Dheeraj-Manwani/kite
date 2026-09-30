@@ -150,12 +150,12 @@ export function SpeechBubble() {
     <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <span className="stream-caret">▍</span>}</div>
     {bubble.approval && <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />}
     {bubble.toolStatus && <div className="bubble-tool-status" role="status">{bubble.toolStatus}</div>}
-    {bubble.alarm && <button onClick={() => { voiceRuntime.alarmUntil = 0; voiceRuntime.reaction = null; window.kite.dismissReminder(); update({ ...state.current, alarm: false }); }}>Dismiss reminder</button>}
+    {bubble.alarm && <button className="primary" onClick={() => { voiceRuntime.alarmUntil = 0; voiceRuntime.reaction = null; window.kite.dismissReminder(); update({ ...state.current, alarm: false }); }}>Dismiss reminder</button>}
     {bubble.vision && <div className="bubble-fallback">(looked using {bubble.vision})</div>}
     {bubble.fallback && <div className="bubble-fallback">(answered by {bubble.fallback})</div>}
     {bubble.voiceStatus && <div className="bubble-voice-status">{bubble.voiceStatus}</div>}
-    {bubble.visible && <button className="bubble-copy" onClick={() => window.kite.focusOverlay()}>Keyboard controls</button>}
-    {bubble.settings && <button onClick={() => window.kite.openSettings()}>Open settings</button>}
-    {bubble.transcript && <button className="bubble-copy" aria-label="Copy reply" onClick={() => { void window.kite.copyText(displayText(bubble.text)); }}>Copy</button>}
+    {bubble.visible && <button className="ghost bubble-copy" onClick={() => window.kite.focusOverlay()}>Keyboard controls</button>}
+    {bubble.settings && <button className="primary" onClick={() => window.kite.openSettings()}>Open settings</button>}
+    {bubble.transcript && <button className="ghost bubble-copy" aria-label="Copy reply" onClick={() => { void window.kite.copyText(displayText(bubble.text)); }}>Copy</button>}
   </aside>;
 }
