@@ -204,3 +204,20 @@ test('sensitive approvals say what leaves the PC and which model receives it', (
   const noVision = { ...snapshot, keys: { anthropic: true, moonshot: false } };
   assert.match(approvalRisk({ toolName: 'read_screen', input: {} }, noVision).flow, /your vision model/);
 });
+
+const { dayLabel, duration, markLabel, snippetParts, toolLine } = require('../src/renderer/components/historyText.ts');
+test('history reads in people’s words: days, marks, tools, and matches', () => {
+  const now = new Date(2026, 9, 1, 15, 0).getTime(), hour = 3_600_000;
+  assert.equal(dayLabel(now - hour, now), 'Today');
+  assert.equal(dayLabel(now - 24 * hour, now), 'Yesterday');
+  assert.equal(dayLabel(now - 3 * 24 * hour, now), new Date(now - 3 * 24 * hour).toLocaleDateString(undefined, { weekday: 'long' }));
+  assert.doesNotMatch(dayLabel(now - 40 * 24 * hour, now), /\//, 'older dates are written out, not 9/1/2026');
+  assert.equal(duration(120), '120 ms'); assert.equal(duration(1440), '1.4 s');
+  assert.equal(markLabel(JSON.stringify({ marks: [{ markType: 'enclosure' }, { markType: 'tap' }, { markType: 'enclosure' }] })), 'Circled, Tapped');
+  assert.equal(markLabel(null), null); assert.equal(markLabel('not json'), 'Looked at your screen');
+  assert.equal(toolLine({ tool: 'create_note', decision: 'approved', error: null }), 'Saved a note · you approved');
+  assert.equal(toolLine({ tool: 'open_app', decision: 'denied', error: null }), 'Didn’t open an app · you declined');
+  assert.equal(toolLine({ tool: 'type_text', decision: 'approved', error: 'Focus lost' }), 'Tried to paste text · it didn’t work');
+  assert.equal(toolLine({ tool: 'get_datetime', decision: 'auto', error: null }), 'Checked the time · no approval needed');
+  assert.deepEqual(snippetParts('…the \u0002kite\u0003 flew \u0002high\u0003'), [{ text: '…the ', match: false }, { text: 'kite', match: true }, { text: ' flew ', match: false }, { text: 'high', match: true }]);
+});

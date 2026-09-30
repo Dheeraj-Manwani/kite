@@ -78,9 +78,11 @@ export function openDatabase(filename: string) {
       return db.prepare(`SELECT c.id,c.started_at,
         (SELECT content FROM messages WHERE conversation_id=c.id ORDER BY id LIMIT 1) AS preview,
         (SELECT group_concat(DISTINCT model) FROM messages WHERE conversation_id=c.id AND role='assistant') AS models,
-        (SELECT COUNT(*) FROM messages WHERE conversation_id=c.id) AS count FROM conversations c
+        (SELECT COUNT(*) FROM messages WHERE conversation_id=c.id) AS count
+        ${match ? `, (SELECT snippet(messages_fts, 0, char(2), char(3), '…', 12) FROM messages_fts f JOIN messages m ON m.id=f.rowid
+          WHERE messages_fts MATCH ? AND m.conversation_id=c.id LIMIT 1) AS snippet` : ''} FROM conversations c
         ${match ? 'WHERE c.id IN (SELECT m.conversation_id FROM messages_fts f JOIN messages m ON m.id=f.rowid WHERE messages_fts MATCH ?)' : ''}
-        ORDER BY c.started_at DESC LIMIT 300`).all(...(match ? [match] : [])) as import('../../shared/release').ConversationSummary[];
+        ORDER BY c.started_at DESC LIMIT 300`).all(...(match ? [match, match] : [])) as import('../../shared/release').ConversationSummary[];
     },
     detail(id: string): import('../../shared/release').HistoryDetail {
       return { messages: db.prepare('SELECT * FROM messages WHERE conversation_id=? ORDER BY id').all(id) as import('../../shared/release').HistoryMessage[],

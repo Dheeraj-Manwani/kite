@@ -205,24 +205,56 @@ button:disabled { opacity: .45; cursor: default; }
 .annotation.fading { opacity: 0; }
 .annotation.pulse path { animation: ink-pulse .45s ease-out; }
 @keyframes ink-pulse { 50% { filter: drop-shadow(0 0 10px #fff); } }
-.screen-looking { position: fixed; z-index: 10001; pointer-events: none; color: #f4f5f7; background: #1b212a; border: 1px solid rgb(255 255 255 / .16); border-radius: 20px; padding: 8px 16px; font: 600 var(--fs-body) var(--font-text); }
+.screen-looking { position: fixed; z-index: 10001; pointer-events: none; display: inline-flex; align-items: center; gap: 8px; color: #f4f5f7; background: #1b212a; border: 1px solid rgb(255 255 255 / .16); border-radius: 20px; padding: 8px 16px; font: 600 var(--fs-body) var(--font-text); }
+.screen-looking::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--kite-body); animation: looking-pulse 1.6s ease-in-out infinite; }
+/* The pink dot says it's Kite doing the looking; it pulses, and holds steady under reduced motion (UX-40). */
+@keyframes looking-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .screen-looking::before { animation: none; } }
 /* Content protection already keeps the whiteboard out of Kite's own captures; hiding it too would flash a large panel. */
 .capture-hidden .overlay > :not(.screen-looking):not(.board) { opacity: 0 !important; }
 
 .loading { padding: 36px; }
-.history-view { max-width: 1050px; margin: auto; padding: 30px; }
-.history-toolbar { display: flex; gap: 12px; align-items: center; }
-.history-toolbar input { flex: 1; }
-.history-layout { display: grid; grid-template-columns: minmax(180px, 30%) 1fr; gap: 24px; }
-.history-item { position: relative; display: block; text-align: left; width: 100%; padding: 14px; margin: 8px 0; background: var(--surface); border: 1px solid var(--border); color: var(--text); }
-.history-item small, .history-message small { display: block; margin-top: 8px; }
+/* History (UX-70 to UX-73): conversations on the left, one conversation as a chat on the right. */
+.history-view { max-width: 1000px; padding: 24px 32px 48px; }
+.history-view h1 { margin: 4px 0 6px; }
+.history-layout { display: grid; grid-template-columns: minmax(170px, 34%) minmax(0, 1fr); gap: 20px; align-items: start; margin-top: 16px; }
+.history-list { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.search { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; padding: 0 10px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); color: var(--text-muted); font-weight: 400; }
+.search:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
+.search input { flex: 1; min-width: 0; margin: 0; padding: 7px 0; border: 0; background: transparent; }
+.search input:focus-visible { outline: none; }
+.history-day { margin: 12px 0 4px; color: var(--text-muted); font: 600 var(--fs-caption) var(--font-text); }
+.history-item { position: relative; display: block; width: 100%; margin: 0; padding: 8px 10px 8px 14px; border-color: transparent; border-radius: 4px; background: transparent; color: var(--text); text-align: left; }
 .history-item.selected { background: var(--surface-subtle); }
 .history-item.selected::before { content: ''; position: absolute; left: 4px; top: 30%; bottom: 30%; width: 3px; border-radius: 2px; background: var(--accent); }
-.history-item strong { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.history-message { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 18px; }
-.history-message p { white-space: pre-wrap; overflow-wrap: anywhere; }
-.history-message pre { white-space: pre-wrap; overflow-wrap: anywhere; }
-.annotation-badge { display: inline-block; background: color-mix(in srgb, var(--sun) 24%, transparent); border-radius: 12px; padding: 4px 10px; color: var(--text); font-size: var(--fs-caption); }
+.history-item strong, .history-item small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.history-item small { margin-top: 2px; font-size: var(--fs-caption); color: var(--text-muted); }
+.history-snippet mark { border-radius: 2px; background: color-mix(in srgb, var(--sun) 35%, transparent); color: var(--text); }
+.history-clear { align-self: flex-start; margin-top: 12px; }
+.history-none { color: var(--text-muted); }
+.history-empty { display: grid; justify-items: center; gap: 12px; padding: 64px 20px; text-align: center; }
+.history-empty p { margin: 0; color: var(--text); font-size: var(--fs-lead); }
+.history-conversation { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.conversation-head { display: flex; align-items: center; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); color: var(--text-muted); }
+.conversation-head span { margin-right: auto; }
+.history-view .icon-button { padding: 6px; border-color: transparent; line-height: 0; color: var(--text-muted); }
+.history-view .icon-button.danger { color: var(--danger); }
+/* Your messages sit on a tint to the right; Kite's sit on the left beside its sail (UX-70). */
+.history-message { display: flex; gap: 10px; }
+.history-message.from-user { justify-content: flex-end; }
+.history-message p { margin: 0; color: var(--text); font-size: var(--fs-body); line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.from-user .chat-body { max-width: 85%; padding: 8px 12px; border-radius: 8px; background: var(--surface-subtle); }
+.from-kite .chat-body { flex: 1; min-width: 0; }
+.chat-avatar { flex: none; display: grid; place-items: center; width: 28px; height: 28px; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); }
+.chat-details { margin-top: 6px; font-size: var(--fs-caption); color: var(--text-muted); }
+.chat-details > summary { cursor: pointer; }
+.history-message .chat-meta { margin: 6px 0 0; font-size: var(--fs-caption); color: var(--text-muted); }
+.tool-line { margin-top: 6px; }
+.tool-line summary { color: var(--text); cursor: pointer; }
+.history-message .tool-line p { margin: 4px 0; font-size: var(--fs-caption); color: var(--text-muted); }
+.tool-line pre { padding: 8px; border-radius: 4px; background: var(--surface-subtle); font: var(--fs-caption) var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+.annotation-badge { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--sun) 24%, transparent); color: var(--text); font-size: var(--fs-caption); }
+@media (max-width: 560px) { .history-layout { grid-template-columns: 1fr; } .history-view { padding: 20px 16px 40px; } }
 /* Onboarding (UX-60): the stage carries the character (kite.css); the step below it is a plain form. */
 .onboarding { min-height: 100%; }
 .kite-stage { position: relative; overflow: hidden; background: var(--stage); border-bottom: 1px solid var(--border); transition: height .3s ease; }
@@ -236,6 +268,22 @@ button:disabled { opacity: .45; cursor: default; }
 .onboarding footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 30px; }
 .onboarding footer .spacer { flex: 1; }
 .onboarding .settings-view { padding: 0; }
+/* Onboarding steps (UX-61 to UX-63). */
+.keys-step { margin-top: 8px; }
+.brain-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.brain-card { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text); text-align: left; }
+.brain-card small { font-size: var(--fs-caption); color: var(--text-muted); }
+.brain-card.chosen { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.big-keys { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+.big-key { min-width: 64px; padding: 10px 16px; border: 1px solid var(--border); border-bottom-width: 3px; border-radius: 8px; background: var(--surface); color: var(--text-muted); font: 600 var(--fs-title) var(--font-display); text-align: center; transition: background .12s, color .12s, transform .12s; }
+.big-key.lit { border-color: var(--ink); background: var(--ink); color: var(--on-ink); transform: translateY(1px); }
+.big-check { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+.big-check .icon { width: 20px; height: 20px; }
+.onboarding-body > .step-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--text-muted); }
+.step-status small { flex-basis: 100%; font-size: var(--fs-caption); color: var(--text-muted); }
+.onboarding-body > .step-status.heard { color: var(--success); font-weight: 600; }
+.onboarding-body > .step-status.blocked, .onboarding-body > .step-status.failed { color: var(--danger); }
+.onboarding-body > .step-missing { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--text-muted); }
 button.link { background: transparent; border-color: transparent; color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; padding-inline: 6px; }
 button.link:where(:hover:not(:disabled)) { background: transparent; color: var(--text); }
 .tutorial-canvas { width: 100%; touch-action: none; cursor: crosshair; }
@@ -243,7 +291,7 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
 .hotkey-recorder small { display: block; margin: 10px 0; color: var(--text-muted); }
 .app-notice { position: fixed; right: 24px; bottom: 24px; padding: 12px 20px; background: var(--surface-overlay); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-overlay); border-radius: 14px; max-width: 350px; pointer-events: none; }
 .reduce-motion *, .reduce-motion *::before { animation: none !important; transition: none !important; }
-@media (max-width: 650px) { .history-layout { grid-template-columns: 1fr; } .history-toolbar { flex-wrap: wrap; } }
+
 /* Guide mode: a marker ring on the control and a step card that never covers it. */
 .guide-layer { position: fixed; inset: 0; pointer-events: none; }
 .guide-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }

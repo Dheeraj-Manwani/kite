@@ -1,11 +1,12 @@
-import { useEffect, useState, type MouseEvent, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { HotkeyRecorder } from './HotkeyRecorder';
 import { Keycaps } from './Keycaps';
 import { sections, type Section } from './sections';
 import { configurableTools, type ConfigurableTool } from '../../shared/release';
 import { routeVision } from '../../shared/vision';
-import type { AboutInfo, AppSettings, ModelSelection, OperationResult, ProviderId, SecretId, SettingsSnapshot } from '../../shared/types';
-import { CheckIcon, ExternalIcon, LockIcon, MoreIcon } from '../icons';
+import type { AboutInfo, AppSettings, ModelSelection, OperationResult, ProviderId, SettingsSnapshot } from '../../shared/types';
+import { LockIcon } from '../icons';
+import { ProviderRow } from './ProviderRow';
 
 // Groq comes first: without it Kite can't hear you.
 const providers: { id: ProviderId; label: string; badge?: string }[] = [
@@ -16,13 +17,6 @@ const providers: { id: ProviderId; label: string; badge?: string }[] = [
 const toolLabels: Record<ConfigurableTool, string> = { open_app: 'Open an app', web_search: 'Search the web', get_datetime: 'Check the date and time', list_reminders: 'Read your reminders' };
 const askByDefault = (name: ConfigurableTool) => !['get_datetime', 'list_reminders'].includes(name);
 const alwaysAsks = ['Type or paste into an app', 'Read or change your clipboard', 'Look at your screen', 'Start a guide', 'Do a task in an app'];
-const checkMessages: Record<string, string> = {
-  'invalid key': 'That key didn’t work. Check it and try again.',
-  'no credit / rate-limited': 'The provider is rate-limiting this key, or the account has no credit.',
-  'model unavailable': 'This key can’t reach the provider’s models.',
-  'network error': 'Couldn’t reach the provider. Check your connection and try again.',
-};
-const CHECKING = 'Checking…';
 const encode = (m: ModelSelection) => `${m.provider}:${m.id}`;
 const decode = (s: string): ModelSelection => ({ provider: s.slice(0, s.indexOf(':')) as ProviderId, id: s.slice(s.indexOf(':') + 1) });
 
@@ -37,16 +31,10 @@ function SwitchRow({ label, description, checked, disabled, change }: { label: s
   return <label className="setting-row switch-row"><span className="row-text"><span className="row-label">{label}</span>{description && <small>{description}</small>}</span>
     <input type="checkbox" role="switch" className="switch" checked={checked} disabled={disabled} onChange={e => change(e.target.checked)} /></label>;
 }
-const closeMenu = (event: MouseEvent<HTMLElement>) => { event.currentTarget.closest('details')?.removeAttribute('open'); };
 
-/** One section of Settings at a time (UX-50). In onboarding, only the key rows. */
-export function SettingsView({ section = 'models', onboarding = false }: { section?: Section; onboarding?: boolean }) {
+/** One section of Settings at a time (UX-50). */
+export function SettingsView({ section = 'general' }: { section?: Section }) {
   const [snapshot, setSnapshot] = useState<SettingsSnapshot>();
-  const [keys, setKeys] = useState<Partial<Record<SecretId, string>>>({});
-  const [editing, setEditing] = useState<Partial<Record<SecretId, boolean>>>({});
-  // Per-provider result of the last check: '' when it passed, CHECKING while running, otherwise what went wrong.
-  const [checks, setChecks] = useState<Partial<Record<SecretId, string>>>({});
-  const [busy, setBusy] = useState<Partial<Record<SecretId, boolean>>>({});
   const [toast, setToast] = useState(''), [loadError, setLoadError] = useState(''), [about, setAbout] = useState<AboutInfo | null>(null);
   const [customProvider, setCustomProvider] = useState<ProviderId>('moonshot'), [customId, setCustomId] = useState('');
   useEffect(() => {
@@ -58,68 +46,11 @@ export function SettingsView({ section = 'models', onboarding = false }: { secti
   useEffect(() => { if (section === 'about') void window.kite.getAbout().then(setAbout); }, [section]);
   // Global results are a short toast; results for one provider stay in its row (UX-53).
   useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 3500); return () => clearTimeout(timer); }, [toast]);
-  useEffect(() => {
-    const close = (e: PointerEvent) => document.querySelectorAll('details.overflow[open]').forEach(menu => { if (!menu.contains(e.target as Node)) menu.removeAttribute('open'); });
-    document.addEventListener('pointerdown', close);
-    return () => document.removeEventListener('pointerdown', close);
-  }, []);
   async function operation(fn: () => Promise<OperationResult>, success?: string) {
     try { const result = await fn(); if (!result.ok) setToast(result.error ?? 'Couldn’t complete that.'); else if (success) setToast(success); }
     catch { setToast('Couldn’t reach Kite. Please restart the app.'); }
   }
   const update = (patch: Partial<AppSettings>) => { void operation(() => window.kite.updateSettings(patch)); };
-  const setCheck = (id: SecretId, value: string) => setChecks(c => ({ ...c, [id]: value }));
-  const refresh = (id: SecretId) => id === 'cartesia' ? window.kite.refreshVoices() : window.kite.refreshModels(id);
-  async function check(id: SecretId, alsoRefresh: boolean) {
-    setCheck(id, CHECKING);
-    try {
-      const { status } = await window.kite.testKey(id);
-      if (status !== 'ok') { setCheck(id, checkMessages[status] ?? 'The check failed. Try again.'); return; }
-      if (alsoRefresh) { const result = await refresh(id); if (!result.ok) { setCheck(id, result.error ?? 'Connected, but the model list didn’t load.'); return; } }
-      setCheck(id, '');
-    } catch { setCheck(id, 'Couldn’t reach Kite. Please restart the app.'); }
-  }
-  // Connect saves, tests, and loads the model list in one step (UX-51).
-  async function connect(id: SecretId) {
-    setBusy(b => ({ ...b, [id]: true }));
-    try {
-      const saved = await window.kite.setKey(id, keys[id] ?? '');
-      if (!saved.ok) { setCheck(id, saved.error ?? 'Couldn’t save that key.'); return; }
-      setKeys(k => ({ ...k, [id]: '' })); setEditing(e => ({ ...e, [id]: false }));
-      await check(id, true);
-    } catch { setCheck(id, 'Couldn’t reach Kite. Please restart the app.'); }
-    finally { setBusy(b => ({ ...b, [id]: false })); }
-  }
-  async function remove(id: SecretId) { await operation(() => window.kite.deleteKey(id), 'Key removed.'); setCheck(id, ''); }
-
-  function providerRow(id: SecretId, label: string, badge?: string) {
-    if (!snapshot) return null;
-    const saved = snapshot.keys[id], open = !saved || editing[id], state = checks[id] ?? '';
-    const working = !!busy[id] || state === CHECKING, problem = state && state !== CHECKING ? state : '';
-    const count = id === 'cartesia' ? snapshot.voices.length : snapshot.models.filter(m => m.provider === id).length;
-    const things = id === 'cartesia' ? count === 1 ? 'voice' : 'voices' : count === 1 ? 'model' : 'models';
-    return <div className={`provider-row${open ? '' : ' connected'}`} key={id}>
-      <div className="provider-head"><strong>{label}</strong>{badge && <span className="tag">{badge}</span>}
-        {open ? <button className="link external" onClick={() => window.kite.openKeyPage(id)}>Get a key<ExternalIcon /></button> : <>
-          <span className={`provider-state${problem ? ' problem' : ''}`} role="status">
-            {working ? CHECKING : problem ? 'Key saved · needs attention' : <><CheckIcon />Connected · {count} {things}</>}</span>
-          <details className="overflow"><summary aria-label={`More for ${label}`}><MoreIcon /></summary>
-            <div className="menu" onClick={closeMenu}>
-              <button className="ghost" onClick={() => { void check(id, false); }}>Check connection</button>
-              <button className="ghost" onClick={() => { void operation(() => refresh(id), id === 'cartesia' ? 'Voices refreshed.' : 'Models refreshed.'); }}>{id === 'cartesia' ? 'Refresh voices' : 'Refresh models'}</button>
-              <button className="ghost" onClick={() => setEditing(e => ({ ...e, [id]: true }))}>Replace key</button>
-              <button className="ghost danger" onClick={() => { void remove(id); }}>Remove key</button>
-            </div></details></>}
-      </div>
-      {open && <div className="provider-connect">
-        <input aria-label={`${label} API key`} type="password" autoComplete="off" spellCheck={false} value={keys[id] ?? ''} placeholder="Paste API key"
-          onChange={e => setKeys(s => ({ ...s, [id]: e.target.value }))} onKeyDown={e => { if (e.key === 'Enter' && keys[id]?.trim() && !working) void connect(id); }} />
-        <button className="primary" disabled={working || !keys[id]?.trim()} onClick={() => { void connect(id); }}>{working ? 'Connecting…' : 'Connect'}</button>
-        {editing[id] && <button className="ghost" onClick={() => setEditing(e => ({ ...e, [id]: false }))}>Cancel</button>}
-      </div>}
-      {problem && <small className="field-error" role="alert">{problem}</small>}
-    </div>;
-  }
   function picker(label: string, value: ModelSelection, change: (model: ModelSelection) => void, options: { visionOnly?: boolean; disabled?: boolean } = {}) {
     if (!snapshot) return null;
     const models = snapshot.models.filter(m => snapshot.keys[m.provider]);
@@ -134,17 +65,13 @@ export function SettingsView({ section = 'models', onboarding = false }: { secti
   }
   const title = sections.find(s => s.id === section)?.label ?? 'Settings';
   const shell = (content: ReactNode) => <main className="settings-view">
-    {!onboarding && <h1>{title}</h1>}
+    <h1>{title}</h1>
     {loadError && <p className="field-error" role="alert">{loadError}</p>}
     {content}
     {toast && <div className="toast" role="status">{toast}</div>}
   </main>;
   if (!snapshot) return shell(!loadError && <p className="loading">Loading…</p>);
   const s = snapshot.settings, hotkey = s.hotkey ?? ['Control', 'Meta'];
-  if (onboarding) return shell(<>
-    <Group title="Providers">{providers.map(p => providerRow(p.id, p.label, p.badge))}</Group>
-    <Group title="Voice">{providerRow('cartesia', 'Cartesia', 'Optional')}</Group>
-  </>);
   const mainModel = snapshot.models.find(m => encode(m) === encode(s.model));
   let visionName = 'your vision model';
   try { if (mainModel) visionName = routeVision(mainModel, s.visionModel, snapshot.models, p => !!snapshot.keys[p]).label; } catch { /* none configured yet */ }
@@ -157,7 +84,7 @@ export function SettingsView({ section = 'models', onboarding = false }: { secti
     </Group>);
     case 'models': return shell(<>
       <Group title="Providers" hint="Groq turns your voice into text. Add at least one more provider for answers. Keys stay encrypted on this computer.">
-        {providers.map(p => providerRow(p.id, p.label, p.badge))}</Group>
+        {providers.map(p => <ProviderRow key={p.id} id={p.id} label={p.label} badge={p.badge} snapshot={snapshot} toast={setToast} />)}</Group>
       <Group title="Models">
         <Row label="Main model" description="Answers every question.">{picker('Main model', s.model, model => update({ model }))}</Row>
         <SwitchRow label="Retry on a backup model" description="Only after a connection error, server error, or rate limit, before the first word arrives."
@@ -174,7 +101,7 @@ export function SettingsView({ section = 'models', onboarding = false }: { secti
       </details>
     </>);
     case 'voice': return shell(<>
-      <Group title="Cartesia" hint="Optional. Gives Kite a voice; without it, answers are text only.">{providerRow('cartesia', 'Cartesia')}</Group>
+      <Group title="Cartesia" hint="Optional. Gives Kite a voice; without it, answers are text only."><ProviderRow id="cartesia" label="Cartesia" snapshot={snapshot} toast={setToast} /></Group>
       <Group>
         <SwitchRow label="Speak replies" checked={s.ttsEnabled} change={v => update({ ttsEnabled: v })} />
         <Row label="Voice"><select aria-label="Voice" value={s.voiceId} onChange={e => update({ voiceId: e.target.value })}>

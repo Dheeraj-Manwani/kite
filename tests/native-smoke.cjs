@@ -40,6 +40,8 @@ app.whenReady().then(() => {
     db.attach(row,'fixture.jpg');
     assert.equal(db.recent().at(-1).capture_ms,35);assert.match(db.recent().at(-1).annotation_json,/tap/);
     assert.equal(db.listConversations('hello').length,1);
+    assert.match(db.listConversations('hello')[0].snippet,/\u0002hello\u0003/i,'search results carry the matched words for highlighting');
+    assert.equal(db.listConversations('')[0].snippet,undefined);
     assert.equal(db.listConversations('" OR injection').length,0);
     assert.ok(db.detail('test').messages.length>=3);
     assert.equal(db.voiceStats().voiceMedianMs, null); // interrupted voice sample is excluded

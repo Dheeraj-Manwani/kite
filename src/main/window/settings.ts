@@ -12,7 +12,8 @@ export function createSettingsWindow(view: 'settings' | 'history' | 'onboarding'
     return settingsWindow;
   }
   const win = new BrowserWindow({
-    width: 700, height: 860, minWidth: 400, minHeight: 560,
+    // Wide enough for the sidebar beside a two-column History (UX-50, UX-57).
+    width: 820, height: 860, minWidth: 480, minHeight: 560,
     title: 'Kite settings', autoHideMenuBar: true, show: false,
     // Matches --bg in tokens.css, so the window never flashes the wrong color while it loads.
     backgroundColor: nativeTheme.shouldUseDarkColors ? '#1c1f24' : '#f4f5f7',

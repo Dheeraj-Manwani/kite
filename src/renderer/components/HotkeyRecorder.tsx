@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { hotkeyLabel, hotkeyWarning, modifiers, validateHotkey, type Modifier } from '../../shared/release';
 import { Keycaps } from './Keycaps';
-export function HotkeyRecorder({ value, change, suppressVoice = false }: { value: Modifier[]; change(value: Modifier[]): void; suppressVoice?: boolean }) {
+/** `compact` hides the current-shortcut line where the page already shows it, as onboarding does. */
+export function HotkeyRecorder({ value, change, suppressVoice = false, compact = false }: { value: Modifier[]; change(value: Modifier[]): void; suppressVoice?: boolean; compact?: boolean }) {
   const [recording, setRecording] = useState(false), [candidate, setCandidate] = useState<Modifier[]>([]), [error, setError] = useState('');
   useEffect(()=>{window.kite.setHotkeyRecording(recording || suppressVoice);return()=>window.kite.setHotkeyRecording(false);},[recording, suppressVoice]);
-  return <div className="hotkey-recorder"><p className="hotkey-current">Push to talk <Keycaps keys={value} /></p><button
+  return <div className="hotkey-recorder">{!compact && <p className="hotkey-current">Push to talk <Keycaps keys={value} /></p>}<button
     onClick={e => { setRecording(true); setCandidate([]); setError(''); e.currentTarget.focus(); }}
     onBlur={() => setRecording(false)} onKeyDown={e => {
       if (!recording) return; e.preventDefault();

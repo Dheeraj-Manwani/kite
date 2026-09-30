@@ -69,8 +69,21 @@ app.whenReady().then(async()=>{
     assert.ok(await tutorial.webContents.executeJavaScript("!!document.querySelector('.kite-stage .kite-stage-sail')"));
     assert.equal(await tutorial.webContents.executeJavaScript("[...document.querySelectorAll('.onboarding footer button')].some(b=>b.textContent==='Back')"),false,'Back is hidden on step 1');
     const next=async()=>{await tutorial.webContents.executeJavaScript("[...document.querySelectorAll('.onboarding footer button')].find(b=>b.textContent==='Continue').click()");await delay(100);};
-    await next();await next();await next();
+    const tjs=code=>tutorial.webContents.executeJavaScript(code);
+    // The microphone check starts by itself; with access denied it says how to allow it (UX-62).
+    await next();await delay(200);
+    assert.match(await tjs("document.querySelector('.step-status.blocked').textContent"),/Privacy & security/);
+    assert.ok(await tjs("[...document.querySelectorAll('.onboarding button')].some(b=>b.textContent==='Try again')"));
+    // Keys: Groq, a choice of brain, and an optional voice, with nothing missing here (UX-61).
+    await next();
+    assert.equal(await tjs("document.querySelectorAll('.brain-card').length"),4);
+    assert.equal(await tjs("document.querySelectorAll('.brain-card.chosen').length"),1);
+    assert.equal(await tjs("document.querySelector('.step-missing')"),null);
+    // The shortcut shows as big keycaps and gets a check once it lands (UX-63).
+    await next();
+    assert.deepEqual(await tjs("[...document.querySelectorAll('.big-key')].map(k=>k.textContent)"),['Ctrl','Win']);
     tutorial.webContents.send('app:event',{type:'hotkey:detected'});await delay(100);
+    assert.ok(await tjs("!!document.querySelector('.big-check')"));
     assert.match(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding').textContent"),/Nice — I felt that/);
     await next();await next();await next();
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Make yourself at home');
@@ -78,9 +91,12 @@ app.whenReady().then(async()=>{
     tutorial.destroy();
     const history=await create('history');await delay(200);
     await history.webContents.executeJavaScript("document.querySelector('.history-item').click()");await delay(100);
-    assert.match(await history.webContents.executeJavaScript("document.querySelector('.annotation-badge').textContent"),/enclosure/);
-    assert.match(await history.webContents.executeJavaScript("document.querySelector('.history-message details summary').textContent"),/create_note · approved/);
-    await history.webContents.executeJavaScript("[...document.querySelectorAll('button')].find(b=>b.textContent==='Export Markdown').click()");await delay(60);
+    // Friendly day groups, human labels for marks and tools, and icon actions (UX-70 to UX-73).
+    assert.equal(await history.webContents.executeJavaScript("document.querySelector('.history-day').textContent"),'Today');
+    assert.equal(await history.webContents.executeJavaScript("document.querySelector('.annotation-badge').textContent"),'Circled');
+    assert.equal(await history.webContents.executeJavaScript("document.querySelector('.tool-line summary').textContent"),'Saved a note · you approved');
+    assert.equal(await history.webContents.executeJavaScript("document.body.textContent.includes('create_note')"),false);
+    await history.webContents.executeJavaScript("document.querySelector('[aria-label=\"Export as Markdown\"]').click()");await delay(60);
     assert.match(await history.webContents.executeJavaScript("document.querySelector('.history-view [role=status]').textContent"),/Exported/);
     fs.writeFileSync(path.join(temporary,'history.png'),(await history.webContents.capturePage()).toPNG());history.destroy();
     const overlay=await create('overlay');
