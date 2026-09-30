@@ -1,0 +1,47 @@
+/* UI tokens (docs/ui-ux-improvements.md UX-01, UX-02). The kite's own colors live in kite.css.
+   Pink (--accent) appears only on the focus ring, the selected-item pill, and the current progress step. */
+:root {
+  --bg: #f4f5f7;
+  --surface: #ffffff;
+  --surface-subtle: #eceef1;
+  --border: #dfe2e7;
+  --text: #1b212a;
+  --text-muted: #5a6472;
+  --ink: #1b212a;
+  --on-ink: #ffffff;
+  --accent: #c8174b;
+  --sun: #e9a43f;
+  --success: #0f7b0f;
+  --danger: #c42b1c;
+  --on-danger: #ffffff;
+  --stage: #1b212a;
+  --surface-overlay: color-mix(in srgb, var(--surface) 96%, transparent);
+  --shadow-overlay: 0 6px 24px rgb(27 33 42 / .14), 0 1px 3px rgb(27 33 42 / .1);
+
+  --font-text: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --font-display: 'Segoe UI Variable Display', 'Segoe UI', system-ui, sans-serif;
+  --font-mono: Consolas, 'Cascadia Mono', monospace;
+  --fs-caption: 12px;
+  --fs-body: 13px;
+  --fs-lead: 15px;
+  --fs-title: 20px;
+  --fs-display: 28px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1f24;
+    --surface: #25292f;
+    --surface-subtle: #2e333a;
+    --border: #3a3f47;
+    --text: #eceef1;
+    --text-muted: #a0a8b3;
+    --ink: #eceef1;
+    --on-ink: #1b212a;
+    --accent: #ff6f91;
+    --success: #6ccb5f;
+    --danger: #ff7a64;
+    --on-danger: #1b212a;
+    --stage: #111418;
+    --shadow-overlay: 0 8px 28px rgb(0 0 0 / .45), 0 1px 3px rgb(0 0 0 / .3);
+  }
+}

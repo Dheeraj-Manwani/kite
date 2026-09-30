@@ -1,0 +1,15 @@
+/* The kite itself (docs/personality.md §2). Sail pink is a rose (346°): never red, never coral.
+   The 1 px halo keeps the sail legible on any desktop: ink on light systems, a light rim on dark ones. */
+:root {
+  --kite-body: #ff426f;
+  --kite-shade: #e92c59;
+  --kite-tail: var(--kite-shade);
+  --kite-halo: rgb(27 33 42 / .45);
+}
+@media (prefers-color-scheme: dark) { :root { --kite-halo: rgb(255 255 255 / .35); } }
+
+.kite-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
+.kite-sail { fill: url(#kite-sail); stroke: var(--kite-halo); stroke-width: 2; stroke-linejoin: round; paint-order: stroke; vector-effect: non-scaling-stroke; }
+.kite-tail rect { fill: var(--kite-tail); stroke: var(--kite-halo); stroke-width: 1; paint-order: stroke; vector-effect: non-scaling-stroke; }
+.kite-sparkle { fill: var(--sun); }
+.kite-paused .kite-canvas { transition: transform .6s ease-in; transform: translateY(-120vh) rotate(-12deg); }

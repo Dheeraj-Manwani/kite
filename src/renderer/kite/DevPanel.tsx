@@ -13,6 +13,14 @@ const sliders = [
   { key: 'wagAmplitude', label: 'Wag amplitude', min: 0, max: 6, step: 0.1 },
   { key: 'wagFrequency', label: 'Wag frequency', min: 0.2, max: 8, step: 0.1 },
 ] as const;
+// The sail's shape dials (docs/personality.md §5.1); 1 is the rest pose.
+const sailSliders = [
+  { key: 'nose', label: 'Sail nose', min: 0.7, max: 1.4, step: 0.01 },
+  { key: 'spread', label: 'Sail spread', min: 0.7, max: 1.3, step: 0.01 },
+  { key: 'billow', label: 'Sail billow', min: 0, max: 2.5, step: 0.05 },
+  { key: 'slack', label: 'Sail slack', min: 0, max: 2.5, step: 0.05 },
+  { key: 'flutter', label: 'Sail flutter', min: -2, max: 2, step: 0.1 },
+] as const;
 
 export default function DevPanel() {
   const [calls, setCalls] = useState<ToolAudit[]>([]), [dryRun, setDryRun] = useState(false);
@@ -87,6 +95,10 @@ export default function DevPanel() {
     {sliders.map(({ key, label, min, max, step }) => <label key={key}>{label}
       <input type="range" min={min} max={max} step={step} defaultValue={config[key]}
         onChange={event => { config[key] = Number(event.target.value); }} />
+    </label>)}
+    {sailSliders.map(({ key, label, min, max, step }) => <label key={key}>{label}
+      <input type="range" min={min} max={max} step={step} defaultValue={config.sail[key]}
+        onChange={event => { config.sail[key] = Number(event.target.value); }} />
     </label>)}
     <label className="dev-check"><input type="checkbox" defaultChecked={config.eyes} onChange={event => { config.eyes = event.target.checked; }} /> Eyes + blink</label>
     <label className="dev-check"><input type="checkbox" defaultChecked={runtime.fakeLevels} onChange={event => { runtime.fakeLevels = event.target.checked; }} /> Simulated audio / speech levels</label>

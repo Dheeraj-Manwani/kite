@@ -32,7 +32,8 @@ export function classifyGuideCommand(text: string): GuideCommand {
 
 export interface GuideLayout { ring: ScreenBounds; anchor: CursorPoint; aim: CursorPoint; card: CursorPoint }
 // Distance from the ring to the kite's centre; its half-extent for a comfortable fit, then its body alone.
-const kiteReach = 30, wholeReach = 24, bodyReach = 16;
+// Sized for the sail: its nose is 11 px from the centre, so the tip stops about 9 px short of the ring.
+const kiteReach = 20, wholeReach = 20, bodyReach = 14;
 const overlaps = (a: ScreenBounds, b: ScreenBounds) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 const inside = (inner: ScreenBounds, outer: ScreenBounds) => inner.x >= outer.x && inner.y >= outer.y && inner.x + inner.width <= outer.x + outer.width && inner.y + inner.height <= outer.y + outer.height;
 const clampTo = (value: number, min: number, max: number) => Math.max(min, Math.min(Math.max(min, max), value));

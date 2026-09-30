@@ -87,3 +87,20 @@ test('reduced motion prevents gusts and dizzy spins', () => {
     assert.equal(result.state.name, 'content');
   }
 });
+
+const { restSail, sailPath, sameSail } = require('../src/renderer/kite/sail.ts');
+test('sail path is one closed, mirrored shape whose dials bend it', () => {
+  const rest = sailPath(restSail);
+  assert.match(rest, /^M[^MZ]+Z$/, 'one closed subpath');
+  assert.equal(rest.match(/Q/g).length, 5, 'two leading edges, two scallops, and the soft nose');
+  const points = rest.slice(1, -1).split(/[MQ]/).flatMap(part => part.trim().split(/[\s]+/).map(Number));
+  const xs = points.filter((_, i) => i % 2 === 0), ys = points.filter((_, i) => i % 2 === 1);
+  assert.ok(Math.abs(Math.min(...xs) + Math.max(...xs)) < 1e-9, 'mirrored about the nose axis');
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 25 && Math.max(...xs) - Math.min(...xs) < 28, 'about 26 px wide');
+  assert.ok(Math.min(...ys) < -10.5 && Math.max(...ys) <= 10.3, 'the nose leads on -y and the notch trails');
+  assert.match(rest, /13\.3 8\.6Q.* -13\.3 8\.6Q/, 'wingtips at rest');
+  assert.match(sailPath({ ...restSail, spread: 1.2 }), /15\.96 8\.6/, 'spread moves the wingtips');
+  assert.match(sailPath({ ...restSail, nose: 1.2 }), /Q0 -13\.32 /, 'nose extends the tip');
+  assert.match(sailPath({ ...restSail, billow: 0 }), /Q6\.65 -1\.25 13\.3 8\.6/, 'no billow gives straight leading edges');
+  assert.ok(sameSail(restSail, { ...restSail }) && !sameSail(restSail, { ...restSail, flutter: 0.5 }));
+});

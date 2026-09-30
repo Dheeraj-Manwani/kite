@@ -4,6 +4,8 @@ import { KiteRenderer } from './kite/KiteRenderer';
 import { SpeechBubble } from './voice/SpeechBubble';
 import { runtime } from './kite/runtime';
 import { react } from './voice/runtime';
+import './tokens.css';
+import './kite.css';
 import './styles.css';
 import './logging';
 const Annotation = lazy(() => import('./vision/Annotation').then(m => ({ default: m.Annotation })));

@@ -1,12 +1,17 @@
+import { restSail } from './sail';
+
 export const KITE_SCALE = 1;
 /** Mutable dev tuning. The frame loop reads this object without React updates. */
 export const config = {
   stiffness: 420, damping: 38, wagAmplitude: 0.15, wagFrequency: 0.65,
-  scale: KITE_SCALE, bodyHeight: 22, bodyWidth: 26, baseAngle: 0,
+  // At rest the nose leans back toward the cursor, which sits up and to the left.
+  scale: KITE_SCALE, baseAngle: -11,
   offsetX: 32, offsetY: 28,
   bankLimit: 3, bankGain: 0.003,
   rotationStiffness: 160, rotationDamping: 28, stretchGain: 0, maxStretch: 1,
-  tailDots: [{ x: 1.2, y: 13, size: 2.3 }, { x: 3.2, y: 17, size: 1.8 }],
+  sail: { ...restSail },
+  // Three dots hanging from the trailing notch, in the sail's local frame.
+  tailDots: [{ x: 0.4, y: 13.6, size: 2.4 }, { x: 1.5, y: 17.6, size: 2 }, { x: 2.9, y: 21.3, size: 1.6 }],
   tailWagLimit: 0.35,
   automaticOneShots: false, personalityAmount: 0.12,
   moodBlend: 0.25, behaviorBlend: 0.3, maxDt: 1 / 30,
