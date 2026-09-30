@@ -21,13 +21,31 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .dev-panel .dev-check { display: flex; align-items: center; gap: 8px; }
 .dev-check input { width: auto; margin: 0; }
 .dev-panel small { display: block; font-size: var(--fs-caption); line-height: 1.5; color: var(--text-muted); }
-.speech-bubble { position: absolute; left: 0; top: 0; width: 320px; max-width: calc(100vw - 24px); max-height: min(420px, calc(100vh - 24px)); overflow: auto; padding: 16px 18px; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); opacity: 0; visibility: hidden; transition: opacity .22s, visibility .22s; pointer-events: none; user-select: text; font-size: max(var(--fs-body), .85rem); line-height: 1.6; }
+.speech-bubble { position: absolute; left: 0; top: 0; width: 320px; max-width: calc(100vw - 24px); max-height: min(420px, calc(100vh - 24px)); display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: 14px; background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); opacity: 0; visibility: hidden; transition: opacity .22s, visibility .22s; pointer-events: none; user-select: text; font-size: max(var(--fs-body), .85rem); line-height: 1.6; }
 .speech-bubble.visible { opacity: 1; visibility: visible; pointer-events: auto; }
 /* Short status lines (a tap that was too short, silence) are a pill, not a card (UX-10). */
-.speech-bubble.compact { width: auto; max-width: 300px; padding: 7px 14px; border-radius: 999px; line-height: 1.4; }
-.speech-bubble.compact::before { display: none; }
-.speech-bubble::before { content: ''; position: absolute; left: 4px; top: 8px; border: 4px solid transparent; border-right-color: var(--border); }
-.speech-bubble[data-side='left']::before { left: auto; right: 4px; transform: rotate(180deg); }
+/* The body scrolls, so the tail can sit outside the bubble's edge without being clipped. */
+.bubble-body { min-height: 0; overflow: auto; padding: 16px 18px; }
+.speech-bubble.compact { width: auto; max-width: 300px; border-radius: 999px; line-height: 1.4; }
+.speech-bubble.compact .bubble-body { padding: 7px 14px; }
+/* A real tail on the edge nearest the kite, level with it (UX-13); --tail-y comes from positionBubble. */
+.speech-bubble::before { content: ''; position: absolute; top: calc(var(--tail-y, 22px) - 6px); left: -6px; width: 11px; height: 11px;
+  background: var(--surface-overlay); border: solid var(--border); border-width: 0 0 1px 1px; border-bottom-left-radius: 3px; transform: rotate(45deg); }
+.speech-bubble[data-side='left']::before { left: auto; right: -6px; transform: rotate(225deg); }
+/* On a pill the end is a semicircle, so a smaller tail sits a little inside it, centred. */
+.speech-bubble.compact::before { top: calc(50% - 4.5px); left: -3px; width: 9px; height: 9px; }
+.speech-bubble.compact[data-side='left']::before { left: auto; right: -3px; }
+/* Listening and thinking pills (UX-12): three dots in the kite tail's rhythm. */
+.bubble-status { display: flex; align-items: center; gap: 9px; white-space: nowrap; }
+.status-dots { display: inline-flex; align-items: center; gap: 3px; height: 10px; }
+.status-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--text); opacity: .35; }
+.status-dots[data-status='listening'] i:nth-child(1) { opacity: calc(.35 + var(--l1, 0) * 1.3); transform: scale(calc(.8 + var(--l1, 0) * 1.2)); }
+.status-dots[data-status='listening'] i:nth-child(2) { opacity: calc(.35 + var(--l2, 0) * 1.3); transform: scale(calc(.8 + var(--l2, 0) * 1.2)); }
+.status-dots[data-status='listening'] i:nth-child(3) { opacity: calc(.35 + var(--l3, 0) * 1.3); transform: scale(calc(.8 + var(--l3, 0) * 1.2)); }
+.status-dots[data-status='thinking'] i { animation: dot-wave 1.2s ease-in-out infinite; }
+.status-dots[data-status='thinking'] i:nth-child(2) { animation-delay: .2s; }
+.status-dots[data-status='thinking'] i:nth-child(3) { animation-delay: .4s; }
+@keyframes dot-wave { 0%, 60%, 100% { opacity: .35; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
 .bubble-transcript { font-size: var(--fs-caption); color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
 .bubble-reply { white-space: pre-wrap; overflow-wrap: anywhere; }
 .bubble-reply code { font-family: var(--font-mono); background: var(--surface-subtle); border-radius: 3px; padding: 1px 3px; }
@@ -41,6 +59,8 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .saved-key { display: flex; align-items: center; gap: 10px; margin: 8px 0 18px; color: var(--success); }
 .saved-key button { padding: 6px 10px; }
 @media (prefers-reduced-motion: reduce) { .stream-caret { animation: none; } .speech-bubble, .kite-stage { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .status-dots i { transform: none !important; animation: none !important; } .status-dots[data-status='thinking'] i:nth-child(2) { opacity: 1; } }
+.reduce-motion .status-dots i { transform: none !important; } .reduce-motion .status-dots[data-status='thinking'] i:nth-child(2) { opacity: 1; }
 html[data-view='settings'] { background: var(--bg); color-scheme: light dark; }
 .settings { max-width: 520px; padding: 32px; margin: 0 auto; }
 h1 { font-size: var(--fs-display); margin: 14px 0 8px; }
@@ -83,12 +103,21 @@ button:disabled { opacity: .45; cursor: default; }
 .bubble-reply pre { white-space: pre-wrap; background: var(--surface-subtle); padding: 8px; border-radius: 6px; }
 
 .approval-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-subtle); padding: 12px; margin-top: 10px; }
-.approval-heading { display: flex; align-items: center; gap: 8px; }
-.approval-summary { margin: 8px 0; color: var(--text); font-size: var(--fs-lead); }
-.approval-countdown { position: relative; margin-left: auto; width: 32px; height: 32px; display: grid; place-items: center; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); }
-.approval-countdown svg { position: absolute; inset: 0; }
-.approval-countdown circle { stroke: var(--sun); }
-.approval-buttons { display: flex; gap: 8px; }
+.approval-heading { display: flex; align-items: flex-start; gap: 8px; }
+.approval-heading .sail-mark { margin-top: 3px; }
+.approval-summary { margin: 0; color: var(--text); font: 600 var(--fs-lead)/1.35 var(--font-display); overflow-wrap: anywhere; }
+.approval-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0 2px; }
+.approval-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+/* A thin gold ring that thickens, with the number in bold, only for the last 5 seconds (UX-22). */
+.approval-countdown { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+.approval-countdown svg { flex: none; width: 16px; height: 16px; }
+.approval-countdown circle { fill: none; stroke-width: 2; }
+.approval-countdown .countdown-track { stroke: var(--border); }
+.approval-countdown .countdown-arc { stroke: var(--sun); stroke-linecap: round; transition: stroke-width .2s; }
+.approval-countdown.ending { color: var(--text); font-weight: 600; }
+.approval-countdown.ending .countdown-arc { stroke-width: 3.5; }
+.approval-details { margin-top: 8px; }
+.approval-details code { display: block; margin: 6px 0 2px; font: var(--fs-caption) var(--font-mono); color: var(--text-muted); }
 .approval-card pre, .tool-audit pre { max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-caption); }
 .approval-card small { display: block; color: var(--text-muted); font-size: var(--fs-caption); margin-top: 8px; }
 .approval-card summary { font-size: var(--fs-caption); cursor: pointer; }

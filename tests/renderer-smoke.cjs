@@ -88,10 +88,13 @@ app.whenReady().then(async()=>{
     assert.ok(!reports.some(r=>r.event==='failed'));
     // A tap that is too short gets a one-line pill that says what to do, not a clipped "?" card.
     overlay.webContents.send('test:voice',{id:50,type:'ptt:start'});await delay(50);
+    // Listening is a compact pill with a level meter and the release/cancel hint, not a full card (UX-12).
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-status').textContent"),'Release to send · Esc to cancel');
     overlay.webContents.send('test:voice',{id:50,type:'ptt:tooShort'});await delay(80);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-reply').textContent"),'Hold a bit longer while you speak.');
     assert.equal(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.speech-bubble button')].some(b=>/Keyboard controls/.test(b.textContent))"),false);
-    overlay.webContents.send('test:voice',{id:2,type:'model:changed',text:'Preview'});
+    overlay.webContents.send('test:voice',{id:2,type:'model:changed',text:'Preview'});await delay(60);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-status')?.textContent"),'Thinking');
     overlay.webContents.send('test:voice',{id:2,type:'tts:start'});
     overlay.webContents.send('test:voice',{id:2,type:'llm:delta',text:'Streaming without timestamps.'});
     overlay.webContents.send('test:voice',{id:2,type:'tts:chunk',audio:new Float32Array(44100*3).buffer});
@@ -109,6 +112,12 @@ app.whenReady().then(async()=>{
     // The primary button names the action; the voice hint follows the user's shortcut.
     assert.deepEqual(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['Paste text','Not now']);
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card').textContent"),/Or hold Ctrl \+ Win and say “yes” or “no”/);
+    // The question is the title; the tool id and arguments wait behind Details; the countdown says what happens (UX-22).
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-details summary').textContent"),'Details');
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-details code').textContent"),'type_text');
+    assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-countdown').textContent"),/Auto-cancels in (30|29) s/);
+    // The bubble's tail is aimed at the kite (UX-13).
+    assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').style.getPropertyValue('--tail-y')"),/^\d+px$/);
     await overlay.webContents.executeJavaScript("document.querySelector('.approval-buttons button').click()");await delay(100);
     assert.deepEqual(decisions,[{id:card.approvalId,approved:true}]);
     overlay.webContents.send('test:voice',{id:2,type:'tool:decision',approval:card,decision:'approved'});await delay(50);

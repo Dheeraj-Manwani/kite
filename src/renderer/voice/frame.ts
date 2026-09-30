@@ -53,6 +53,9 @@ export function positionBubble(x: number, y: number, geometry: CursorGeometry, n
     const bubbleY = clamp(y + height < bottom - 12 ? y - 12 : y - height + 12, top + 12, Math.max(top + 12, bottom - height - 12));
     bubble.dataset.side = fitsRight ? 'right' : 'left';
     bubble.style.transform = `translate(${bubbleX}px, ${bubbleY}px)`;
+    // The tail sits level with the kite, kept clear of the rounded corners (UX-13).
+    const tail = String(Math.round(clamp(y - bubbleY, 16, Math.max(16, height - 16))));
+    if (bubble.dataset.tail !== tail) { bubble.dataset.tail = tail; bubble.style.setProperty('--tail-y', tail + 'px'); }
   }
   if (now - lastReport > 50 || reportedElement !== bubble) {
     const rect = bubble.getBoundingClientRect();

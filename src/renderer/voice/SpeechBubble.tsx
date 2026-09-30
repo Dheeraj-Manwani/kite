@@ -7,13 +7,44 @@ import { voiceRuntime, react } from './runtime';
 import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
-interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean }
+import { modelLabel, useSettings } from '../hooks/useSettings';
+interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean; status?: Status }
+type Status = 'listening' | 'thinking';
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
 function Markdown({ text }: { text: string }) {
   return <>{displayText(text).split(/(```[\s\S]*?(?:```|$))/g).map((block, i) => block.startsWith('```')
     ? <pre key={i}><code>{block.replace(/^```[^\n]*\n?/, '').replace(/```$/, '')}</code></pre>
     : <span key={i}>{block.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, j) => part.startsWith('**') && part.endsWith('**')
       ? <strong key={j}>{part.slice(2, -2)}</strong> : part.startsWith('`') && part.endsWith('`') ? <code key={j}>{part.slice(1, -1)}</code> : part)}</span>)}</>;
+}
+/**
+ * Listening and thinking as a compact pill beside the kite (UX-12), sharing the tail's three-dot rhythm.
+ * Listening: the dots are a live level meter, the later dots lagging so the voice flows down them; after 2 s of
+ * silence the hint asks the user to check their mic. Thinking: the dots pulse, and after 3 s the model is named.
+ */
+function StatusLine({ status }: { status: Status }) {
+  const dots = useRef<HTMLSpanElement>(null), [silent, setSilent] = useState(false), [still, setStill] = useState(false);
+  const model = modelLabel(useSettings());
+  useEffect(() => {
+    setSilent(false); setStill(false);
+    if (status === 'thinking') { const timer = setTimeout(() => setStill(true), 3000); return () => clearTimeout(timer); }
+    const levels = [0, 0, 0];
+    let heard = performance.now(), quiet = false, frame = 0;
+    const tick = (now: number) => {
+      const level = runtime.audioLevel ?? 0;
+      levels[0] = level; levels[1] += (levels[0] - levels[1]) * .25; levels[2] += (levels[1] - levels[2]) * .25;
+      levels.forEach((value, i) => dots.current?.style.setProperty(`--l${i + 1}`, value.toFixed(3)));
+      if (level > .06) heard = now;
+      if (now - heard > 2000 !== quiet) { quiet = !quiet; setSilent(quiet); }
+      frame = requestAnimationFrame(tick);
+    };
+    frame = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frame);
+  }, [status]);
+  const text = status === 'listening' ? silent ? 'I can’t hear you — check your mic' : 'Release to send · Esc to cancel'
+    : still && model ? `Still thinking · ${model}` : 'Thinking';
+  return <div className="bubble-status" role="status">
+    <span ref={dots} className="status-dots" data-status={status} aria-hidden="true"><i /><i /><i /></span>{text}</div>;
 }
 export function SpeechBubble() {
   const [bubble, setBubble] = useState<Bubble>(empty), [hovered, setHovered] = useState(false);
@@ -65,7 +96,7 @@ export function SpeechBubble() {
         reset(event.id);
         // Guide steps are spoken while the kite points; the step card shows the words.
         if (event.type === 'guide:announce') { voiceRuntime.quiet = true; update({ ...empty, id: event.id, quiet: true }); void player.warm().catch((): void => undefined); return; }
-        update({ ...empty, id: event.id, visible: true, text: event.type === 'ptt:start' ? 'Listening…' : '' });
+        update({ ...empty, id: event.id, visible: true, status: event.type === 'ptt:start' ? 'listening' : 'thinking' });
         if (event.type === 'ptt:start') {
           useKiteStore.getState().setMood('listening');
           if (voiceRuntime.reaction?.kind !== 'flinch') react('perk');
@@ -74,13 +105,13 @@ export function SpeechBubble() {
         void player.warm().catch((): void => undefined); return;
       }
       if (event.type === 'approval:resume') {
-        recorder.cancel(); reset(event.id); update({ ...(suspendedBubble.current ?? empty), id: event.id, visible: true, text: event.text ?? '', revealed: Infinity });
+        recorder.cancel(); reset(event.id); update({ ...(suspendedBubble.current ?? empty), id: event.id, visible: true, status: undefined, text: event.text ?? '', revealed: Infinity });
         suspendedBubble.current = undefined; return;
       }
       if (event.id !== latest.current) return;
       if (event.timing) { voiceRuntime.timing = event.timing; if (event.timing.voiceAverageMs !== undefined) voiceRuntime.voiceAverageMs = event.timing.voiceAverageMs; }
       switch (event.type) {
-        case 'ptt:stop': recorder.stop(event.id); voiceRuntime.waitingSince = performance.now(); useKiteStore.getState().setMood('thinking'); update({ ...state.current, text: 'Thinking…' }); break;
+        case 'ptt:stop': recorder.stop(event.id); voiceRuntime.waitingSince = performance.now(); useKiteStore.getState().setMood('thinking'); update({ ...state.current, status: 'thinking' }); break;
         case 'voice:thinking': voiceRuntime.waitingSince ||= performance.now(); useKiteStore.getState().setMood('thinking'); break;
         case 'voice:transcript': update({ ...state.current, visible: true, transcript: event.text ?? '', text: '', streaming: true }); break;
         case 'tts:start': player.begin(); words = []; starts = []; offsets = []; wordIndex = 0; textBase = state.current.text.length; firstAudioAt = 0; noTimestamps = false; speaking = true; playbackDone = false; update({ ...state.current, revealed: state.current.approval ? Infinity : textBase }); break;
@@ -152,8 +183,11 @@ export function SpeechBubble() {
     if (value) { remaining.current = Math.max(0, expires.current - performance.now()); expires.current = Infinity; }
     else expires.current = performance.now() + remaining.current;
   };
-  return <aside ref={element} className={`speech-bubble ${bubble.visible ? 'visible' : ''} ${bubble.compact ? 'compact' : ''}`}
+  // The pill stays until there is something to read or decide; then the bubble grows to hold it.
+  const pill = bubble.status && !bubble.text && !bubble.approval && !bubble.toolStatus && !bubble.alarm && !bubble.settings && !bubble.voiceStatus ? bubble.status : undefined;
+  return <aside ref={element} className={`speech-bubble ${bubble.visible ? 'visible' : ''} ${bubble.compact || pill ? 'compact' : ''}`}
     aria-live="polite" aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
+    <div className="bubble-body">{pill ? <StatusLine status={pill} /> : <>
     {bubble.transcript && <div className="bubble-transcript">You: {bubble.transcript}</div>}
     <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <span className="stream-caret">▍</span>}</div>
     {bubble.approval && <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />}
@@ -165,5 +199,6 @@ export function SpeechBubble() {
     {bubble.settings && <button className="primary" onClick={() => window.kite.openSettings()}>Open settings</button>}
     {bubble.transcript && <button className="ghost bubble-copy" aria-label="Copy reply" onClick={() => { void window.kite.copyText(displayText(bubble.text)); }}>Copy</button>}
     {!bubble.compact && <div className="bubble-keys">Tab to move · Esc to close</div>}
+    </>}</div>
   </aside>;
 }
