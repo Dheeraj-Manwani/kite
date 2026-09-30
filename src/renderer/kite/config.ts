@@ -3,7 +3,8 @@ import { restSail } from './sail';
 export const KITE_SCALE = 1;
 /** Mutable dev tuning. The frame loop reads this object without React updates. */
 export const config = {
-  stiffness: 420, damping: 38, wagAmplitude: 0.15, wagFrequency: 0.65,
+  // wagAmplitude is the tail's idle swing in px at full ambient motion.
+  stiffness: 420, damping: 38, wagAmplitude: 2.4, wagFrequency: 0.65,
   // At rest the nose leans back toward the cursor, which sits up and to the left; the tail streams away from it.
   scale: KITE_SCALE, baseAngle: -35,
   offsetX: 32, offsetY: 28,
@@ -12,8 +13,12 @@ export const config = {
   sail: { ...restSail },
   // Three dots hanging from the trailing notch, in the sail's local frame.
   tailDots: [{ x: 0.4, y: 13.6, size: 2.4 }, { x: 1.5, y: 17.6, size: 2 }, { x: 2.9, y: 21.3, size: 1.6 }],
-  tailWagLimit: 0.35,
-  automaticOneShots: false, personalityAmount: 0.12,
+  tailWagLimit: 3,
+  // How much of each kind of motion shows (docs/personality.md §5.5, K-06): follow is how moods change the follow,
+  // expression is mood and idle-behaviour poses, ambient is breathing, the tail's swing, and the dozing dim.
+  // Tuned so nothing moves less than about a pixel; a Liveliness setting can scale these later (K-15).
+  motion: { follow: 0.5, expression: 0.45, ambient: 0.5 },
+  automaticOneShots: false,
   moodBlend: 0.25, behaviorBlend: 0.3, maxDt: 1 / 30,
   stillSpeed: 12, excitedSpeed: 1100, boredAfter: 8, dozeAfter: 30,
   gustMin: 6, gustMax: 15, gustDuration: 1.3, wakeDuration: 1.2, dizzyDuration: 1.4,

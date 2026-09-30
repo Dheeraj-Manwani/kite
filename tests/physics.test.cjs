@@ -118,3 +118,27 @@ test('a half-strength spin still ends upright instead of hanging upside down', (
   }
   voiceRuntime.reaction = null;
 });
+
+const { toScreen, tailAt, stepTail } = require('../src/renderer/kite/tail.ts');
+test('tail dots sit where the body transform puts them, trail on their own springs, then settle', () => {
+  const still = { x: 0, y: 0, direction: 0, along: 1, rotation: 0, scale: 1, squash: 1 };
+  assert.deepEqual(toScreen({ x: 3, y: 4 }, still), { x: 3, y: 4 });
+  const turned = toScreen({ x: 1, y: 0 }, { ...still, x: 10, y: 20, rotation: 90, scale: 2 });
+  assert.ok(Math.abs(turned.x - 10) < 1e-9 && Math.abs(turned.y - 22) < 1e-9, 'rotate, scale, then translate');
+  const rest = [{ x: 0, y: 14 }, { x: 1, y: 18 }, { x: 3, y: 21 }];
+  let dots = tailAt(rest);
+  const moved = rest.map(p => ({ x: p.x + 50, y: p.y }));
+  dots = stepTail(dots, moved, 1 / 60, false);
+  const lag = dots.map((d, i) => moved[i].x - d.x.value);
+  assert.ok(lag[0] > 0 && lag[2] > lag[0], 'every dot lags, and the last lags most: ' + lag.map(n => n.toFixed(1)));
+  for (let i = 0; i < 120; i++) dots = stepTail(dots, moved, 1 / 60, false);
+  assert.ok(dots.every((d, i) => Math.abs(d.x.value - moved[i].x) < 0.05 && Math.abs(d.y.value - moved[i].y) < 0.05), 'settles on its anchors');
+  assert.deepEqual(stepTail(tailAt(rest), moved, 1 / 60, true).map(d => d.x.value), moved.map(p => p.x), 'reduced motion: no lag');
+});
+test('a fast flight stretches the tail but never detaches it', () => {
+  const rest = [{ x: 0, y: 14 }, { x: 1, y: 18 }, { x: 3, y: 21 }];
+  let dots = tailAt(rest), anchors = rest;
+  for (let i = 0; i < 30; i++) { anchors = anchors.map(p => ({ x: p.x + 15, y: p.y })); dots = stepTail(dots, anchors, 1 / 60, false); }
+  const stray = dots.map((d, i) => Math.hypot(d.x.value - anchors[i].x, d.y.value - anchors[i].y));
+  assert.ok(stray[2] > 5 && stray[2] <= 9 + 1e-9 && stray[0] <= 3 + 1e-9, 'trails within reach: ' + stray.map(n => n.toFixed(1)));
+});

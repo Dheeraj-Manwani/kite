@@ -13,6 +13,12 @@ const sliders = [
   { key: 'wagAmplitude', label: 'Wag amplitude', min: 0, max: 6, step: 0.1 },
   { key: 'wagFrequency', label: 'Wag frequency', min: 0.2, max: 8, step: 0.1 },
 ] as const;
+// How much of each kind of motion shows (docs/personality.md §5.5).
+const motionSliders = [
+  { key: 'follow', label: 'Follow (moods change the follow)', min: 0, max: 1, step: 0.05 },
+  { key: 'expression', label: 'Expression (poses)', min: 0, max: 1, step: 0.05 },
+  { key: 'ambient', label: 'Ambient (breathing, tail)', min: 0, max: 1, step: 0.05 },
+] as const;
 // The sail's shape dials (docs/personality.md §5.1); 1 is the rest pose.
 const sailSliders = [
   { key: 'nose', label: 'Sail nose', min: 0.7, max: 1.4, step: 0.01 },
@@ -95,6 +101,10 @@ export default function DevPanel() {
     {sliders.map(({ key, label, min, max, step }) => <label key={key}>{label}
       <input type="range" min={min} max={max} step={step} defaultValue={config[key]}
         onChange={event => { config[key] = Number(event.target.value); }} />
+    </label>)}
+    {motionSliders.map(({ key, label, min, max, step }) => <label key={key}>{label}
+      <input type="range" min={min} max={max} step={step} defaultValue={config.motion[key]}
+        onChange={event => { config.motion[key] = Number(event.target.value); }} />
     </label>)}
     {sailSliders.map(({ key, label, min, max, step }) => <label key={key}>{label}
       <input type="range" min={min} max={max} step={step} defaultValue={config.sail[key]}

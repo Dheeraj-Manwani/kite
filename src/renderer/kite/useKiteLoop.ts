@@ -13,6 +13,7 @@ import { bodySpring, spring, stepBody, stepSpring } from './physics/spring';
 import { clamp } from './physics/vector';
 import { runtime } from './runtime';
 import { sailPath, sameSail } from './sail';
+import { stepTail, tailAt, toScreen, type TailDot } from './tail';
 import { positionBubble, reactionMotion, sampleVoice } from '../voice/frame';
 import { voiceRuntime } from '../voice/runtime';
 
@@ -53,6 +54,8 @@ export function useKiteLoop(refs: KiteElements) {
     let blinkAt = config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin), blinkStart = -10;
     let fpsTime = 0, fpsFrames = 0;
     let drawnSail = { ...config.sail }, spokenName = '';
+    let dots: TailDot[] | null = null;
+    const dotNodes = Array.from(tailNode.children) as SVGRectElement[];
     function tick(now: number) {
       frame = requestAnimationFrame(tick);
       reduced = media.matches || runtime.reducedMotion;
@@ -78,7 +81,7 @@ export function useKiteLoop(refs: KiteElements) {
       const scale = config.scale;
       const cursor = { x: cursorInput.point.x - geometry.origin.x, y: cursorInput.point.y - geometry.origin.y };
       if (!initialized || previousOrigin.x !== geometry.origin.x || previousOrigin.y !== geometry.origin.y) {
-        body = bodySpring({ x: cursor.x + config.offsetX * scale, y: cursor.y + config.offsetY * scale });
+        body = bodySpring({ x: cursor.x + config.offsetX * scale, y: cursor.y + config.offsetY * scale }); dots = null;
         previousCursor = cursor; previousOrigin = geometry.origin; initialized = true;
       }
       const velocity = { x: (cursor.x - previousCursor.x) / dt, y: (cursor.y - previousCursor.y) / dt };
@@ -128,10 +131,13 @@ export function useKiteLoop(refs: KiteElements) {
       wagPhase += dt * (mood === 'listening' ? 10 : workingHard ? 5 : config.wagFrequency * motion.frequency);
       bobPhase += dt * motion.bobFrequency * Math.PI * 2;
       const wake = mood === 'idle' && behavior.name === 'wake' && !reduced;
-      const bob = Math.sin(bobPhase) * motion.bob * config.personalityAmount * (reduced ? 0.25 : 1) * (mood === 'talking' ? 0.5 + speech : 1);
+      const { follow, expression, ambient } = config.motion;
+      // Calm while you read: with an answer on screen, idle drifting and swaying stop and only breathing remains (personality.md §4).
+      const pose = mood === 'idle' && voiceRuntime.bubble ? 0 : expression;
+      const bob = Math.sin(bobPhase) * motion.bob * (mood === 'idle' ? ambient : expression) * (reduced ? 0.25 : 1) * (mood === 'talking' ? 0.5 + speech : 1);
       const target = {
-        x: cursor.x + (config.offsetX + motion.driftX * config.personalityAmount) * scale,
-        y: cursor.y + (config.offsetY + bob + reaction.y + (mood === 'talking' && speech < 0.06 ? 1.4 : -speech * 2) + (wake ? behaviorResult.motion.driftY : motion.driftY) * config.personalityAmount) * scale,
+        x: cursor.x + (config.offsetX + motion.driftX * pose) * scale,
+        y: cursor.y + (config.offsetY + bob + reaction.y + (mood === 'talking' && speech < 0.06 ? 1.4 : -speech * 2) + (wake ? behaviorResult.motion.driftY : motion.driftY) * pose) * scale,
       };
       if (vr.drawing && vr.pen) { target.x = vr.pen.x; target.y = vr.pen.y; }
       if (guiding) {
@@ -148,7 +154,7 @@ export function useKiteLoop(refs: KiteElements) {
       if (look) { target.x += clamp(vr.target.x - target.x, -50, 50) * .35; target.y += clamp(vr.target.y - target.y, -50, 50) * .35; }
       // Guiding uses a softer, slightly underdamped spring so the kite visibly flies to the control.
       const holding = !!ink && !!br.pen;
-      body = stepBody(body, target, holding ? 900 : pointing ? 170 : config.stiffness * (vr.drawing ? 4 : 1) * (1 + (motion.stiffness - 1) * config.personalityAmount),
+      body = stepBody(body, target, holding ? 900 : pointing ? 170 : config.stiffness * (vr.drawing ? 4 : 1) * (1 + (motion.stiffness - 1) * follow),
         reduced ? Math.max(40, config.damping) : holding ? 55 : pointing ? 21 : config.damping, dt);
       const bodySpeed = Math.hypot(body.x.velocity, body.y.velocity);
       const bank = reduced ? 0 : clamp(body.x.velocity * config.bankGain, -config.bankLimit, config.bankLimit);
@@ -161,7 +167,7 @@ export function useKiteLoop(refs: KiteElements) {
         if (lastSpin > 0 && behaviorResult.spin === 0) spinBase += 360;
         lastSpin = behaviorResult.spin;
       }
-      const tilt = reduced ? 0 : motion.tilt * config.personalityAmount * Math.sin(time * (mood === 'thinking' ? 1.7 : 2.5));
+      const tilt = reduced ? 0 : motion.tilt * pose * Math.sin(time * (mood === 'thinking' ? 1.7 : 2.5));
       let rotationTarget = config.baseAngle + bank + tilt + reaction.tilt + spinBase + lastSpin;
       if (pointing) {
         // The nose (local -y) points at the control or the nib; wrap so the kite turns the short way.
@@ -180,16 +186,20 @@ export function useKiteLoop(refs: KiteElements) {
       if (sparkle) sparkle.style.opacity = reaction.happy ? String(reaction.flash) : '0';
       if (muted) muted.style.opacity = now < voiceRuntime.mutedUntil ? '1' : '0';
       svg.style.visibility = 'visible';
-      svg.style.opacity = String(1 + (motion.opacity - 1) * config.personalityAmount);
-      bodyNode.setAttribute('transform', `translate(${body.x.value} ${body.y.value}) rotate(${direction * 180 / Math.PI}) scale(${along} ${1 / along}) rotate(${rotation.value + reaction.spin - direction * 180 / Math.PI}) scale(${scale}) scale(1 ${captureBlink ? .65 : vr.drawing ? .88 : look && mood === 'thinking' ? .78 : 1})`);
+      svg.style.opacity = String(1 + (motion.opacity - 1) * ambient);
+      const squash = captureBlink ? .65 : vr.drawing ? .88 : look && mood === 'thinking' ? .78 : 1;
+      bodyNode.setAttribute('transform', `translate(${body.x.value} ${body.y.value}) rotate(${direction * 180 / Math.PI}) scale(${along} ${1 / along}) rotate(${rotation.value + reaction.spin - direction * 180 / Math.PI}) scale(${scale}) scale(1 ${squash})`);
       // The sail is one path built from its shape dials; rebuild it only when a dial moves.
       if (!sameSail(drawnSail, config.sail)) { drawnSail = { ...config.sail }; sailNode.setAttribute('d', sailPath(drawnSail)); }
-      // Keep the tail dots attached to the body's local frame: no rope can fold
-      // back into the silhouette or leave a stray dot behind during fast movement.
+      // The tail dots hang on their own springs behind the sail, so they trail during movement and swing with a small
+      // delay down the tail; at rest they settle on their anchors, clear of the sail (personality.md K-03).
       const signal = mood === 'listening' ? 0.3 + audio : mood === 'talking' ? 0.5 + speech : 1;
-      const amplitude = now < voiceRuntime.alarmUntil ? 4 : voiceRuntime.toolPose === 'proposing' ? .15 : voiceRuntime.toolPose === 'executing' ? 1.5 : mood === 'listening' ? 0.2 + audio * 1.6 : workingHard ? 0.9 : reaction.happy ? 0.6 : Math.min(config.tailWagLimit, config.wagAmplitude * motion.wag * signal);
-      const wag = reduced ? 0 : Math.sin(wagPhase * Math.PI * 2) * amplitude;
-      tailNode.setAttribute('transform', `translate(${wag} ${reaction.tailY})`);
+      const amplitude = now < voiceRuntime.alarmUntil ? 4 : voiceRuntime.toolPose === 'proposing' ? .15 : voiceRuntime.toolPose === 'executing' ? 1.5 : mood === 'listening' ? 0.2 + audio * 1.6 : workingHard ? 0.9 : reaction.happy ? 0.6 : Math.min(config.tailWagLimit, config.wagAmplitude * ambient * motion.wag * signal);
+      const bodyFrame = { x: body.x.value, y: body.y.value, direction: direction * 180 / Math.PI, along, rotation: rotation.value + reaction.spin, scale, squash };
+      const anchors = config.tailDots.map((dot, i) => toScreen({
+        x: dot.x + (reduced ? 0 : Math.sin(wagPhase * Math.PI * 2 - i * .8) * amplitude * (.6 + .4 * i)), y: dot.y + reaction.tailY }, bodyFrame));
+      dots = stepTail(dots ?? tailAt(anchors), anchors, dt, reduced, scale);
+      dots.forEach((dot, i) => dotNodes[i]?.setAttribute('transform', `translate(${dot.x.value} ${dot.y.value}) rotate(${bodyFrame.rotation + 12}) scale(${scale})`));
       positionBubble(body.x.value, body.y.value, geometry, now);
       if (time >= blinkAt) {
         blinkStart = time; blinkAt = time + config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin);
