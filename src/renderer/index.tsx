@@ -2,6 +2,7 @@ import { StrictMode, lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KiteRenderer } from './kite/KiteRenderer';
 import { SailMark } from './kite/SailMark';
+import { sections, type Section } from './components/sections';
 import { SpeechBubble } from './voice/SpeechBubble';
 import { runtime } from './kite/runtime';
 import { react } from './voice/runtime';
@@ -49,12 +50,26 @@ function Overlay() {
     {DevPanel&&<Suspense fallback={null}><DevPanel /></Suspense>}
   </main>;
 }
+// Settings sections and History share one sidebar; onboarding hides it, since setup is a guided path (UX-50, UX-60).
 function DesktopWindow(){
-  const [view,setView]=useState(location.hash.slice(1));
+  const [view,setView]=useState(location.hash.slice(1)||'settings');
+  const [section,setSection]=useState<Section>('general');
   useEffect(()=>window.kite.onViewChange(v=>{location.hash=v;setView(v);}),[]);
-  // Onboarding is a guided path, so it hides the nav rather than offering exits to unrelated places (UX-60).
-  return <>{view!=='onboarding'&&<nav className="window-nav" aria-label="Kite"><strong><SailMark size={18} />Kite</strong>{(['settings','history','onboarding'] as const).map(v=><button key={v} aria-current={view===v?'page':undefined} onClick={()=>{location.hash=v;setView(v);}}>{v==='onboarding'?'Tutorial':v==='history'?'History':'Settings'}</button>)}</nav>}
-    <Suspense fallback={<p className="loading">Opening Kite…</p>}>{view==='history'?<History/>:view==='onboarding'?<Onboarding/>:<Settings/>}</Suspense></>;
+  const current=view==='history'?'History':sections.find(s=>s.id===section)?.label??'Settings';
+  // The window title names the view, so the taskbar and Alt+Tab say where you are.
+  useEffect(()=>{document.title=view==='onboarding'?'Set up Kite':`Kite · ${current}`;},[view,current]);
+  const go=(next:string,to?:Section)=>{location.hash=next;setView(next);if(to)setSection(to);};
+  const content=<Suspense fallback={<p className="loading">Opening Kite…</p>}>{view==='history'?<History/>:view==='onboarding'?<Onboarding/>:<Settings section={section}/>}</Suspense>;
+  if(view==='onboarding')return content;
+  return <div className="window-layout">
+    <nav className="window-sidebar" aria-label="Kite">
+      <div className="sidebar-brand"><SailMark size={18} />Kite</div>
+      {sections.map(s=><button key={s.id} className="side-item" aria-current={view==='settings'&&section===s.id?'page':undefined} onClick={()=>go('settings',s.id)}>{s.label}</button>)}
+      <hr />
+      <button className="side-item" aria-current={view==='history'?'page':undefined} onClick={()=>go('history')}>History</button>
+    </nav>
+    <div className="window-content">{content}</div>
+  </div>;
 }
 const isWindow=['settings','history','onboarding'].includes(location.hash.slice(1));
 document.documentElement.dataset.view=isWindow?'settings':'overlay';

@@ -14,7 +14,7 @@ const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
-listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
+listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:()=>{},openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
@@ -36,18 +36,31 @@ app.whenReady().then(async()=>{
       win.webContents.on('console-message',details=>{if(details.level==='error')errors.push(details.message);});
       await win.loadFile(path.join(__dirname,'../.vite/renderer/main_window/index.html'),{hash:view});await delay(350);return win;
     };
-    const settings=await create('settings');
-    // Lazy view and asynchronous settings hydration may complete on different frames.
-    for(let i=0;i<100 && await settings.webContents.executeJavaScript("document.querySelectorAll('.provider-row').length")!==6;i++)await delay(30);
-    assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('.provider-row').length"),6);
-    assert.equal(await settings.webContents.executeJavaScript("document.querySelectorAll('optgroup').length"),15);
-    await settings.webContents.executeJavaScript("[...document.querySelectorAll('button')].find(b=>b.textContent==='Test').click()");await delay(100);
-    assert.equal(await settings.webContents.executeJavaScript("document.querySelector('.key-test').textContent"),'ok');
-    await settings.webContents.executeJavaScript("const s=document.querySelector('select:has(optgroup)');s.value='anthropic:claude-sonnet-5';s.dispatchEvent(new Event('change',{bubbles:true}));");await delay(100);
+    const settings=await create('settings');const sjs=code=>settings.webContents.executeJavaScript(code);
+    // Settings opens on General in a sidebar layout, and the window title names the section (UX-50).
+    for(let i=0;i<100 && !(await sjs("!!document.querySelector('.switch')"));i++)await delay(30);
+    assert.equal(await sjs("document.title"),'Kite · General');
+    assert.equal(await sjs("document.querySelector('.side-item[aria-current]').textContent"),'General');
+    assert.match(await sjs("document.querySelector('.hotkey-current').textContent"),/Push to talk\s*Ctrl\s*Win/);
+    await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Models & keys').click()");
+    for(let i=0;i<100 && await sjs("document.querySelectorAll('.provider-row').length")!==5;i++)await delay(30);
+    assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),5);
+    assert.equal(await sjs("document.querySelectorAll('optgroup').length"),15);
+    // A connected provider shows its state; rarer actions wait in a menu (UX-51).
+    assert.match(await sjs("document.querySelector('.provider-state').textContent"),/Connected · \d+ models/);
+    await sjs("document.querySelector('.overflow summary').click()");await delay(30);
+    await sjs("[...document.querySelectorAll('.overflow .menu button')].find(b=>b.textContent==='Check connection').click()");await delay(120);
+    assert.match(await sjs("document.querySelector('.provider-state').textContent"),/Connected/);
+    await sjs("const s=document.querySelector('select:has(optgroup)');s.value='anthropic:claude-sonnet-5';s.dispatchEvent(new Event('change',{bubbles:true}));");await delay(100);
     assert.equal(snapshot.settings.model.provider,'anthropic');
     fs.writeFileSync(path.join(temporary,'settings.png'),(await settings.webContents.capturePage()).toPNG());
-    await settings.webContents.executeJavaScript('window.scrollTo(0,document.body.scrollHeight)');await delay(100);
+    await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Voice').click()");await delay(120);
+    assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),1);
     fs.writeFileSync(path.join(temporary,'voice-settings.png'),(await settings.webContents.capturePage()).toPNG());
+    // Trust settings use plain actions and switches, not tool ids (UX-54).
+    await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Actions & trust').click()");await delay(120);
+    assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Ask before I….*Open an app.*Search the web/);
+    assert.equal(await sjs("document.querySelector('.settings-view').textContent.includes('open_app')"),false);
     const tutorial=await create('onboarding');
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Hello, I’m Kite');
     // Onboarding is a guided path: no nav, a labeled progress row, and the kite on its stage.
@@ -193,6 +206,10 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('guide:state',view);await delay(900);
     assert.equal(await js("document.querySelectorAll('.guide-ring path').length"),2);
     assert.match(await js("document.querySelector('.guide-card').textContent"),/Step 1 of 3.*Click the Insert tab\..*Insert/);
+    // The goal titles the card, the control is a keycap, and there is no Back on step 1 (UX-30, UX-32).
+    assert.equal(await js("document.querySelector('.guide-goal').textContent+' '+document.querySelector('.guide-app').textContent"),'Add a footer · Word');
+    assert.equal(await js("document.querySelector('.guide-key').textContent"),'Insert');
+    assert.equal(await js("[...document.querySelectorAll('.guide-actions button')].some(b=>b.textContent==='Back')"),false);
     const cardRect=await js("JSON.parse(JSON.stringify(document.querySelector('.guide-card').getBoundingClientRect()))");
     assert.ok(cardRect.y>=view.rect.y+view.rect.height||cardRect.y+cardRect.height<=view.rect.y,'card never covers the target');
     assert.ok(guideBounds.some(b=>b&&b.width>200),'card bounds reported for hit testing');
@@ -206,6 +223,12 @@ app.whenReady().then(async()=>{
     assert.deepEqual(guideActions,['next','pause','stop']);
     overlay.webContents.send('guide:state',{...view,index:1,completed:1,instruction:'Click Footer.',target:'Footer',rect:{x:420,y:120,width:50,height:40}});await delay(100);
     assert.match(await js("document.querySelector('.guide-card').textContent"),/Step 2 of 3.*Click Footer\./);
+    // Lost always offers a way forward: Look again re-runs the search; Skip step moves on (UX-31).
+    overlay.webContents.send('guide:state',{...view,index:1,status:'lost',target:'Footer',rect:null});await delay(100);
+    assert.deepEqual(await js("[...document.querySelectorAll('.guide-actions button')].map(b=>b.textContent)"),['Look again','Skip step','Stop']);
+    assert.match(await js("document.querySelector('.guide-instruction').textContent"),/Bring Word to the front/);
+    await js("[...document.querySelectorAll('.guide-actions button')].find(b=>b.textContent==='Look again').click()");await delay(30);
+    assert.equal(guideActions.at(-1),'repeat');
     overlay.webContents.send('guide:state',{...view,index:1,status:'paused'});await delay(100);
     assert.equal(await js("document.querySelectorAll('.guide-ring path').length"),0,'no ring while paused');
     assert.match(await js("document.querySelector('.guide-card').textContent"),/Paused on step 2.*Resume/);

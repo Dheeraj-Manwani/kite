@@ -6,12 +6,13 @@ import { cursorInput } from '../kite/useKiteLoop';
 import { react } from '../voice/runtime';
 import { guideRuntime } from './runtime';
 import { ringPaths } from './ring';
+import { BackIcon, LookAgainIcon, PauseIcon, ResumeIcon, SkipIcon, StopIcon } from '../icons';
 const estimate = { width: 280, height: 150 };
 function message(view: GuideView) {
   switch (view.status) {
     case 'locating': return view.instruction;
     case 'pointing': return view.instruction;
-    case 'lost': return `I can't spot “${view.target}” yet. Bring ${view.app} to the front and I'll keep looking.`;
+    case 'lost': return `I can’t spot “${view.target}” yet. Bring ${view.app} to the front and I’ll keep looking.`;
     case 'paused': return `Paused on step ${view.index + 1}. Say “continue” or press Resume.`;
     case 'done': return 'All done — nice work!';
   }
@@ -62,23 +63,29 @@ export function GuideLayer() {
     {pointing && <svg className="guide-ring" key={`${view.id}:${view.index}`} aria-hidden="true">
       {paths.map((d, i) => <path key={i} d={d} pathLength={1} className={`pass-${i}`} />)}
     </svg>}
-    <section ref={card} className={`guide-card ${view.status}`} aria-label="Show me how" style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
-      <header><SailMark /><strong>Show me how</strong>
+    {/* The goal is the title, so the user keeps their bearings between steps (UX-30). */}
+    <section ref={card} className={`guide-card ${view.status}`} aria-label={`Show me how: ${view.goal}`} style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
+      <header><SailMark /><strong className="guide-goal">{view.goal}</strong><span className="guide-app">· {view.app}</span>
         <span className="guide-progress">{view.status === 'done' ? `${view.total} of ${view.total}` : `Step ${view.index + 1} of ${view.total}`}</span></header>
       <div className="guide-dots" aria-hidden="true">{Array.from({ length: view.total }, (_, i) =>
         <span key={i} className={view.status === 'done' || i < view.index ? 'done' : i === view.index ? 'current' : ''} />)}</div>
       <p className="guide-instruction" role="status" aria-live="polite">{message(view)}</p>
       {(view.status === 'pointing' || view.status === 'locating') && <div className="guide-target">
-        <span>{view.status === 'locating' ? 'Looking for' : 'Click'}</span><strong>{view.target}</strong>
+        <span>{view.status === 'locating' ? 'Looking for' : 'Click'}</span><kbd className="guide-key">{view.target}</kbd>
         {view.status === 'pointing' && view.source === 'vision' && <small>found on screen</small>}
       </div>}
-      {view.status !== 'done' && <div className="guide-actions">
-        <button onClick={() => control('back')} disabled={view.index === 0}>Back</button>
-        <button onClick={() => control(view.status === 'paused' ? 'resume' : 'pause')}>{view.status === 'paused' ? 'Resume' : 'Pause'}</button>
-        <button onClick={() => control('next')}>{last ? 'Finish' : 'Skip'}</button>
-        <button className="guide-stop ghost" onClick={() => control('stop')}>Stop</button>
+      {/* Lost always offers a one-click way forward (UX-31); otherwise quiet icon-and-label controls, with Stop the quietest (UX-32). */}
+      {view.status === 'lost' ? <div className="guide-actions">
+        <button className="primary" onClick={() => control('repeat')}><LookAgainIcon />Look again</button>
+        <button onClick={() => control('next')}><SkipIcon />Skip step</button>
+        <button className="guide-stop ghost" onClick={() => control('stop')}><StopIcon />Stop</button>
+      </div> : view.status !== 'done' && <div className="guide-actions">
+        {view.index > 0 && <button onClick={() => control('back')}><BackIcon />Back</button>}
+        <button onClick={() => control(view.status === 'paused' ? 'resume' : 'pause')}>{view.status === 'paused' ? <><ResumeIcon />Resume</> : <><PauseIcon />Pause</>}</button>
+        <button onClick={() => control('next')}>{last ? 'Finish' : 'Skip'}<SkipIcon /></button>
+        <button className="guide-stop ghost" onClick={() => control('stop')}><StopIcon />Stop</button>
       </div>}
-      {view.status !== 'done' && <small className="guide-hint">Say “wait”, “next”, or “stop” anytime. I only point; you click.</small>}
+      {view.status !== 'done' && <small className="guide-hint">{view.index === 0 ? 'Say “wait”, “next”, or “stop” anytime. I only point; you click.' : 'Say “next” or “stop”.'}</small>}
     </section>
   </div>;
 }

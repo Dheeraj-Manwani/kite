@@ -31,7 +31,9 @@ export function reactionMotion(now: number, reduced: boolean) {
   }
   const amount = reaction.intensity ?? 1;
   result.y *= amount; result.tilt *= amount; result.tailY *= amount;
-  result.spin *= amount; result.flash *= amount; result.stretch = 1 + (result.stretch - 1) * amount;
+  // A spin always completes a whole turn: scaling the angle would hold the kite upside down until the
+  // reaction expires and then snap it upright (docs/personality.md K-00). Intensity softens the flash instead.
+  result.flash *= amount; result.stretch = 1 + (result.stretch - 1) * amount;
   return result;
 }
 let lastReport = 0;

@@ -9,6 +9,7 @@ export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }
 export interface VoiceChoice { id: string; name: string }
 export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean; whiteboard: boolean; computerUse: boolean }
+export interface AboutInfo { version: string; updateStatus: string; updateReady: boolean }
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
 export interface Timing { captureMs?: number; transcribeMs: number; firstTokenMs: number; totalMs: number; ttsFirstAudioMs?: number; voiceToVoiceMs?: number; voiceAverageMs?: number }
@@ -38,6 +39,9 @@ export interface KiteAPI {
   getPerf(): Promise<import('./release').PerfSnapshot>;
   logEvent(event: 'renderer:ready' | 'renderer:error', data?: { durationMs?: number }): void;
   focusOverlay(): void;
+  getAbout(): Promise<AboutInfo | null>;
+  aboutAction(action: 'logs' | 'report' | 'restart'): void;
+  openKeyPage(provider: SecretId): void;
   releaseOverlay(): void;
 
   onScreenEvent(callback: (event: import('./vision').ScreenEvent) => void): () => void;

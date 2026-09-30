@@ -104,3 +104,17 @@ test('sail path is one closed, mirrored shape whose dials bend it', () => {
   assert.match(sailPath({ ...restSail, billow: 0 }), /Q6\.65 -1\.25 13\.3 8\.6/, 'no billow gives straight leading edges');
   assert.ok(sameSail(restSail, { ...restSail }) && !sameSail(restSail, { ...restSail, flutter: 0.5 }));
 });
+
+const { reactionMotion } = require('../src/renderer/voice/frame.ts');
+const { voiceRuntime } = require('../src/renderer/voice/runtime.ts');
+test('a half-strength spin still ends upright instead of hanging upside down', () => {
+  for (const intensity of [1, 0.5]) {
+    voiceRuntime.reaction = { kind: 'costume', at: 0, intensity };
+    const settled = reactionMotion(1000, false);
+    assert.equal(settled.spin % 360, 0, `intensity ${intensity} settles on a whole turn`);
+    assert.ok(settled.spin > 0, 'the turn really happened');
+    voiceRuntime.reaction = { kind: 'costume', at: 0, intensity };
+    assert.ok(reactionMotion(0, false).flash <= intensity, 'intensity softens the flash');
+  }
+  voiceRuntime.reaction = null;
+});
