@@ -4,7 +4,7 @@ import { appRuntime, appEvent, startUpdates, onResume, setLaunchOnStartup } from
 import { logEvent } from '../logging';
 import { ScreenSession, registerScreenIPC, captureUnderCursor, prepareImages } from '../vision/service';
 import { routeVision, type VisionTurn } from '../../shared/vision';
-import { setAnnotationInteractive } from '../ipc/overlay';
+import { overlayHit, setAnnotationInteractive } from '../ipc/overlay';
 import { readScreen } from '../tools/impl/read_screen';
 import { persistVision } from '../vision/history';
 import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, session, Notification, screen } from 'electron';
@@ -35,6 +35,9 @@ import { AppIndex } from '../tools/appIndex';
 import { ToolSession, waitForTools } from '../tools/registry';
 import { createTools } from '../tools/platform';
 import { ReminderScheduler } from '../tools/reminders';
+import { showMeHow } from '../tools/impl/show_me_how';
+import { GuideService } from '../guide/service';
+import { guideActions, type GuideAction } from '../../shared/guide';
 const validProvider = (value: unknown): value is SecretId => [...providerIds, 'cartesia'].includes(value as SecretId);
 export function startVoiceService() {
   const secrets = openSecrets();
@@ -64,6 +67,16 @@ export function startVoiceService() {
     userData: app.getPath('userData'), keep: preferences.get().keepScreenshots, row, turn, signal, history,
   });
   const conversation = new Conversation(randomUUID, settingsConfig.contextMessages, settingsConfig.inactivityMs);
+  const guide = new GuideService({
+    directory: path.join(app.getPath('userData'), 'guide'), log: logEvent, overlayHit,
+    emit: view => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('guide:state', view); },
+    announce: text => controller.announce(text), enabled: () => preferences.get().guideMode,
+    getKey: provider => secrets.getKey(provider),
+    visionModel: () => {
+      try { const { settings, models } = preferences.snapshot(); return routeVision(describeModel(settings.model, models), settings.visionModel, models, id => secrets.hasKey(id)); }
+      catch { return undefined; }
+    },
+  });
   const controller = new VoiceController({
     vision: {
       start: (id, signal, ready, measured) => {
@@ -78,7 +91,7 @@ export function startVoiceService() {
     approvals,
     tools: (messageId, signal, activity, model, captureTiming) => new ToolSession({
       imageToolResults: ['anthropic', 'openai', 'google'].includes(model?.provider),
-      definitions: [...createTools(apps, history, preferences.get()), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
+      definitions: [...createTools(apps, history, preferences.get()), ...(preferences.get().guideMode ? [showMeHow(plan => guide.start(plan))] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
         captureSignal.throwIfAborted(); const captured = await captureUnderCursor(captureSignal); captureSignal.throwIfAborted();
         captureTiming?.(captured.captureMs);
         const images = await prepareImages(captured, [], captureSignal);
@@ -88,7 +101,7 @@ export function startVoiceService() {
       audit: history, messageId, context: { dryRun: preferences.get().dryRun, signal }, activity, changed: auditChanged,
       event: (type, name, result) => { if (!signal.aborted) controller.toolEvent(type, name, result); } }),
     getKey: provider => secrets.getKey(provider), history,
-    conversation,
+    conversation, guide,
     transcribe: transcribeAudio, ask, tts,
     settings: preferences.get, describe: model => describeModel(model, preferences.snapshot().models),
     emit,
@@ -102,7 +115,8 @@ export function startVoiceService() {
     },
   });
   const tray = createKiteTray(preferences);
-  appRuntime.changed = tray.update; appRuntime.cancel = () => controller.cancel();
+  // Pausing Kite keeps the guide's goal and progress; "continue" picks it up again.
+  appRuntime.changed = tray.update; appRuntime.cancel = () => { controller.cancel(); guide.pause(); };
   const stopUpdates = startUpdates();
   registerHistoryIPC(history, async () => { controller.cancel(); await waitForTools(); conversation.reset(); });
   let rendererFPS=0, frameMs=0;
@@ -134,8 +148,14 @@ export function startVoiceService() {
     await apps.scan(); return { ok: true };
   });
   ipcMain.on('reminder:dismiss', event => { if (trusted(event, 'overlay')) controller.dismissReminder(); });
+  ipcMain.handle('dev:guideDemo', async (event): Promise<OperationResult> => {
+    if (app.isPackaged || !trusted(event, 'overlay')) return { ok: false };
+    return (await guide.demo()) ? { ok: true } : { ok: false, error: 'No menus or tabs found in the active window.' };
+  });
+  ipcMain.on('guide:control', (event, action: unknown) => { if (trusted(event, 'overlay') && guideActions.includes(action as GuideAction)) guide.control(action as GuideAction); });
   const unsubscribe = preferences.subscribe((snapshot, old) => {
     if (snapshot.settings.dryRun !== old.dryRun) { controller.cancel('voice:aborted'); reminders.refresh(); }
+    if (old.guideMode && !snapshot.settings.guideMode) guide.stop();
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('settings:changed', snapshot);
     tray.update();
     if (snapshot.settings.launchOnStartup !== old.launchOnStartup) setLaunchOnStartup(snapshot.settings.launchOnStartup);
@@ -233,11 +253,12 @@ export function startVoiceService() {
   let stopHook = startPttHook(hookAction, preferences.get().hotkey);
   const restartHook = () => { controller.cancel(); stopHook(); try { stopHook = startPttHook(hookAction, preferences.get().hotkey); logEvent('hook:restart', { ok: true }); } catch { stopHook = () => undefined; logEvent('hook:restart', { ok: false }); appEvent({ type: 'fault' }); } };
   const offResume = onResume(() => { restartHook(); if (appRuntime.pausedUntil && appRuntime.pausedUntil <= Date.now()) import('../runtime').then(m => m.pauseKite(0)); });
-  const reset = () => controller.cancel();
+  const reset = () => { controller.cancel(); guide.relocate(); };
   screen.on('display-metrics-changed', reset); screen.on('display-removed', reset); screen.on('display-added', reset);
   const overlay = getOverlayWindow();
   overlay?.webContents.on('did-start-loading', reset);
+  overlay?.webContents.on('did-finish-load', () => guide.refresh());
   overlay?.webContents.on('render-process-gone', reset);
   overlay?.on('closed', reset);
-  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
+  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); guide.dispose(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
 }

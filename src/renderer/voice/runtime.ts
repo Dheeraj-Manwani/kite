@@ -12,5 +12,7 @@ export const voiceRuntime = {
   voiceAverageMs: undefined as number | undefined,
   timing: null as Timing | null,
   captureStartMs: 0,
+  /** A guide step is being spoken without a bubble; the kite keeps pointing while it talks. */
+  quiet: false,
 };
 export function react(kind: Reaction, intensity = 1) { voiceRuntime.reaction = { kind, at: performance.now(), intensity }; }

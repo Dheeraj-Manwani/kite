@@ -9,7 +9,7 @@ require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
@@ -19,7 +19,7 @@ updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>tr
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
 approveTool:(id,approved)=>ipcRenderer.invoke('test:approve',{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
-onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true})});`);
+onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},onGuideEvent:cb=>subscribe('guide:state',cb),guideControl:action=>ipcRenderer.send('test:guide',action),setGuideBounds:bounds=>ipcRenderer.send('test:guideBounds',bounds),setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true})});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
   const windows=[]; const errors=[], reports=[], decisions=[];
@@ -150,8 +150,37 @@ app.whenReady().then(async()=>{
     }
     assert.ok(await overlay.webContents.executeJavaScript("window.audioContexts.filter(c=>c.state!=='closed').length<=1"),'50 playback turns must reuse one live context');
     assert.deepEqual(await overlay.webContents.executeJavaScript("window.kite.listenerCounts()"),listenerBaseline,'50 turns must not add IPC listeners');
+    // Guide mode: marker ring, step card beside (never over) the target, the kite flying over to point, and controls.
+    const guideActions=[],guideBounds=[];ipcMain.on('test:guide',(_e,action)=>guideActions.push(action));ipcMain.on('test:guideBounds',(_e,bounds)=>guideBounds.push(bounds));
+    overlay.webContents.send('test:voice',{id:149,type:'voice:aborted'});await delay(100);
+    const js=code=>overlay.webContents.executeJavaScript(code);
+    const view={id:9,goal:'Add a footer',app:'Word',index:0,total:3,completed:0,instruction:'Click the Insert tab.',target:'Insert',status:'pointing',rect:{x:300,y:120,width:60,height:26},display:{x:0,y:0,width:760,height:960},source:'uia',verified:true};
+    overlay.webContents.send('guide:state',view);await delay(900);
+    assert.equal(await js("document.querySelectorAll('.guide-ring path').length"),2);
+    assert.match(await js("document.querySelector('.guide-card').textContent"),/Step 1 of 3.*Click the Insert tab\..*Insert/);
+    const cardRect=await js("JSON.parse(JSON.stringify(document.querySelector('.guide-card').getBoundingClientRect()))");
+    assert.ok(cardRect.y>=view.rect.y+view.rect.height||cardRect.y+cardRect.height<=view.rect.y,'card never covers the target');
+    assert.ok(guideBounds.some(b=>b&&b.width>200),'card bounds reported for hit testing');
+    const kiteAt=async()=>(await js("document.querySelector('.kite-canvas > g').getAttribute('transform')")).match(/translate\(([-\d.]+) ([-\d.]+)\)/).slice(1).map(Number);
+    const [kx,ky]=await kiteAt();
+    assert.ok(Math.hypot(kx-330,ky-133)<110&&Math.hypot(kx-(350+32),ky-(250+28))>60,'kite flew from the cursor to the control: '+[kx,ky]);
+    fs.writeFileSync(path.join(temporary,'guide.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("[...document.querySelectorAll('.guide-actions button')].find(b=>b.textContent==='Skip').click()");
+    await js("[...document.querySelectorAll('.guide-actions button')].find(b=>b.textContent==='Pause').click()");
+    await js("document.querySelector('.guide-stop').click()");await delay(50);
+    assert.deepEqual(guideActions,['next','pause','stop']);
+    overlay.webContents.send('guide:state',{...view,index:1,completed:1,instruction:'Click Footer.',target:'Footer',rect:{x:420,y:120,width:50,height:40}});await delay(100);
+    assert.match(await js("document.querySelector('.guide-card').textContent"),/Step 2 of 3.*Click Footer\./);
+    overlay.webContents.send('guide:state',{...view,index:1,status:'paused'});await delay(100);
+    assert.equal(await js("document.querySelectorAll('.guide-ring path').length"),0,'no ring while paused');
+    assert.match(await js("document.querySelector('.guide-card').textContent"),/Paused on step 2.*Resume/);
+    overlay.webContents.send('guide:state',{...view,index:2,status:'done',rect:null,display:null});await delay(100);
+    assert.match(await js("document.querySelector('.guide-card').textContent"),/All done/);
+    overlay.webContents.send('guide:state',null);await delay(100);
+    assert.equal(await js("document.querySelector('.guide-card')"),null);
+    assert.equal(guideBounds.at(-1),null,'hit-test bounds cleared with the card');
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
-    console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding. Screenshots: '+temporary);
+    console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding, guide ring/card/flight/controls. Screenshots: '+temporary);
   } catch(error) {console.error(error);process.exitCode=1;}
   finally {windows.forEach(w=>{if(!w.isDestroyed())w.destroy();});app.exit(process.exitCode||0);}
 });

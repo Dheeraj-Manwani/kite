@@ -80,9 +80,11 @@ export function SettingsView({ onboarding = false }: { onboarding?: boolean } = 
         <p>Use the tray to pause Kite, replay the tutorial, or open diagnostic logs.</p>
       </section>}
       <section><h2>Trust</h2>{configurableTools.map(name=><label className="setting-field" key={name}>{name.replaceAll('_',' ')}<select value={String(snapshot.settings.toolApprovals?.[name] ?? !['get_datetime','list_reminders'].includes(name))} onChange={e=>update({toolApprovals:{[name]:e.target.value==='true'}})}><option value="true">Always ask</option><option value="false">Don't ask</option></select></label>)}
-        <p>Typing, reading or writing the clipboard, and reading the screen always ask in v1.</p></section>
+        <p>Typing, reading or writing the clipboard, reading the screen, and starting a guide always ask in v1.</p></section>
       <section><h2>Actions</h2><label className="setting-field">Search engine<select value={snapshot.settings.searchEngine} onChange={e => update({ searchEngine: e.target.value as AppSettings['searchEngine'] })}><option value="google">Google</option><option value="bing">Bing</option><option value="duckduckgo">DuckDuckGo</option></select></label>
         <button onClick={() => { void operation(() => window.kite.rescanApps(), 'App index ready. Scans are cached for 10 minutes.'); }}>Rescan apps</button>
+        <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.guideMode ?? true} onChange={e => update({ guideMode: e.target.checked })} />Show me how: point at each control, step by step</label>
+        <small>Ask “how do I…?” and approve the plan. Kite reads control names in the active window with Windows UI Automation, flies to each one, and moves on when you click it. It never clicks for you. If it can’t find a control, it looks at your screen with your vision model.</small>
         <p>Sensitive actions always require confirmation. For typing, focus the destination app and say yes.</p></section>
       <section><h2>Model</h2>{picker('Powered by', snapshot.settings.model, model => update({ model }))}
         <div className="custom-model"><label>Custom provider<select value={customProvider} onChange={e => setCustomProvider(e.target.value as ProviderId)}>

@@ -6,14 +6,17 @@ import { buildSystemPrompt } from './systemPrompt';
 import { describeModel } from './catalog';
 import type { ChatMessage } from './conversation';
 import type { ModelEntry } from '../../shared/types';
-export async function ask(messages: ChatMessage[], key: string, abortSignal: AbortSignal, onDelta: (text: string) => void,
-  model: ModelEntry = describeModel({ provider: 'moonshot', id: 'kimi-k2.6' }), session?: ToolSession): Promise<string> {
-  const providerOptions = model.provider === 'openai' ? { openai: { store: false,
+export function providerOptionsFor(model: ModelEntry) {
+  return model.provider === 'openai' ? { openai: { store: false,
     ...(/^gpt-6-(sol|luna)$/.test(model.id) ? { reasoningEffort: 'none' } : model.id === 'gpt-6-astra' ? { reasoningEffort: 'low' } : {}),
   } } : undefined;
-  if (model.supportsTools && session) return runAgentLoop({ model: getModel(model.provider, model.id, { getKey: () => key }), system: buildSystemPrompt(model), messages, signal: abortSignal, onDelta, session, providerOptions });
+}
+export async function ask(messages: ChatMessage[], key: string, abortSignal: AbortSignal, onDelta: (text: string) => void,
+  model: ModelEntry = describeModel({ provider: 'moonshot', id: 'kimi-k2.6' }), session?: ToolSession, context?: string): Promise<string> {
+  const providerOptions = providerOptionsFor(model);
+  if (model.supportsTools && session) return runAgentLoop({ model: getModel(model.provider, model.id, { getKey: () => key }), system: buildSystemPrompt(model, context), messages, signal: abortSignal, onDelta, session, providerOptions });
   const result = streamText({ onError: () => undefined,
-    model: getModel(model.provider, model.id, { getKey: () => key }), system: buildSystemPrompt(model), messages,
+    model: getModel(model.provider, model.id, { getKey: () => key }), system: buildSystemPrompt(model, context), messages,
     abortSignal, maxRetries: 0, maxOutputTokens: 1200,
     providerOptions,
   });

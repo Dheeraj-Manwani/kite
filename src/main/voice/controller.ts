@@ -17,7 +17,7 @@ interface Dependencies {
   emit(event: VoiceEvent): void;
   getKey(provider: ProviderId): string | undefined;
   transcribe(audio: Uint8Array, key: string, signal: AbortSignal): Promise<string>;
-  ask(messages: ChatMessage[], key: string, signal: AbortSignal, onDelta: (text: string) => void, model?: ModelEntry, tools?: ToolSession): Promise<string>;
+  ask(messages: ChatMessage[], key: string, signal: AbortSignal, onDelta: (text: string) => void, model?: ModelEntry, tools?: ToolSession, context?: string): Promise<string>;
   history: { createConversation(id: string, now: number): void;
     addMessage(id: string, role: 'user' | 'assistant', content: string, timing: Timing, model?: ModelSelection, interrupted?: boolean): number | void;
     updateMessage?(id: number, timing: Timing, interrupted: boolean): void; voiceAverage?(): number | undefined };
@@ -28,6 +28,8 @@ interface Dependencies {
   tts?: { start(id: number, settings: AppSettings): void; push(id: number, text: string): void; finish(id: number): void; cancel(): void };
   approvals?: ApprovalBroker;
   tools?(messageId: number | null, signal: AbortSignal, activity: () => void, model?: ModelEntry, captureTiming?: (ms: number) => void): ToolSession;
+  /** Guide mode: local voice commands and per-turn system context. */
+  guide?: { command(text: string): string | undefined; context(): string | undefined };
   now?: () => number;
 }
 interface Interaction {
@@ -35,7 +37,7 @@ interface Interaction {
   releasedAt: number; timing: Timing; timeout?: ReturnType<typeof setTimeout>;
   visualContent?: ChatMessage['content']; markTypes?: string;
   text: string; session?: string; userRow?: number; toolsStarted?: boolean; tools?: ToolSession; speechStarted?: boolean; approvalReply?: boolean; reminder?: boolean; model?: ModelEntry; row?: number; saved: boolean;
-  llmDone: boolean; playbackDone: boolean; speaking: boolean; ttsStartedAt?: number;
+  llmDone: boolean; playbackDone: boolean; speaking: boolean; ttsStartedAt?: number; announcement?: boolean;
 }
 export class VoiceController {
   private sequence = 0;
@@ -44,6 +46,7 @@ export class VoiceController {
   private active?: Interaction;
   private suspended?: Interaction;
   private reminderQueue: Reminder[] = [];
+  private pendingAnnouncement?: string;
   reminder(reminder: Reminder) {
     if (this.active) { this.reminderQueue.push(reminder); return; }
     this.preview(reminder.label, false, reminder.id);
@@ -78,7 +81,11 @@ export class VoiceController {
     if (this.deps.vision) this.emit('vision:done', job);
     clearTimeout(job.timeout);
     if (this.active === job) { this.active = undefined; this.deps.setEscape(false, () => undefined);
-      if (!this.closing && this.reminderQueue.length) queueMicrotask(() => { if (!this.active && this.reminderQueue.length) this.reminder(this.reminderQueue.shift()); });
+      if (!this.closing && (this.reminderQueue.length || this.pendingAnnouncement)) queueMicrotask(() => {
+        if (this.active) return;
+        if (this.reminderQueue.length) this.reminder(this.reminderQueue.shift());
+        else if (this.pendingAnnouncement) this.announce(this.pendingAnnouncement);
+      });
     }
   }
   private save(job: Interaction, interrupted = false) {
@@ -101,6 +108,8 @@ export class VoiceController {
       this.suspended = this.active; this.deps.tts?.cancel(); this.suspended.speaking = false; this.suspended.playbackDone = true;
       clearTimeout(this.suspended.timeout); this.active = undefined;
     } else this.cancel('ptt:cancel');
+    // The user is taking over; the guide re-announces only on its next change.
+    this.pendingAnnouncement = undefined;
     const job: Interaction = { id: ++this.sequence, phase: 'listening', controller: new AbortController(),
       releasedAt: 0, timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text: '', approvalReply: !!this.suspended, saved: false, llmDone: false, playbackDone: true, speaking: false };
     this.active = job; this.deps.setEscape(true, () => this.cancel('voice:aborted'));
@@ -139,7 +148,7 @@ export class VoiceController {
   }
   playback(id: number, type: 'started' | 'ended' | 'failed') {
     const job = this.active; if (!job || job.id !== id || !job.speaking) return;
-    if (type === 'started' && job.timing.voiceToVoiceMs === undefined) {
+    if (type === 'started' && job.timing.voiceToVoiceMs === undefined && !job.announcement) {
       job.timing.voiceToVoiceMs = this.now() - job.releasedAt;
       if (job.row !== undefined) this.deps.history.updateMessage?.(job.row, job.timing, false);
       job.timing.voiceAverageMs = this.deps.history.voiceAverage?.(); this.emit('voice:metrics', job);
@@ -164,6 +173,35 @@ export class VoiceController {
     this.beginSpeech(job, this.deps.settings?.()); this.emit('llm:delta', job, { text });
     if (job.speaking) { this.deps.tts.push(job.id, text); this.deps.tts.finish(job.id); }
     if (reminderId !== undefined) { job.reminder = true; this.emit('reminder:fired', job, { text, reminderId }); }
+    this.emit('llm:done', job); this.complete(job);
+  }
+  /**
+   * Speak a guide line without a bubble. It never interrupts the user's own interaction: the latest
+   * line waits for it to finish. `null` cancels a queued or playing line. No voice means no line.
+   */
+  announce(text: string | null) {
+    if (text === null) { this.pendingAnnouncement = undefined; if (this.active?.announcement) this.drop(this.active); return; }
+    const settings = this.deps.settings?.();
+    if (this.closing || !settings?.ttsEnabled || !settings.voiceId || !this.deps.tts) return;
+    if (this.active && !this.active.announcement) { this.pendingAnnouncement = text; return; }
+    if (this.active) this.drop(this.active);
+    this.pendingAnnouncement = undefined;
+    const job: Interaction = { id: ++this.sequence, phase: 'processing', controller: new AbortController(), releasedAt: this.now(),
+      timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text, saved: false, llmDone: true, playbackDone: true, speaking: false, announcement: true };
+    this.active = job;
+    job.timeout = setTimeout(() => { if (this.active === job) this.drop(job); }, 30000);
+    this.emit('guide:announce', job);
+    this.speak(job, text, settings);
+  }
+  /** Silently end an announcement; tts.cancel() tells the overlay to stop its audio. */
+  private drop(job: Interaction) {
+    job.controller.abort(); this.deps.tts?.cancel(); job.speaking = false; job.playbackDone = true; this.finish(job);
+  }
+  /** A complete, locally generated reply for the current job. */
+  private speak(job: Interaction, text: string, settings?: AppSettings) {
+    job.text = text; job.llmDone = true;
+    this.beginSpeech(job, settings); this.emit('llm:delta', job, { text });
+    if (job.speaking) { this.deps.tts.push(job.id, text); this.deps.tts.finish(job.id); }
     this.emit('llm:done', job); this.complete(job);
   }
   audioResult(id: number, result: 'empty' | 'micDenied' | 'captureFailed') {
@@ -209,6 +247,8 @@ export class VoiceController {
         job.approvalReply = false;
       }
       this.emit('voice:transcript', job, { text });
+      const guideReply = this.deps.guide?.command(text);
+      if (guideReply !== undefined) { this.speak(job, guideReply, this.deps.settings?.()); return; }
       const session = this.deps.conversation.begin(Date.now()); job.session = session.id;
       this.deps.history.createConversation(session.id, Date.now());
       const userRow = this.deps.history.addMessage(session.id, 'user', text, job.timing);
@@ -246,7 +286,7 @@ export class VoiceController {
           if (!job.speechStarted) this.beginSpeech(job, settings);
           job.text += delta; this.emit('llm:delta', job, { text: delta });
           if (job.speaking) this.deps.tts.push(job.id, delta);
-        }, job.model, job.tools);
+        }, job.model, job.tools, this.deps.guide?.context());
       };
       const answer = await withFallback(run, run, () => !!job.text || !!job.toolsStarted, !!settings?.fallbackEnabled, job.controller.signal, () => {
         usedModelCalls = job.tools?.modelCalls ?? 0; job.tools?.close(); job.tools = undefined; job.model = describe(settings.fallback); selectVision(); this.emit('model:fallback', job, { text: job.model.label });

@@ -7,6 +7,7 @@ import { react } from './voice/runtime';
 import './styles.css';
 import './logging';
 const Annotation = lazy(() => import('./vision/Annotation').then(m => ({ default: m.Annotation })));
+const Guide = lazy(() => import('./guide/GuideLayer').then(m => ({ default: m.GuideLayer })));
 const Settings = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
 const History = lazy(() => import('./components/HistoryView'));
 const Onboarding = lazy(() => import('./components/Onboarding'));
@@ -25,7 +26,7 @@ function Overlay() {
       clearTimeout(timer);timer=setTimeout(()=>setNotice(''),6000);
     });return()=>{off();app();clearTimeout(timer);};
   },[]);
-  return <main className="overlay"><Suspense fallback={null}><Annotation /></Suspense><KiteRenderer /><SpeechBubble />
+  return <main className="overlay"><Suspense fallback={null}><Annotation /></Suspense><Suspense fallback={null}><Guide /></Suspense><KiteRenderer /><SpeechBubble />
     {notice&&<div className="app-notice" role="status">{notice}</div>}
     {DevPanel&&<Suspense fallback={null}><DevPanel /></Suspense>}
   </main>;

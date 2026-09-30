@@ -32,7 +32,11 @@ Bring keys for OpenAI, Anthropic, Google, Groq, or Moonshot. Switch models in Se
 
 ![Action illustration](assets/actions.gif)
 
-Open Start Menu apps, search, create notes, paste, and use the clipboard through validated tools. Code generates confirmation summaries from validated arguments. Approve by click or voice. `type_text`, `read_clipboard`, `write_clipboard`, and `read_screen` **always ask in v1**. Only open-app, web-search, date/time, and reminder-listing trust can be changed. For pasting, focus the destination first and use voice approval.
+Open Start Menu apps, search, create notes, paste, and use the clipboard through validated tools. Code generates confirmation summaries from validated arguments. Approve by click or voice. `type_text`, `read_clipboard`, `write_clipboard`, `read_screen`, and `show_me_how` **always ask in v1**. Only open-app, web-search, date/time, and reminder-listing trust can be changed. For pasting, focus the destination first and use voice approval.
+
+### Show me how
+
+Ask “how do I add a footer in Word?” Kite plans the clicks and shows them for approval. Then the kite flies to each control, points at it with a hand-drawn ring, and speaks the step; click it yourself and Kite moves on. Say “wait”, “continue”, “next”, “back”, “repeat”, or “stop” anytime. Kite finds controls with Windows UI Automation on your PC and falls back to your vision model only when it can't. **It never clicks for you.** [Guide details](docs/guide.md).
 
 ### Circle to ask
 
@@ -60,6 +64,7 @@ Cursor polling changes from 16 ms while moving to 100 ms after two stationary se
 - Provider calls go directly from main to chosen services. There is no Kite backend or telemetry. Transcripts, selected screen content, and relevant tool context go to those providers.
 - SQLite history and audits are **local plaintext** and may contain sensitive text. Raw audio is not saved. Screenshots stay in memory by default; optional history saves JPEGs in `userData/screens/`. Deletion removes associated files and search records; backups may retain copies.
 - Capture protection and overlay hiding are enabled briefly and restored in `finally`. Protection stays off during normal use so recordings can show Kite. Verify exclusion on your Windows/capture setup.
+- Guide mode reads control names and positions locally through a read-only UI Automation sidecar (inbox Windows PowerShell). It has no way to click, type, or invoke controls. Screens leave the PC only for an approved guide's vision fallback, with the capture indicator shown.
 - Tools do not execute arbitrary shell commands. Main validates input and IPC sender/frame. Navigation and new windows are denied. Audio permissions are restricted to Kite recording/tutorial windows.
 - Logs contain event names, numeric timings/counts, and constrained error codes, never keys, transcripts, screenshots, or raw exception messages. Logs rotate at 5 MB with two archives. Problem reports include version and OS only.
 
@@ -82,10 +87,11 @@ npm run test:packaged
 npm run test:native
 npm run test:renderer
 npm run test:startup
+npm run test:uia
 npm run perf
 ```
 
-Run renderer/startup checks after the build completes. Tests use temporary profiles and mocked or disabled provider traffic. `npm run perf` runs a roughly one-minute measurement and rewrites the raw report. Ctrl + Shift + D opens the development panel.
+Run renderer/startup checks after the build completes. `npm run test:uia` opens a small WinForms window and walks a real guide through it with the UI Automation sidecar. Tests use temporary profiles and mocked or disabled provider traffic. `npm run perf` runs a roughly one-minute measurement and rewrites the raw report. Ctrl + Shift + D opens the development panel.
 
 Forge uses one runtime-module list for Vite externals and copying production dependencies. Native modules are force-rebuilt for Electron and unpacked from ASAR. `Kite.exe --smoke-test` opens SQLite, starts/stops uiohook, writes `ok`, and exits. CI tests the packaged executable.
 
@@ -97,4 +103,6 @@ Signing can later use `WINDOWS_CERTIFICATE_FILE` and `WINDOWS_CERTIFICATE_PASSWO
 
 Windows only, unsigned, no mouse automation. Voice intelligence requires provider accounts and network access. Live provider quality, mixed-DPI alignment, clean-machine installation, and upgrading an installed old version need manual checks. A packaged smoke test alone does not establish them. CI configuration is included; check GitHub for actual remote results.
 
-Planned: a Rive renderer behind the existing rendering boundary and an explicitly confirmed computer-use mode. Neither is part of v1. [Architecture](docs/architecture.md) · [Ten ADRs](docs/adr/README.md) · [Demo script](docs/demo.md).
+Guide mode plans from the model's knowledge of each app; unusual labels rely on the vision fallback or “skip”. Mixed-DPI guide alignment and live Office/Chromium walkthroughs need manual checks.
+
+Planned: a Rive renderer behind the existing rendering boundary and an explicitly confirmed computer-use mode. Neither is part of v1. [Architecture](docs/architecture.md) · [Eleven ADRs](docs/adr/README.md) · [Demo script](docs/demo.md).

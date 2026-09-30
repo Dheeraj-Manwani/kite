@@ -57,11 +57,18 @@ const api: KiteAPI = {
   submitAudio: (buffer, id, strokes) => ipcRenderer.invoke('voice:submit', buffer, id, strokes),
   reportAudioResult: (id, result) => ipcRenderer.send('voice:audioResult', id, result),
   setBubbleBounds: bounds => ipcRenderer.send('bubble:bounds', bounds),
+  onGuideEvent(callback) {
+    const listener = (_event: IpcRendererEvent, view: import('../shared/guide').GuideView | null) => callback(view);
+    ipcRenderer.on('guide:state', listener); return () => ipcRenderer.removeListener('guide:state', listener);
+  },
+  guideControl: action => ipcRenderer.send('guide:control', action),
+  setGuideBounds: bounds => ipcRenderer.send('guide:bounds', bounds),
+  demoGuide: () => ipcRenderer.invoke('dev:guideDemo'),
   printRecentMessages: () => ipcRenderer.invoke('dev:recentMessages'),
   copyText: text => ipcRenderer.invoke('bubble:copy', text),
   onVoiceEvent(callback) {
     const channels: VoiceEventType[] = ['vision:routed', 'vision:done', 'ptt:start', 'ptt:stop', 'ptt:cancel', 'ptt:tooShort',
-      'voice:thinking', 'voice:transcript', 'voice:empty', 'voice:aborted', 'llm:delta', 'llm:done', 'llm:error', 'model:changed', 'model:fallback', 'voice:muted', 'voice:metrics', 'tool:approvalRequired', 'tool:decision', 'tool:executing', 'tool:result', 'approval:resume', 'reminder:fired', 'tts:start', 'tts:chunk', 'tts:timestamps', 'tts:done', 'tts:stop', 'tts:error'];
+      'voice:thinking', 'voice:transcript', 'voice:empty', 'voice:aborted', 'llm:delta', 'llm:done', 'llm:error', 'model:changed', 'model:fallback', 'voice:muted', 'voice:metrics', 'tool:approvalRequired', 'tool:decision', 'tool:executing', 'tool:result', 'approval:resume', 'reminder:fired', 'tts:start', 'tts:chunk', 'tts:timestamps', 'tts:done', 'tts:stop', 'tts:error', 'guide:announce'];
     const listener = (_event: IpcRendererEvent, event: VoiceEvent) => callback(event);
     channels.forEach(channel => ipcRenderer.on(channel, listener));
     return () => channels.forEach(channel => ipcRenderer.removeListener(channel, listener));

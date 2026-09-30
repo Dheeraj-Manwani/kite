@@ -7,7 +7,7 @@ import { voiceRuntime, react } from './runtime';
 import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
-interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean }
+interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean }
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
 function Markdown({ text }: { text: string }) {
   return <>{displayText(text).split(/(```[\s\S]*?(?:```|$))/g).map((block, i) => block.startsWith('```')
@@ -32,6 +32,7 @@ export function SpeechBubble() {
     const complete = () => {
       if (!llmDone || !playbackDone) return;
       update({ ...state.current, streaming: false, revealed: Infinity });
+      if (state.current.quiet) { voiceRuntime.quiet = false; idle(300); return; }
       if (!['costume', 'success', 'denied', 'alarm'].includes(voiceRuntime.reaction?.kind)) react('happy'); idle(300); life(4000 + state.current.text.trim().split(/\s+/).length * 60);
     };
     const player = new VoicePlayback(type => {
@@ -54,14 +55,16 @@ export function SpeechBubble() {
     const reset = (id: number) => {
       recorder.cancel(); player.stop(); latest.current = id; clearTimeout(idleTimer);
       words = []; starts = []; offsets = []; wordIndex = 0; firstAudioAt = 0; noTimestamps = false;
-      llmDone = false; playbackDone = true; speaking = false; voiceRuntime.waitingSince = 0;
+      llmDone = false; playbackDone = true; speaking = false; voiceRuntime.waitingSince = 0; voiceRuntime.quiet = false;
       voiceRuntime.hover = false; setHovered(false); expires.current = Infinity; remaining.current = Infinity;
     };
     const receive = (event: VoiceEvent) => {
-      if (event.type === 'ptt:start' || event.type === 'model:changed') {
+      if (event.type === 'ptt:start' || event.type === 'model:changed' || event.type === 'guide:announce') {
         if (event.type === 'ptt:start' && state.current.approval) suspendedBubble.current = state.current;
         voiceRuntime.toolPose = null;
         reset(event.id);
+        // Guide steps are spoken while the kite points; the step card shows the words.
+        if (event.type === 'guide:announce') { voiceRuntime.quiet = true; update({ ...empty, id: event.id, quiet: true }); void player.warm().catch((): void => undefined); return; }
         update({ ...empty, id: event.id, visible: true, text: event.type === 'ptt:start' ? 'Listening…' : '' });
         if (event.type === 'ptt:start') {
           useKiteStore.getState().setMood('listening');
@@ -105,9 +108,9 @@ export function SpeechBubble() {
         case 'vision:routed': react('costume', .5); update({ ...state.current, vision: event.text }); break;
         case 'model:fallback': react('phew'); update({ ...state.current, fallback: event.text ?? '' }); break;
         case 'llm:delta':
-          if (!speaking && useKiteStore.getState().mood !== 'talking') { if (!['costume', 'phew', 'success', 'denied', 'tangled', 'approved'].includes(voiceRuntime.reaction?.kind)) react('aha'); useKiteStore.getState().setMood('talking'); }
+          if (!speaking && useKiteStore.getState().mood !== 'talking') { if (!state.current.quiet && !['costume', 'phew', 'success', 'denied', 'tangled', 'approved'].includes(voiceRuntime.reaction?.kind)) react('aha'); useKiteStore.getState().setMood('talking'); }
           voiceRuntime.waitingSince = 0;
-          update({ ...state.current, visible: true, text: state.current.text + (event.text ?? ''), streaming: true });
+          update({ ...state.current, visible: !state.current.quiet, text: state.current.text + (event.text ?? ''), streaming: true });
           if (words.length) offsets = wordOffsets(state.current.text.slice(textBase), words); break;
         case 'llm:done': voiceRuntime.waitingSince = 0; llmDone = true; update({ ...state.current, streaming: false }); complete(); break;
         case 'ptt:tooShort': case 'voice:empty':

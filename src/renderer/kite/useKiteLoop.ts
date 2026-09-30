@@ -1,4 +1,5 @@
 import { visionRuntime as vr } from '../vision/runtime';
+import { guideRuntime as gr } from '../guide/runtime';
 import { RefObject, useEffect } from 'react';
 import type { CursorGeometry, CursorPoint } from '../../shared/types';
 import { useKiteStore } from '../store/kite';
@@ -44,7 +45,7 @@ export function useKiteLoop(refs: KiteElements) {
     let behavior = createBehavior(0, Math.random()), shake = createShake();
     let motion = { ...moods.idle };
     let currentMood = useKiteStore.getState().mood;
-    let wagPhase = 0, bobPhase = 0, lastSpin = 0, spinBase = 0;
+    let wagPhase = 0, bobPhase = 0, lastSpin = 0, spinBase = 0, wasGuiding = false;
     let blinkAt = config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin), blinkStart = -10;
     let fpsTime = 0, fpsFrames = 0;
     function tick(now: number) {
@@ -83,16 +84,24 @@ export function useKiteLoop(refs: KiteElements) {
         spinBase += lastSpin; lastSpin = 0;
         currentMood = mood;
       }
+      // Guide mode: fly to the control and point at it, but stay with the user while they talk or read a reply.
+      const guiding = !!gr.anchor && !!gr.aim && !vr.drawing && !voiceRuntime.bubble && (mood === 'idle' || voiceRuntime.quiet);
+      if (wasGuiding && !guiding) {
+        // Re-base whole turns so returning upright takes the short way round.
+        spinBase = Math.round((rotation.value - config.baseAngle) / 360) * 360; lastSpin = 0;
+        if (reduced) rotation = spring(config.baseAngle + spinBase);
+      }
+      wasGuiding = guiding;
       const shakeResult = detectShake(shake, velocity.x, time);
       shake = shakeResult.state;
       let requested = runtime.trigger ?? (config.automaticOneShots && shakeResult.fired ? 'dizzy' : undefined);
       runtime.trigger = null;
       if (mood !== 'idle') requested = undefined;
-      const behaviorResult = mood === 'idle'
+      const behaviorResult = mood === 'idle' && !guiding
         ? updateBehavior(behavior, time, speed, Math.random(), requested, reduced, config.automaticOneShots)
         : { state: createBehavior(time, Math.random()), motion: moods.idle, spin: 0 };
       behavior = behaviorResult.state;
-      runtime.behavior = mood === 'idle' ? behavior.name : mood;
+      runtime.behavior = guiding ? 'guiding' : mood === 'idle' ? behavior.name : mood;
       const targetMotion = mood === 'idle' ? behaviorResult.motion : moods[mood];
       motion = blendMotion(motion, targetMotion, dt, mood === 'idle' ? config.behaviorBlend : config.moodBlend);
       const fakeAudio = runtime.fakeLevels ? (1 + Math.sin(time * 3.2)) / 2 : 0;
@@ -108,9 +117,17 @@ export function useKiteLoop(refs: KiteElements) {
         y: cursor.y + (config.offsetY + bob + reaction.y + (mood === 'talking' && speech < 0.06 ? 1.4 : -speech * 2) + (wake ? behaviorResult.motion.driftY : motion.driftY) * config.personalityAmount) * scale,
       };
       if (vr.drawing && vr.pen) { target.x = vr.pen.x; target.y = vr.pen.y; }
+      if (guiding) {
+        // A small periodic poke toward the control, like a fingertip tapping the screen.
+        const dx = gr.aim.x - gr.anchor.x, dy = gr.aim.y - gr.anchor.y, length = Math.hypot(dx, dy) || 1;
+        const phase = (time % 1.8) / 1.8, poke = reduced ? 0 : phase < 0.2 ? Math.sin(phase / 0.2 * Math.PI) * 5 : 0;
+        target.x = gr.anchor.x + dx / length * poke; target.y = gr.anchor.y + dy / length * poke + bob * scale * 0.4;
+      }
       const look = vr.target && (mood === 'thinking' || now < vr.glanceUntil);
       if (look) { target.x += clamp(vr.target.x - target.x, -50, 50) * .35; target.y += clamp(vr.target.y - target.y, -50, 50) * .35; }
-      body = stepBody(body, target, config.stiffness * (vr.drawing ? 4 : 1) * (1 + (motion.stiffness - 1) * config.personalityAmount), reduced ? Math.max(40, config.damping) : config.damping, dt);
+      // Guiding uses a softer, slightly underdamped spring so the kite visibly flies to the control.
+      body = stepBody(body, target, guiding ? 170 : config.stiffness * (vr.drawing ? 4 : 1) * (1 + (motion.stiffness - 1) * config.personalityAmount),
+        reduced ? Math.max(40, config.damping) : guiding ? 21 : config.damping, dt);
       const bodySpeed = Math.hypot(body.x.velocity, body.y.velocity);
       const bank = reduced ? 0 : clamp(body.x.velocity * config.bankGain, -config.bankLimit, config.bankLimit);
       // Keep complete turns in a continuous angle domain so recovery never unwinds.
@@ -123,7 +140,14 @@ export function useKiteLoop(refs: KiteElements) {
         lastSpin = behaviorResult.spin;
       }
       const tilt = reduced ? 0 : motion.tilt * config.personalityAmount * Math.sin(time * (mood === 'thinking' ? 1.7 : 2.5));
-      rotation = stepSpring(rotation, config.baseAngle + bank + tilt + reaction.tilt + spinBase + lastSpin, config.rotationStiffness, config.rotationDamping, dt);
+      let rotationTarget = config.baseAngle + bank + tilt + reaction.tilt + spinBase + lastSpin;
+      if (guiding) {
+        // The nose (local -y) points at the control; wrap so the kite turns the short way.
+        const angle = Math.atan2(gr.aim.y - body.y.value, gr.aim.x - body.x.value) * 180 / Math.PI + 90 + reaction.tilt;
+        rotationTarget = rotation.value + (((angle - rotation.value) % 360) + 540) % 360 - 180;
+        if (reduced) rotation = spring(rotationTarget);
+      }
+      rotation = stepSpring(rotation, rotationTarget, config.rotationStiffness, config.rotationDamping, dt);
       const desiredStretch = reduced ? 1 : wake ? behaviorResult.motion.stretch : Math.min(config.maxStretch, 1 + bodySpeed * config.stretchGain);
       stretch = stepSpring(stretch, desiredStretch, wake ? 1000 : 240, wake ? 42 : 26, dt);
       const along = reduced ? 1 : clamp(stretch.value * reaction.stretch, 0.75, Math.max(config.maxStretch, 1.1));

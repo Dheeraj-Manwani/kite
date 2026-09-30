@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import type { ApprovalCard, ToolDecision } from '../../shared/types';
 export type ApprovalPolicy = { defaults: { info: boolean; action: boolean; 'sensitive-read': boolean }; tools: Record<string, boolean> };
 export const approvalPolicy: ApprovalPolicy = { defaults: { info: false, action: true, 'sensitive-read': true }, tools: { read_clipboard: true } };
-export function needsApproval(tool: { name: string; kind: 'info' | 'action' | 'sensitive-read'; approvalRequired?: boolean }, config = approvalPolicy) { if (['type_text', 'read_clipboard', 'write_clipboard', 'read_screen'].includes(tool.name)) return true; return tool.approvalRequired ?? config.tools[tool.name] ?? config.defaults[tool.kind]; }
+export function needsApproval(tool: { name: string; kind: 'info' | 'action' | 'sensitive-read'; approvalRequired?: boolean }, config = approvalPolicy) { if (['type_text', 'read_clipboard', 'write_clipboard', 'read_screen', 'show_me_how'].includes(tool.name)) return true; return tool.approvalRequired ?? config.tools[tool.name] ?? config.defaults[tool.kind]; }
 export function classifyApproval(text: string): 'approve' | 'deny' | 'new-request' {
   const s = text.toLowerCase().trim().replace(/[.!?,]+$/g, '').replace(/’/g, "'").replace(/\s+/g, ' ');
   if (/^(yes|yeah|yep|sure|do it|go ahead|okay|ok)( please)?$/.test(s)) return 'approve';

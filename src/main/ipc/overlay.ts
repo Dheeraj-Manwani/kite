@@ -6,17 +6,25 @@ import { trusted } from './trust';
 
 let panelBounds: ScreenBounds | null = null;
 let bubbleBounds: ScreenBounds | null = null;
+let guideBounds: ScreenBounds | null = null;
 let interactive = false;
 let annotation = false;
 export function setAnnotationInteractive(value: boolean) {
   annotation = value; interactive = value;
   getOverlayWindow()?.setIgnoreMouseEvents(!value, { forward: true });
 }
-export function resetPanelHitTest() { panelBounds = null; bubbleBounds = null; interactive = false; annotation = false; }
+export function resetPanelHitTest() { panelBounds = null; bubbleBounds = null; guideBounds = null; interactive = false; annotation = false; }
+const overControls = (point: CursorPoint) => [panelBounds, bubbleBounds, guideBounds].some(bounds => !!bounds && point.x >= bounds.x && point.x <= bounds.x + bounds.width
+  && point.y >= bounds.y && point.y <= bounds.y + bounds.height);
+/** Whether a global DIP click lands on Kite itself (controls or drawing) rather than the app below. */
+export function overlayHit(point: CursorPoint) {
+  if (annotation) return true;
+  const origin = getOverlayWindow()?.getBounds();
+  return !!origin && overControls({ x: point.x - origin.x, y: point.y - origin.y });
+}
 export function updatePanelHitTest(point: CursorPoint) {
   if (annotation) return;
-  const hit = [panelBounds, bubbleBounds].some(bounds => !!bounds && point.x >= bounds.x && point.x <= bounds.x + bounds.width
-    && point.y >= bounds.y && point.y <= bounds.y + bounds.height);
+  const hit = overControls(point);
   if (hit !== interactive) {
     interactive = hit;
     getOverlayWindow()?.setIgnoreMouseEvents(!hit, { forward: true });
@@ -28,7 +36,16 @@ export function registerOverlayIPC() {
     if (!trusted(event, 'overlay')) return;
     if (bounds !== null && (!bounds || ![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite) || bounds.width <= 0 || bounds.height <= 0)) return;
     bubbleBounds = bounds;
-    if (!annotation && !bounds && !panelBounds) {
+    if (!annotation && !bounds && !panelBounds && !guideBounds) {
+      interactive = false;
+      getOverlayWindow()?.setIgnoreMouseEvents(true, { forward: true });
+    }
+  });
+  ipcMain.on('guide:bounds', (event, bounds: ScreenBounds | null) => {
+    if (!trusted(event, 'overlay')) return;
+    if (bounds !== null && (!bounds || ![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite) || bounds.width <= 0 || bounds.height <= 0)) return;
+    guideBounds = bounds;
+    if (!annotation && !bounds && !bubbleBounds && !panelBounds) {
       interactive = false;
       getOverlayWindow()?.setIgnoreMouseEvents(true, { forward: true });
     }
@@ -37,7 +54,7 @@ export function registerOverlayIPC() {
     if (app.isPackaged || !trusted(event, 'overlay')) return;
     if (bounds !== null && (!bounds || ![bounds.x, bounds.y, bounds.width, bounds.height].every(Number.isFinite) || bounds.width <= 0 || bounds.height <= 0)) return;
     panelBounds = bounds;
-    if (!annotation && !bounds && !bubbleBounds) {
+    if (!annotation && !bounds && !bubbleBounds && !guideBounds) {
       interactive = false;
       getOverlayWindow()?.setIgnoreMouseEvents(true, { forward: true });
     }

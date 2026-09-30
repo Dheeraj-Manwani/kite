@@ -103,3 +103,32 @@ button { background: #255e59; color: white; border: 0; border-radius: 7px; paddi
 .app-notice {position:fixed;right:24px;bottom:24px;padding:12px 20px;background:#164e57;color:#fff;border-radius:14px;max-width:350px;pointer-events:none;}.kite-paused .kite-canvas {transition:transform .6s ease-in;transform:translateY(-120vh) rotate(-12deg);}
 .reduce-motion *, .reduce-motion *::before {animation:none!important;transition:none!important;}.speech-bubble {font-size:max(13px,.85rem);}.speech-bubble button:focus-visible,button:focus-visible {outline:3px solid #cb741d;outline-offset:3px;}
 @media(max-width:650px){.history-layout{grid-template-columns:1fr}.window-nav{padding:10px;gap:5px}.history-toolbar{flex-wrap:wrap}}
+/* Guide mode: a marker ring on the control and a step card that never covers it. */
+.guide-layer { position: fixed; inset: 0; pointer-events: none; }
+.guide-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.guide-ring path { fill: none; stroke: var(--kite-accent); stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 1.2px #000a) drop-shadow(0 0 6px color-mix(in srgb, var(--kite-accent) 55%, transparent)); animation: guide-draw .5s cubic-bezier(.3,.7,.4,1) backwards; }
+.guide-ring path.pass-1 { stroke-width: 1.8; opacity: .72; animation-delay: .16s; }
+@keyframes guide-draw { from { stroke-dashoffset: 1; } }
+.guide-card { position: absolute; left: 0; top: 0; width: 280px; padding: 12px 14px 10px; border: 1px solid #edc8d4; border-radius: 14px; background: #fff8fcf7; color: #443440;
+  box-shadow: 0 5px 24px #24162422; pointer-events: auto; font-size: 13px; line-height: 1.5; transition: transform .35s cubic-bezier(.3,.7,.4,1), opacity .2s; }
+.guide-card header { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #715363; }
+.guide-card header span[aria-hidden] { color: var(--kite-body); }
+.guide-progress { margin-left: auto; font-size: 11px; color: #8f7788; }
+.guide-dots { display: flex; gap: 4px; margin: 8px 0 6px; }
+.guide-dots span { flex: 1; height: 3px; border-radius: 3px; background: #eddce5; }
+.guide-dots .done { background: var(--kite-body); }
+.guide-dots .current { background: var(--kite-accent); }
+.guide-instruction { margin: 0 0 6px; color: #443440; font-size: 14px; line-height: 1.45; }
+.guide-target { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: 11px; color: #8f7788; }
+.guide-target strong { font-size: 12px; color: #443440; background: #f5e7ee; border-radius: 4px; padding: 1px 6px; overflow-wrap: anywhere; }
+.guide-card.locating { opacity: .55; pointer-events: none; }
+.guide-card.locating .guide-target strong { animation: caret-pulse 1s ease-in-out infinite; }
+.guide-card.lost { border-color: #e8b98a; }
+.guide-card.done { border-color: #9fd4b4; }
+.guide-actions { display: flex; gap: 6px; margin-top: 10px; }
+.guide-actions button { flex: 1; font-size: 11px; padding: 6px 4px; background: #f1e3ea; color: #5d3f50; }
+.guide-actions button:disabled { opacity: .45; cursor: default; }
+.guide-actions .guide-stop { background: #5d3f50; color: #fff; }
+.guide-hint { display: block; margin-top: 7px; font-size: 10px; color: #8f7788; }
+.approval-steps { margin: 6px 0 4px; padding-left: 20px; font-size: 11px; color: #5d3f50; max-height: 150px; overflow: auto; }
