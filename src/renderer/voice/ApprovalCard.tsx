@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { SailMark } from '../kite/SailMark';
 import { useSettings } from '../hooks/useSettings';
 import { hotkeyLabel } from '../../shared/release';
-import { approvalAction } from './approvalAction';
+import { approvalAction, approvalRisk } from './approvalAction';
+import { ShieldIcon } from '../icons';
 import type { ApprovalCard as Card } from '../../shared/types';
 /** Planned guide steps, shown as plain text so the user can check the route before approving. */
 function guideSteps(input: unknown): string[] {
@@ -11,7 +12,7 @@ function guideSteps(input: unknown): string[] {
 }
 export function ApprovalCard({ card }: { card: Card }) {
   const [now, setNow] = useState(Date.now()), [busy, setBusy] = useState(false), settings = useSettings();
-  const hotkey = settings ? hotkeyLabel(settings.settings.hotkey) : '';
+  const hotkey = settings ? hotkeyLabel(settings.settings.hotkey) : '', risk = approvalRisk(card, settings);
   useEffect(() => { setBusy(false); const timer = setInterval(() => setNow(Date.now()), 100); return () => clearInterval(timer); }, [card.approvalId]);
   const left = Math.max(0, card.expiresAt - now), seconds = Math.ceil(left / 1000);
   const decide = async (approved: boolean, scope?: 'task' | 'once') => {
@@ -21,8 +22,10 @@ export function ApprovalCard({ card }: { card: Card }) {
     finally { window.kite.setOverlayInteractive(false); }
   };
   // The question is the title; the countdown is calm until its last 5 seconds (UX-22).
-  return <section className="approval-card" aria-label="Confirm action">
+  // Low-risk approvals sit lightly in the bubble; sensitive ones are framed and say what leaves this PC (UX-21).
+  return <section className={`approval-card ${risk.sensitive ? 'sensitive' : 'low'}`} aria-label="Confirm action">
     <div className="approval-heading"><SailMark /><p className="approval-summary">{card.summary}</p></div>
+    {risk.flow && <p className="approval-flow"><ShieldIcon />{risk.flow}</p>}
     {card.toolName === 'show_me_how' && <ol className="approval-steps">{guideSteps(card.input).map((step, i) => <li key={i}>{step}</li>)}</ol>}
     {card.dryRun && <small>Preview only. Nothing will run.</small>}
     {card.toolName === 'type_text' && <small>Focus the destination app first. Voice approval is recommended.</small>}

@@ -136,11 +136,11 @@ test('new hold aborts old stream; late deltas and completion cannot affect new i
 test('missing key and provider 429 are friendly, sanitized failures', async () => {
   const missing=fixture({getKey:()=>undefined});
   const id=missing.controller.start();missing.controller.stop(); await missing.controller.submit(id,new ArrayBuffer(8));
-  assert.match(missing.events.at(-1).text,/Groq key/);
+  assert.match(missing.events.at(-1).title,/Groq key/);
   assert.equal(missing.events.at(-1).settings,true);
   const failed=fixture({transcribe:async()=>{throw {statusCode:429,headers:{authorization:'SECRET'}};}});
   const next=failed.controller.start();failed.controller.stop(); await failed.controller.submit(next,new ArrayBuffer(8));
-  assert.match(failed.events.at(-1).text,/rate-limited/);
+  assert.match(failed.events.at(-1).title,/rate-limited/);
   assert.ok(!JSON.stringify(failed.events).includes('SECRET'));
   assert.equal(failed.escape.at(-1),false);
 });
@@ -187,4 +187,20 @@ test('approval buttons name the action they approve', () => {
   assert.equal(approvalAction({ toolName: 'type_text', summary: 'Paste "hi" into the currently focused app?' }), 'Paste text');
   assert.equal(approvalAction({ toolName: 'show_me_how', summary: 'Guide you through "x" in Word?' }), 'Start guide');
   assert.equal(approvalAction({ toolName: 'something_new', summary: 'Do a new thing?' }), 'Allow');
+});
+
+const { approvalRisk } = require('../src/renderer/voice/approvalAction.ts');
+test('sensitive approvals say what leaves the PC and which model receives it', () => {
+  const models = [{ provider: 'anthropic', id: 'sonnet', label: 'Claude Sonnet 5', supportsVision: false, supportsTools: true, tier: 'flagship' },
+    { provider: 'moonshot', id: 'k25', label: 'Kimi K2.5', supportsVision: true, supportsTools: true, tier: 'flagship' }];
+  const snapshot = { settings: { model: { provider: 'anthropic', id: 'sonnet' }, visionModel: { provider: 'moonshot', id: 'k25' } }, models, voices: [], keys: { anthropic: true, moonshot: true } };
+  assert.deepEqual(approvalRisk({ toolName: 'open_app', input: {} }, snapshot), { sensitive: false });
+  assert.equal(approvalRisk({ toolName: 'read_screen', input: {} }, snapshot).flow, 'A screenshot of this display will be sent to Kimi K2.5.');
+  assert.match(approvalRisk({ toolName: 'read_clipboard', input: {} }, snapshot).flow, /sent to Claude Sonnet 5\.$/);
+  assert.match(approvalRisk({ toolName: 'type_text', input: {} }, snapshot).flow, /Nothing leaves this PC\./);
+  assert.match(approvalRisk({ toolName: 'show_me_how', input: { app: 'Word' } }, snapshot).flow, /controls in Word on this PC.*screenshot of Word to Kimi K2\.5/);
+  assert.equal(approvalRisk({ toolName: 'do_task', input: { app: 'Notepad' } }, snapshot).flow, 'Each step sends Notepad’s controls and their text to Claude Sonnet 5.');
+  // Without any vision-capable model, the card still says something true.
+  const noVision = { ...snapshot, keys: { anthropic: true, moonshot: false } };
+  assert.match(approvalRisk({ toolName: 'read_screen', input: {} }, noVision).flow, /your vision model/);
 });

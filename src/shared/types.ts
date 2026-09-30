@@ -17,7 +17,7 @@ export type VoiceEventType = 'ptt:start' | 'ptt:stop' | 'ptt:cancel' | 'ptt:tooS
   | 'vision:routed' | 'vision:done' | 'llm:delta' | 'llm:done' | 'llm:error' | 'model:changed' | 'model:fallback' | 'voice:muted' | 'voice:metrics'
   | 'tool:approvalRequired' | 'tool:decision' | 'tool:executing' | 'tool:result' | 'approval:resume' | 'reminder:fired'
   | 'tts:start' | 'tts:chunk' | 'tts:timestamps' | 'tts:done' | 'tts:stop' | 'tts:error' | 'guide:announce';
-export interface VoiceEvent { type: VoiceEventType; id: number; text?: string; timing?: Timing; settings?: boolean;
+export interface VoiceEvent { type: VoiceEventType; id: number; text?: string; title?: string; setup?: boolean; timing?: Timing; settings?: boolean;
   approval?: ApprovalCard; decision?: ToolDecision; toolName?: string; success?: boolean; reminderId?: number;
   audio?: ArrayBuffer; timestamps?: { words: string[]; start: number[]; end: number[] }; }
 export type ToolDecision = 'approved' | 'denied' | 'timeout' | 'auto';

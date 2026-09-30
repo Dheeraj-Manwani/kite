@@ -8,7 +8,8 @@ import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
 import { modelLabel, useSettings } from '../hooks/useSettings';
-interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean; status?: Status }
+import { AlertIcon, CopyIcon, HistoryIcon, PinIcon, SetupIcon } from '../icons';
+interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean; status?: Status; error?: { title: string; text: string; setup?: boolean } }
 type Status = 'listening' | 'thinking';
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
 function Markdown({ text }: { text: string }) {
@@ -47,11 +48,14 @@ function StatusLine({ status }: { status: Status }) {
     <span ref={dots} className="status-dots" data-status={status} aria-hidden="true"><i /><i /><i /></span>{text}</div>;
 }
 export function SpeechBubble() {
-  const [bubble, setBubble] = useState<Bubble>(empty), [hovered, setHovered] = useState(false);
+  const [bubble, setBubble] = useState<Bubble>(empty), [hovered, setHovered] = useState(false), settings = useSettings();
+  // Pin keeps an answer open until the user unpins it, presses Esc, or starts another question (UX-14).
+  const pinned = useRef(false), [isPinned, setPinned] = useState(false);
+  const pin = (value: boolean) => { pinned.current = value; setPinned(value); if (!value) expires.current = performance.now() + 4000; };
   const element = useRef<HTMLElement>(null), state = useRef(empty);
   const suspendedBubble = useRef<Bubble | undefined>(undefined);
   const expires = useRef(Infinity), remaining = useRef(Infinity), latest = useRef(0);
-  const update = (value: Bubble) => { state.current = value; setBubble(value); };
+  const update = (value: Bubble) => { if (value.id !== state.current.id && pinned.current) { pinned.current = false; setPinned(false); } state.current = value; setBubble(value); };
   useEffect(() => {
     const recorder = new VoiceRecorder();
     let llmDone = false, playbackDone = true, speaking = false, firstAudioAt = 0, noTimestamps = false;
@@ -152,7 +156,9 @@ export function SpeechBubble() {
           recorder.cancel(); player.stop(); voiceRuntime.waitingSince = 0; voiceRuntime.toolPose = null; update({ ...empty, id: event.id }); react('flinch'); idle(); break;
         case 'llm:error':
           recorder.cancel(); player.stop(); voiceRuntime.waitingSince = 0;
-          update({ ...state.current, visible: true, revealed: Infinity, text: event.text ?? 'Something went wrong. Please try again.', streaming: false, settings: !!event.settings });
+          // What happened as a title, then one sentence of help and at most one action (UX-15).
+          update({ ...state.current, visible: true, revealed: Infinity, text: '', streaming: false, settings: !!event.settings,
+            error: { title: event.title ?? 'I couldn’t finish that', text: event.text ?? 'Please try again.', setup: event.setup } });
           react('tangled'); idle(1200); life(12000); break;
       }
     };
@@ -161,7 +167,7 @@ export function SpeechBubble() {
       if (!snapshot.settings.ttsEnabled && speaking) { player.stop(); speaking = false; playbackDone = true; update({ ...state.current, revealed: Infinity }); complete(); }
     });
     const expiry = setInterval(() => {
-      if (!voiceRuntime.hover && state.current.visible && performance.now() >= expires.current) { update({ ...state.current, visible: false }); expires.current = Infinity; }
+      if (!voiceRuntime.hover && !pinned.current && state.current.visible && performance.now() >= expires.current) { update({ ...state.current, visible: false }); expires.current = Infinity; }
     }, 100);
     return () => {
       unsubscribe(); unsubSettings(); recorder.dispose(); player.dispose(); clearInterval(expiry); clearTimeout(idleTimer);
@@ -184,20 +190,26 @@ export function SpeechBubble() {
     else expires.current = performance.now() + remaining.current;
   };
   // The pill stays until there is something to read or decide; then the bubble grows to hold it.
-  const pill = bubble.status && !bubble.text && !bubble.approval && !bubble.toolStatus && !bubble.alarm && !bubble.settings && !bubble.voiceStatus ? bubble.status : undefined;
+  const pill = bubble.status && !bubble.text && !bubble.error && !bubble.approval && !bubble.toolStatus && !bubble.alarm && !bubble.settings && !bubble.voiceStatus ? bubble.status : undefined;
   return <aside ref={element} className={`speech-bubble ${bubble.visible ? 'visible' : ''} ${bubble.compact || pill ? 'compact' : ''}`}
     aria-live="polite" aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
     <div className="bubble-body">{pill ? <StatusLine status={pill} /> : <>
-    {bubble.transcript && <div className="bubble-transcript">You: {bubble.transcript}</div>}
-    <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <span className="stream-caret">▍</span>}</div>
+    {bubble.transcript && <div className="bubble-transcript">You asked · {bubble.transcript}</div>}
+    {(bubble.text || bubble.streaming) && <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <span className="stream-caret">▍</span>}</div>}
+    {bubble.error && <div className={`bubble-error${bubble.error.setup ? ' setup' : ''}`} role="alert">
+      <strong>{bubble.error.setup ? <SetupIcon /> : <AlertIcon />}{bubble.error.title}</strong><p>{bubble.error.text}</p></div>}
     {bubble.approval && <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />}
     {bubble.toolStatus && <div className="bubble-tool-status" role="status">{bubble.toolStatus}</div>}
     {bubble.alarm && <button className="primary" onClick={() => { voiceRuntime.alarmUntil = 0; voiceRuntime.reaction = null; window.kite.dismissReminder(); update({ ...state.current, alarm: false }); }}>Dismiss reminder</button>}
-    {bubble.vision && <div className="bubble-fallback">(looked using {bubble.vision})</div>}
-    {bubble.fallback && <div className="bubble-fallback">(answered by {bubble.fallback})</div>}
     {bubble.voiceStatus && <div className="bubble-voice-status">{bubble.voiceStatus}</div>}
     {bubble.settings && <button className="primary" onClick={() => window.kite.openSettings()}>Open settings</button>}
-    {bubble.transcript && <button className="ghost bubble-copy" aria-label="Copy reply" onClick={() => { void window.kite.copyText(displayText(bubble.text)); }}>Copy</button>}
+    {/* The footer waits while a decision is pending, so the approval is the only thing asking for attention. */}
+    {bubble.text && !bubble.compact && !bubble.approval && <div className="bubble-footer">
+      <span className="model-chip">{bubble.fallback ? `${bubble.fallback} · backup model` : bubble.vision || modelLabel(settings)}{bubble.vision ? ' · looked at your screen' : ''}</span>
+      <button className="ghost icon-button" aria-label="Copy reply" title="Copy" onClick={() => { void window.kite.copyText(displayText(bubble.text)); }}><CopyIcon /></button>
+      <button className="ghost icon-button" aria-pressed={isPinned} aria-label={isPinned ? 'Unpin' : 'Keep this open'} title={isPinned ? 'Unpin' : 'Keep this open'} onClick={() => pin(!isPinned)}><PinIcon on={isPinned} /></button>
+      <button className="ghost icon-button" aria-label="Open in History" title="Open in History" onClick={() => window.kite.openView('history')}><HistoryIcon /></button>
+    </div>}
     {!bubble.compact && <div className="bubble-keys">Tab to move · Esc to close</div>}
     </>}</div>
   </aside>;

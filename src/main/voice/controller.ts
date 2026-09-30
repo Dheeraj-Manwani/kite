@@ -132,7 +132,7 @@ export class VoiceController {
     clearTimeout(job.timeout); job.phase = 'awaiting'; job.releasedAt = this.now();
     job.timeout = setTimeout(() => {
       if (this.active !== job) return;
-      this.emit('llm:error', job, { text: 'The microphone didn’t finish recording. Please try again.' });
+      this.emit('llm:error', job, { title: 'The recording stopped early', text: 'Hold your shortcut and try again.' });
       if (job.approvalReply) this.cancel('voice:aborted'); else { job.controller.abort(); this.finish(job); }
     }, 10000);
     this.deps.vision?.leave();
@@ -228,7 +228,9 @@ export class VoiceController {
   audioResult(id: number, result: 'empty' | 'micDenied' | 'captureFailed') {
     const job = this.active; if (!job || id !== job.id || job.phase === 'processing') return;
     if (result === 'empty') this.emit('voice:empty', job);
-    else this.emit('llm:error', job, { text: result === 'micDenied' ? 'Please allow microphone access in Windows Settings → Privacy & security → Microphone, including desktop apps.' : 'I couldn’t record your microphone. Check the input device and try again.' });
+    else this.emit('llm:error', job, result === 'micDenied'
+      ? { title: 'I can’t use your microphone', text: 'Allow it in Windows Settings → Privacy & security → Microphone, including desktop apps.', setup: true }
+      : { title: 'I couldn’t record your microphone', text: 'Check the input device, then try again.' });
     if (job.approvalReply) this.cancel('voice:aborted'); else { job.controller.abort(); this.finish(job); }
   }
   async submit(id: number, buffer: ArrayBuffer, strokes: Stroke[] = [], marks: string[] = []) {
@@ -237,7 +239,7 @@ export class VoiceController {
     job.timeout = setTimeout(() => {
       if (this.active !== job) return;
       job.controller.abort(); this.deps.tts?.cancel(); this.save(job, true);
-      this.emit('llm:error', job, { text: 'That took too long. Please try again.' }); this.finish(job);
+      this.emit('llm:error', job, { title: 'That took too long', text: 'Please try again.' }); this.finish(job);
     }, 180000);
     const current = () => this.active === job && !job.controller.signal.aborted;
     this.emit('voice:thinking', job); let provider: ProviderId = 'groq';

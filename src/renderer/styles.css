@@ -46,11 +46,23 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .status-dots[data-status='thinking'] i:nth-child(2) { animation-delay: .2s; }
 .status-dots[data-status='thinking'] i:nth-child(3) { animation-delay: .4s; }
 @keyframes dot-wave { 0%, 60%, 100% { opacity: .35; transform: none; } 30% { opacity: 1; transform: translateY(-2px); } }
-.bubble-transcript { font-size: var(--fs-caption); color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px; }
+.bubble-transcript { font-size: var(--fs-caption); color: var(--text-muted); border-bottom: 1px solid var(--border); padding-bottom: 8px; margin-bottom: 8px;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+/* Answer footer (UX-14): who answered, then Copy, Pin, and Open in History. */
+.bubble-footer { display: flex; align-items: center; gap: 2px; margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.model-chip { margin-right: auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 8px; border: 1px solid var(--border); border-radius: 999px; font-size: var(--fs-caption); color: var(--text-muted); }
+.speech-bubble .bubble-footer button { margin-top: 0; }
+.speech-bubble .icon-button { padding: 5px; line-height: 0; color: var(--text-muted); }
+.speech-bubble .icon-button:hover, .speech-bubble .icon-button[aria-pressed='true'] { color: var(--text); }
+/* Errors (UX-15): a failure's title is red; something to set up is ink with a settings icon. */
+.bubble-error strong { display: flex; align-items: center; gap: 6px; color: var(--danger); }
+.bubble-error.setup strong { color: var(--text); }
+.bubble-error p { margin: 4px 0 0; color: var(--text-muted); }
+.icon { flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.icon .filled { fill: currentColor; }
 .bubble-reply { white-space: pre-wrap; overflow-wrap: anywhere; }
 .bubble-reply code { font-family: var(--font-mono); background: var(--surface-subtle); border-radius: 3px; padding: 1px 3px; }
 .speech-bubble button { font-size: var(--fs-caption); margin-top: 10px; padding: 6px 10px; }
-.speech-bubble .bubble-copy { color: var(--text-muted); margin-left: 8px; }
 /* Keyboard hints appear only while Kite's controls have focus (UX-11). */
 .bubble-keys { display: none; margin-top: 10px; font-size: var(--fs-caption); color: var(--text-muted); }
 .overlay-focused .bubble-keys { display: block; }
@@ -99,10 +111,14 @@ button:disabled { opacity: .45; cursor: default; }
 .settings-view button { padding: 7px 12px; border-radius: 8px; }
 .settings-hint, .settings-view small, .settings-view footer { color: var(--text-muted); font-size: var(--fs-caption); }
 .settings-status { position: sticky; top: 0; z-index: 2; padding: 10px; background: var(--surface-subtle); border-radius: 8px; }
-.bubble-fallback, .bubble-voice-status { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 7px; }
+.bubble-voice-status { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 7px; }
 .bubble-reply pre { white-space: pre-wrap; background: var(--surface-subtle); padding: 8px; border-radius: 6px; }
 
 .approval-card { border: 1px solid var(--border); border-radius: 10px; background: var(--surface-subtle); padding: 12px; margin-top: 10px; }
+/* Risk tiers (UX-21): low-risk approvals sit lightly in the bubble; sensitive ones are framed and say what leaves this PC. */
+.approval-card.low { background: transparent; border: 0; padding: 0; margin-top: 14px; }
+.approval-flow { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; font-size: var(--fs-caption); line-height: 1.45; color: var(--text); }
+.approval-flow .icon { margin-top: 1px; color: var(--text-muted); }
 .approval-heading { display: flex; align-items: flex-start; gap: 8px; }
 .approval-heading .sail-mark { margin-top: 3px; }
 .approval-summary { margin: 0; color: var(--text); font: 600 var(--fs-lead)/1.35 var(--font-display); overflow-wrap: anywhere; }

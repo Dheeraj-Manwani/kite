@@ -82,6 +82,10 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-reply').textContent"),'Hello', JSON.stringify({reports,errors,debug:await overlay.webContents.executeJavaScript("({frames:window.framesRun,contexts:window.audioContexts.map(c=>({state:c.state,time:c.currentTime})),text:document.querySelector('.speech-bubble').outerHTML})")}));
     await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').dispatchEvent(new PointerEvent('pointerover',{bubbles:true}))");await delay(50);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-reply').textContent"),'Hello world.');
+    // The answer ends with who answered (the Settings step above switched to Claude Sonnet 5), then Copy, Pin, and Open in History (UX-14).
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer .model-chip').textContent"),'Claude Sonnet 5');
+    await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer [aria-label=\"Keep this open\"]').click()");await delay(50);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer [aria-pressed]').getAttribute('aria-pressed')"),'true');
     send({type:'voice:aborted'});await delay(100);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').getAttribute('aria-hidden')"),'true');
     assert.ok(reports.some(r=>r.event==='started'));
@@ -93,6 +97,11 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('test:voice',{id:50,type:'ptt:tooShort'});await delay(80);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-reply').textContent"),'Hold a bit longer while you speak.');
     assert.equal(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.speech-bubble button')].some(b=>/Keyboard controls/.test(b.textContent))"),false);
+    // Errors: what happened as a title, one sentence of help, one action (UX-15).
+    overlay.webContents.send('test:voice',{id:60,type:'ptt:start'});await delay(40);
+    overlay.webContents.send('test:voice',{id:60,type:'llm:error',title:'I need a Groq key to hear you',text:'Add one in Settings, then hold your shortcut again.',settings:true,setup:true});await delay(80);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-error.setup strong').textContent"),'I need a Groq key to hear you');
+    assert.equal(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.speech-bubble button.primary')].map(b=>b.textContent).join()"),'Open settings');
     overlay.webContents.send('test:voice',{id:2,type:'model:changed',text:'Preview'});await delay(60);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-status')?.textContent"),'Thinking');
     overlay.webContents.send('test:voice',{id:2,type:'tts:start'});
@@ -115,6 +124,8 @@ app.whenReady().then(async()=>{
     // The question is the title; the tool id and arguments wait behind Details; the countdown says what happens (UX-22).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-details summary').textContent"),'Details');
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-details code').textContent"),'type_text');
+    // Pasting is a sensitive tier: framed, with a line saying what leaves the PC (UX-21).
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card.sensitive .approval-flow').textContent"),'Pastes into whichever app has focus. Nothing leaves this PC.');
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-countdown').textContent"),/Auto-cancels in (30|29) s/);
     // The bubble's tail is aimed at the kite (UX-13).
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').style.getPropertyValue('--tail-y')"),/^\d+px$/);
