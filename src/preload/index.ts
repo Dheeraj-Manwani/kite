@@ -31,7 +31,7 @@ const api: KiteAPI = {
   setDevPanelBounds: bounds => ipcRenderer.send('dev:panelBounds', bounds),
   setOverlayInteractive: value => ipcRenderer.send('overlay:setInteractive', value),
   openSettings: () => ipcRenderer.send('settings:open'),
-  approveTool: (id, approved) => ipcRenderer.invoke('tools:approve', { id, approved }),
+  approveTool: (id, approved, scope) => ipcRenderer.invoke('tools:approve', scope ? { id, approved, scope } : { id, approved }),
   getToolCalls: () => ipcRenderer.invoke('tools:recent'),
   onToolCallsChanged(callback) {
     const listener = (_event: IpcRendererEvent, calls: import('../shared/types').ToolAudit[]) => callback(calls);
@@ -54,7 +54,7 @@ const api: KiteAPI = {
   hasKey: provider => ipcRenderer.invoke('secrets:has', provider),
   setKey: (provider, key) => ipcRenderer.invoke('secrets:set', provider, key),
   deleteKey: provider => ipcRenderer.invoke('secrets:delete', provider),
-  submitAudio: (buffer, id, strokes) => ipcRenderer.invoke('voice:submit', buffer, id, strokes),
+  submitAudio: (buffer, id, strokes, marks) => ipcRenderer.invoke('voice:submit', buffer, id, strokes, marks),
   reportAudioResult: (id, result) => ipcRenderer.send('voice:audioResult', id, result),
   setBubbleBounds: bounds => ipcRenderer.send('bubble:bounds', bounds),
   onGuideEvent(callback) {
@@ -64,6 +64,21 @@ const api: KiteAPI = {
   guideControl: action => ipcRenderer.send('guide:control', action),
   setGuideBounds: bounds => ipcRenderer.send('guide:bounds', bounds),
   demoGuide: () => ipcRenderer.invoke('dev:guideDemo'),
+  onBoardEvent(callback) {
+    const listener = (_event: IpcRendererEvent, view: import('../shared/board').BoardView | null) => callback(view);
+    ipcRenderer.on('board:state', listener); return () => ipcRenderer.removeListener('board:state', listener);
+  },
+  boardControl: action => ipcRenderer.send('board:control', action),
+  boardDrawn: (id, key) => ipcRenderer.send('board:drawn', id, key),
+  setBoardBounds: bounds => ipcRenderer.send('board:bounds', bounds),
+  exportBoard: (action, png, title) => ipcRenderer.invoke('board:export', action, png, title),
+  demoBoard: () => ipcRenderer.invoke('dev:boardDemo'),
+  onTaskEvent(callback) {
+    const listener = (_event: IpcRendererEvent, view: import('../shared/agent').TaskView | null) => callback(view);
+    ipcRenderer.on('task:state', listener); return () => ipcRenderer.removeListener('task:state', listener);
+  },
+  taskControl: action => ipcRenderer.send('task:control', action),
+  setTaskBounds: bounds => ipcRenderer.send('task:bounds', bounds),
   printRecentMessages: () => ipcRenderer.invoke('dev:recentMessages'),
   copyText: text => ipcRenderer.invoke('bubble:copy', text),
   onVoiceEvent(callback) {

@@ -13,3 +13,5 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [Temporary capture exclusion](009-capture-exclusion.md)
 - [Screenshots are not persisted by default](010-screenshot-retention.md)
 - [Guide mode grounds with UI Automation first](011-guide-mode.md)
+- [Tasks act through UI Automation and the keyboard, never the mouse](012-computer-use.md)
+- [Whiteboard lessons are scripts of beats, drawn by the kite](013-whiteboard.md)

@@ -72,6 +72,7 @@ export default function DevPanel() {
     <div className="dev-buttons">
       <button onClick={() => window.kite.openSettings()}>API keys</button>
       <button onClick={() => { void window.kite.testCapture().then(result => { setCaptureResult(result.ok ? `Saved test capture: ${result.path}` : result.error); }); }}>Test capture (save PNG)</button>
+      <button title="Draws a built-in lesson on the whiteboard; no model needed." onClick={() => { void window.kite.demoBoard().then(result => { setCaptureResult(result.ok ? 'Whiteboard demo playing.' : result.error ?? 'Whiteboard demo unavailable.'); }); }}>Demo whiteboard</button>
       <button title="Tours up to three menus or tabs of the active window. Kite only points." onClick={() => { void window.kite.demoGuide().then(result => { setCaptureResult(result.ok ? 'Guide demo running: click the ringed control.' : result.error ?? 'Guide demo unavailable.'); }); }}>Demo guide</button>
       <button onClick={() => { void window.kite.printRecentMessages().then(result => { if (timing.current) timing.current.textContent = result.ok ? 'Recent message count recorded in the logs; message contents are never logged.' : 'Could not read history.'; }); }}>Log recent message count</button>
     </div>

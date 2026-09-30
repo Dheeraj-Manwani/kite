@@ -9,7 +9,7 @@ require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
@@ -18,8 +18,10 @@ listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRend
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
-approveTool:(id,approved)=>ipcRenderer.invoke('test:approve',{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
-onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},onGuideEvent:cb=>subscribe('guide:state',cb),guideControl:action=>ipcRenderer.send('test:guide',action),setGuideBounds:bounds=>ipcRenderer.send('test:guideBounds',bounds),setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true})});`);
+approveTool:(id,approved,scope)=>ipcRenderer.invoke('test:approve',scope?{id,approved,scope}:{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
+onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},onGuideEvent:cb=>subscribe('guide:state',cb),guideControl:action=>ipcRenderer.send('test:guide',action),setGuideBounds:bounds=>ipcRenderer.send('test:guideBounds',bounds),setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true}),
+onBoardEvent:cb=>subscribe('board:state',cb),boardControl:action=>ipcRenderer.send('test:board',action),boardDrawn:(id,key)=>ipcRenderer.send('test:boardDrawn',id,key),setBoardBounds:bounds=>ipcRenderer.send('test:boardBounds',bounds),exportBoard:(action,png,title)=>ipcRenderer.invoke('test:boardExport',action,png,title),demoBoard:async()=>({ok:true}),
+onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
   const windows=[]; const errors=[], reports=[], decisions=[];
@@ -179,8 +181,83 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('guide:state',null);await delay(100);
     assert.equal(await js("document.querySelector('.guide-card')"),null);
     assert.equal(guideBounds.at(-1),null,'hit-test bounds cleared with the card');
+    // Whiteboard: elements draw stroke by stroke while the kite holds the pen, then controls, highlight, and export.
+    const { layoutScene, applyBeat } = require('../src/shared/board.ts'); const { demoLesson } = require('../src/main/board/service.ts');
+    const boardActions=[],drawnAcks=[],boardBounds=[],exported=[];
+    ipcMain.on('test:board',(_e,action)=>boardActions.push(action));ipcMain.on('test:boardDrawn',(_e,id,key)=>drawnAcks.push([id,key]));ipcMain.on('test:boardBounds',(_e,bounds)=>boardBounds.push(bounds));
+    ipcMain.handle('test:boardExport',(_e,action,png,title)=>{exported.push({action,png:Buffer.from(png),title});return {ok:true};});
+    overlay.webContents.send('guide:state',null);overlay.webContents.send('cursor:update',{x:700,y:900},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});
+    const beats=demoLesson.beats, lesson=n=>layoutScene(beats.slice(0,n).reduce(applyBeat,[]));
+    const boardView={id:3,title:'How a kite flies',status:'playing',beat:1,total:beats.length,caption:beats[1].say,note:null,elements:lesson(2),drawing:{key:1,beat:1,ids:['wind1','wind2'],durationMs:2600},highlight:['kite']};
+    overlay.webContents.send('board:state',{...boardView,beat:0,caption:beats[0].say,elements:lesson(1),drawing:{key:0,beat:0,ids:['title','kite'],durationMs:1800},highlight:[]});
+    await delay(500);
+    assert.equal(await js("document.querySelectorAll('.board [data-el]').length"),2);
+    const frame=await js("JSON.parse(JSON.stringify(document.querySelector('.board').getBoundingClientRect()))");
+    const inFrame=([x,y])=>x>=frame.x-40&&x<=frame.x+frame.width+40&&y>=frame.y-40&&y<=frame.y+frame.height+40;
+    assert.ok(inFrame(await kiteAt()),'the kite flew from the cursor to the board to draw: '+(await kiteAt()));
+    fs.writeFileSync(path.join(temporary,'board-drawing.png'),(await overlay.webContents.capturePage()).toPNG());
+    for(let i=0;i<120&&!drawnAcks.some(a=>a[1]===0);i++)await delay(50);
+    assert.deepEqual(drawnAcks[0],[3,0],'the overlay reports each drawn beat');
+    overlay.webContents.send('board:state',boardView);await delay(200);
+    assert.equal(await js("document.querySelectorAll('.board-ring path').length"),2,'highlighted element is circled');
+    assert.match(await js("document.querySelector('.board-caption').textContent"),/Wind blows/);
+    for(let i=0;i<120&&!drawnAcks.some(a=>a[1]===1);i++)await delay(50);
+    assert.ok(drawnAcks.some(a=>a[0]===3&&a[1]===1));
+    // The final frame, fully drawn, with the text written out and nothing left mid-animation.
+    overlay.webContents.send('board:state',{...boardView,status:'done',beat:5,caption:'',note:'That’s the picture. Ask me anything about it.',elements:lesson(beats.length),drawing:null,highlight:[]});await delay(300);
+    assert.equal(await js("document.querySelectorAll('.board [data-el]').length"),layoutScene(beats.reduce(applyBeat,[])).length);
+    assert.equal(await js("[...document.querySelectorAll('.board [data-kind]')].filter(n=>n.style.strokeDashoffset||n.getAttribute('clip-path')||n.style.opacity==='0').length"),0,'nothing is left half drawn');
+    assert.match(await js("document.querySelector('.board text').textContent"),/How a kite flies/);
+    assert.ok(boardBounds.some(b=>b&&b.width>400),'board bounds reported for hit testing');
+    fs.writeFileSync(path.join(temporary,'board.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Copy').click()");
+    for(let i=0;i<100&&!exported.length;i++)await delay(50);
+    assert.equal(exported[0].action,'copy');assert.equal(exported[0].title,'How a kite flies');
+    assert.deepEqual([...exported[0].png.subarray(0,4)],[0x89,0x50,0x4e,0x47],'exports a PNG');
+    fs.writeFileSync(path.join(temporary,'board-export.png'),exported[0].png);
+    assert.ok(nativeImage.createFromBuffer(exported[0].png).getSize().width>600,'export is cropped to the content at 2x');
+    await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Replay').click()");
+    await js("document.querySelector('.board-close').click()");await delay(50);
+    overlay.webContents.send('board:state',{...boardView,status:'paused',note:'Paused. Say “continue” when you’re ready.',drawing:null});await delay(100);
+    await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Resume').click()");
+    await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Next').click()");await delay(50);
+    assert.deepEqual(boardActions,['replay','close','resume','next']);
+    overlay.webContents.send('board:state',null);await delay(100);
+    assert.equal(await js("document.querySelector('.board')"),null);
+    assert.equal(boardBounds.at(-1),null,'hit-test bounds cleared with the board');
+    // Tasks: the approval card offers task-wide or step-by-step trust; the task card shows progress, confirmations, and Stop.
+    const taskActions=[],taskBounds=[];ipcMain.on('test:task',(_e,a)=>taskActions.push(a));ipcMain.on('test:taskBounds',(_e,b)=>taskBounds.push(b));
+    overlay.webContents.send('test:voice',{id:300,type:'model:changed',text:'Preview'});await delay(50);
+    const taskCard={approvalId:'task-approval',toolName:'do_task',summary:'Let me do this in Notepad: "Write a haiku"? I\'ll click and type in Notepad only, never move your mouse, ask before anything that sends, deletes, buys, or submits, and stop after 15 steps.',input:{goal:'Write a haiku',app:'Notepad'},expiresAt:Date.now()+30000,dryRun:false};
+    overlay.webContents.send('test:voice',{id:300,type:'tool:approvalRequired',approval:taskCard});await delay(100);
+    assert.deepEqual(await js("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['✓ Allow this task','Step by step','✗ Cancel']);
+    await js("[...document.querySelectorAll('.approval-buttons button')].find(b=>b.textContent==='Step by step').click()");await delay(100);
+    assert.deepEqual(decisions.at(-1),{id:'task-approval',approved:true,scope:'once'});
+    overlay.webContents.send('test:voice',{id:300,type:'tool:decision',approval:taskCard,decision:'approved'});overlay.webContents.send('test:voice',{id:300,type:'voice:aborted'});await delay(100);
+    const taskView={id:5,goal:'Write a haiku in Notepad and save it',app:'Notepad',status:'approval',step:3,budget:15,scope:'once',action:'Click “Save” button',risk:null,message:'Okay to do this step?',
+      target:{x:200,y:300,width:60,height:24},display:{x:0,y:0,width:760,height:960},log:[{text:'Click “File” menu item',ok:true},{text:'Type into “Text editor” document: “An old pond…”',ok:true}]};
+    overlay.webContents.send('task:state',taskView);await delay(900);
+    assert.match(await js("document.querySelector('.task-card').textContent"),/Your OK · Notepad.*Step 3 of 15.*Write a haiku.*Next.*Click “Save” button/);
+    assert.equal(await js("document.querySelectorAll('.task-layer .guide-ring path').length"),2,'the control is ringed');
+    const [tx,ty]=await kiteAt();
+    assert.ok(Math.hypot(tx-230,ty-312)<110,'the kite points at the control it is about to use: '+[tx,ty]);
+    const taskRect=await js("JSON.parse(JSON.stringify(document.querySelector('.task-card').getBoundingClientRect()))");
+    assert.ok(!(taskRect.x<260&&taskRect.x+taskRect.width>200&&taskRect.y<324&&taskRect.y+taskRect.height>300),'the card never covers the control');
+    assert.ok(taskBounds.some(b=>b&&b.width>200),'task card bounds reported for hit testing');
+    fs.writeFileSync(path.join(temporary,'task.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("[...document.querySelectorAll('.task-approval button')].find(b=>b.textContent==='Allow the rest').click()");
+    await js("[...document.querySelectorAll('.task-approval button')].find(b=>b.textContent==='Skip').click()");
+    await js("document.querySelector('.task-stop').click()");
+    assert.deepEqual(taskActions,['allowAll','skip','stop']);
+    overlay.webContents.send('task:state',{...taskView,status:'approval',scope:'task',risk:'“Delete” button may send, delete, buy, or change something that can’t be undone.',message:'“Delete” button may send, delete, buy, or change something that can’t be undone.',action:'Click “Delete” button'});await delay(100);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-approval button')].map(b=>b.textContent)"),['Allow','Skip'],'risky steps offer no blanket approval');
+    overlay.webContents.send('task:state',{...taskView,status:'done',action:null,target:null,message:'I wrote the haiku and saved it as haiku.txt.'});await delay(100);
+    assert.match(await js("document.querySelector('.task-card').textContent"),/Done · Notepad.*saved it as haiku\.txt/);
+    assert.equal(await js("document.querySelector('.task-stop')"),null,'no Stop button once finished');
+    overlay.webContents.send('task:state',null);await delay(100);
+    assert.equal(await js("document.querySelector('.task-card')"),null); assert.equal(taskBounds.at(-1),null);
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
-    console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding, guide ring/card/flight/controls. Screenshots: '+temporary);
+    console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding, guide ring/card/flight/controls, whiteboard drawing/pen/highlight/export/controls, task approval scopes/card/ring/pointing/controls. Screenshots: '+temporary);
   } catch(error) {console.error(error);process.exitCode=1;}
   finally {windows.forEach(w=>{if(!w.isDestroyed())w.destroy();});app.exit(process.exitCode||0);}
 });

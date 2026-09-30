@@ -1,4 +1,5 @@
-import { submittedStrokes } from '../vision/runtime';
+import { splitMarks, submittedStrokes } from '../vision/runtime';
+import { boardRuntime } from '../board/runtime';
 import { runtime } from '../kite/runtime';
 import { voiceRuntime } from './runtime';
 
@@ -52,11 +53,11 @@ export class VoiceRecorder {
       recorder.onstop = async () => {
         if (job.discard || this.disposed) return;
         try {
-          const strokes = submittedStrokes(id);
-          if ((job.peak < SILENCE_RMS || !job.chunks.length) && !strokes.length) { window.kite.reportAudioResult(id, 'empty'); return; }
+          const all = submittedStrokes(id), { strokes, marks } = splitMarks(all, boardRuntime.hit, boardRuntime.frame);
+          if ((job.peak < SILENCE_RMS || !job.chunks.length) && !all.length) { window.kite.reportAudioResult(id, 'empty'); return; }
           const buffer = job.peak < SILENCE_RMS ? new ArrayBuffer(0) : await new Blob(job.chunks, { type: MIME }).arrayBuffer();
           if (job.discard || this.disposed) return;
-          const result = await window.kite.submitAudio(buffer, id, strokes);
+          const result = await window.kite.submitAudio(buffer, id, strokes, marks);
           if (!result.ok) window.kite.reportAudioResult(id, 'captureFailed');
         } catch { window.kite.reportAudioResult(id, 'captureFailed'); }
         finally { job.chunks = []; }
@@ -83,7 +84,10 @@ export class VoiceRecorder {
     const job = this.current;
     if (!job || job.id !== id) return;
     // Releasing while permission/device setup is pending must never start a late recording.
-    if (!job.recorder) { const strokes = submittedStrokes(id); this.cancel(); if (strokes.length) void window.kite.submitAudio(new ArrayBuffer(0), id, strokes); else window.kite.reportAudioResult(id, 'empty'); return; }
+    if (!job.recorder) {
+      const all = submittedStrokes(id), { strokes, marks } = splitMarks(all, boardRuntime.hit, boardRuntime.frame); this.cancel();
+      if (all.length) void window.kite.submitAudio(new ArrayBuffer(0), id, strokes, marks); else window.kite.reportAudioResult(id, 'empty'); return;
+    }
     this.sample(1 / 60);
     if (job.recorder.state !== 'inactive') job.recorder.stop();
     this.current = undefined; this.pause();

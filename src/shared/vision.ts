@@ -11,7 +11,8 @@ export interface VisionTurn { images: VisionImages; analysis: Analysis; captureM
 export type ScreenEvent =
   | { type: 'looking'; hidden: boolean; active: boolean; token?: string }
   | { type: 'annotate'; id: number; display: DisplayInfo; origin: CursorPoint }
-  | { type: 'prepare'; token: string; png: Uint8Array; display: DisplayInfo; strokes: Stroke[] }
+  /** `crop` (global DIP): the overview shows only that region, e.g. the one window a task works in. */
+  | { type: 'prepare'; token: string; png: Uint8Array; display: DisplayInfo; strokes: Stroke[]; crop?: ScreenBounds }
   | { type: 'clear' };
 export const contains = (r: ScreenBounds, p: CursorPoint) => p.x >= r.x && p.y >= r.y && p.x < r.x + r.width && p.y < r.y + r.height;
 export function bounds(points: CursorPoint[]): ScreenBounds {

@@ -8,7 +8,7 @@ export type SecretId = ProviderId | 'cartesia';
 export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }
 export interface VoiceChoice { id: string; name: string }
-export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean }
+export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean; whiteboard: boolean; computerUse: boolean }
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
 export interface Timing { captureMs?: number; transcribeMs: number; firstTokenMs: number; totalMs: number; ttsFirstAudioMs?: number; voiceToVoiceMs?: number; voiceAverageMs?: number }
@@ -51,7 +51,7 @@ export interface KiteAPI {
   hasKey(provider: SecretId): Promise<boolean>;
   setKey(provider: SecretId, key: string): Promise<OperationResult>;
   deleteKey(provider: SecretId): Promise<OperationResult>;
-  approveTool(approvalId: string, approved: boolean): Promise<OperationResult>;
+  approveTool(approvalId: string, approved: boolean, scope?: import('./agent').TaskScope): Promise<OperationResult>;
   getToolCalls(): Promise<ToolAudit[]>;
   onToolCallsChanged(callback: (calls: ToolAudit[]) => void): () => void;
   setDryRun(enabled: boolean): Promise<OperationResult>;
@@ -66,13 +66,23 @@ export interface KiteAPI {
   previewVoice(): Promise<OperationResult>;
   reportPlayback(id: number, event: 'started' | 'ended' | 'failed'): void;
   onVoiceEvent(callback: (event: VoiceEvent) => void): () => void;
-  submitAudio(buffer: ArrayBuffer, interactionId: number, strokes?: import('./vision').Stroke[]): Promise<OperationResult>;
+  /** `marks`: ids of whiteboard elements the user drew over while speaking. */
+  submitAudio(buffer: ArrayBuffer, interactionId: number, strokes?: import('./vision').Stroke[], marks?: string[]): Promise<OperationResult>;
   reportAudioResult(interactionId: number, result: 'empty' | 'micDenied' | 'captureFailed'): void;
   setBubbleBounds(bounds: ScreenBounds | null): void;
   onGuideEvent(callback: (view: import('./guide').GuideView | null) => void): () => void;
   guideControl(action: import('./guide').GuideAction): void;
   setGuideBounds(bounds: ScreenBounds | null): void;
   demoGuide(): Promise<OperationResult>;
+  onBoardEvent(callback: (view: import('./board').BoardView | null) => void): () => void;
+  boardControl(action: import('./board').BoardAction): void;
+  boardDrawn(id: number, key: number): void;
+  setBoardBounds(bounds: ScreenBounds | null): void;
+  exportBoard(action: 'copy' | 'save', png: Uint8Array, title: string): Promise<OperationResult>;
+  demoBoard(): Promise<OperationResult>;
+  onTaskEvent(callback: (view: import('./agent').TaskView | null) => void): () => void;
+  taskControl(action: import('./agent').TaskAction): void;
+  setTaskBounds(bounds: ScreenBounds | null): void;
   printRecentMessages(): Promise<OperationResult>;
   copyText(text: string): Promise<OperationResult>;
 }

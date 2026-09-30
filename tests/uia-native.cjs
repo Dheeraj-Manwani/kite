@@ -96,5 +96,5 @@ app.whenReady().then(async () => {
     assert.equal(await self.snapshot(undefined, hwnd), null); self.stop();
     console.log(`PASS real UI Automation guide: tab → button → popup menu, selected tab auto-completes, hidden pages and Kite's own process excluded, DIP rects on display. Sidecar cold ${coldMs.toFixed(0)} ms, warm snapshot ${warmMs.toFixed(0)} ms, ${first.elements.length} elements.`);
   } catch (error) { console.error(error); process.exitCode = 1; }
-  finally { try { send('quit'); } catch { /* fixture gone */ } uia?.stop(); setTimeout(() => { child?.kill(); fs.rmSync(dir, { recursive: true, force: true }); app.exit(process.exitCode || 0); }, 500); }
+  finally { try { send('quit'); } catch { /* fixture gone */ } uia?.stop(); setTimeout(() => { child?.kill(); try { fs.rmSync(dir, { recursive: true, force: true }); } catch { /* A just-stopped sidecar may still hold its script. */ } app.exit(process.exitCode || 0); }, 500); }
 });

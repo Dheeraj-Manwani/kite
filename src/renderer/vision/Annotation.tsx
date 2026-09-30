@@ -18,7 +18,7 @@ export function Annotation() {
         if (event.active && !event.hidden) vr.blinkUntil = performance.now() + 180;
         if (event.hidden) requestAnimationFrame(() => requestAnimationFrame(() => window.kite.screenHidden(event.token)));
       } else if (event.type === 'prepare') {
-        void import('./images').then(m => m.prepareImages(event.png, event.display, event.strokes)).then(images => window.kite.screenPrepared(event.token, images)).catch(() => window.kite.screenPrepared(event.token, null));
+        void import('./images').then(m => m.prepareImages(event.png, event.display, event.strokes, event.crop)).then(images => window.kite.screenPrepared(event.token, images)).catch(() => window.kite.screenPrepared(event.token, null));
       } else if (event.type === 'annotate') {
         if (vr.id !== event.id) return;
         setPreparing(false); current.current = event; setMode(event); vr.drawing = true; window.kite.setOverlayInteractive(true);

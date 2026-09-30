@@ -9,9 +9,9 @@ export function ApprovalCard({ card }: { card: Card }) {
   const [now, setNow] = useState(Date.now()), [busy, setBusy] = useState(false);
   useEffect(() => { setBusy(false); const timer = setInterval(() => setNow(Date.now()), 100); return () => clearInterval(timer); }, [card.approvalId]);
   const seconds = Math.max(0, Math.ceil((card.expiresAt - now) / 1000));
-  const decide = async (approved: boolean) => {
+  const decide = async (approved: boolean, scope?: 'task' | 'once') => {
     setBusy(true);
-    try { const result = await window.kite.approveTool(card.approvalId, approved); if (!result.ok) setBusy(false); }
+    try { const result = await window.kite.approveTool(card.approvalId, approved, scope); if (!result.ok) setBusy(false); }
     catch { setBusy(false); }
     finally { window.kite.setOverlayInteractive(false); }
   };
@@ -23,7 +23,12 @@ export function ApprovalCard({ card }: { card: Card }) {
     <details><summary>Full arguments · {card.toolName}</summary><pre>{JSON.stringify(card.input, null, 2)}</pre></details>
     {card.dryRun && <small>Dry run: no action will be performed.</small>}
     {card.toolName === 'type_text' && <small>Focus the destination app first. Voice approval is recommended.</small>}
-    <div className="approval-buttons"><button disabled={busy || !seconds} onClick={() => { void decide(true); }}>✓ Do it</button><button disabled={busy || !seconds} onClick={() => { void decide(false); }}>✗ Cancel</button></div>
+    {card.toolName === 'do_task'
+      ? <div className="approval-buttons"><button disabled={busy || !seconds} onClick={() => { void decide(true, 'task'); }}>✓ Allow this task</button>
+        <button className="approval-secondary" disabled={busy || !seconds} onClick={() => { void decide(true, 'once'); }}>Step by step</button>
+        <button className="approval-secondary" disabled={busy || !seconds} onClick={() => { void decide(false); }}>✗ Cancel</button></div>
+      : <div className="approval-buttons"><button disabled={busy || !seconds} onClick={() => { void decide(true); }}>✓ Do it</button><button disabled={busy || !seconds} onClick={() => { void decide(false); }}>✗ Cancel</button></div>}
+    {card.toolName === 'do_task' && <small>“Allow this task” lets ordinary steps run; anything that sends, deletes, buys, or submits still asks. “Step by step” asks before every step.</small>}
     <small>or hold Ctrl+Win and say yes/no</small>
   </section>;
 }

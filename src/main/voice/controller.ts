@@ -28,8 +28,11 @@ interface Dependencies {
   tts?: { start(id: number, settings: AppSettings): void; push(id: number, text: string): void; finish(id: number): void; cancel(): void };
   approvals?: ApprovalBroker;
   tools?(messageId: number | null, signal: AbortSignal, activity: () => void, model?: ModelEntry, captureTiming?: (ms: number) => void): ToolSession;
-  /** Guide mode: local voice commands and per-turn system context. */
-  guide?: { command(text: string): string | undefined; context(): string | undefined };
+  /**
+   * Running sessions (task, whiteboard, guide): local voice commands, per-turn system context, and
+   * descriptions of whiteboard elements the user marked while speaking.
+   */
+  guide?: { command(text: string): string | undefined; context(): string | undefined; marks?(ids: string[]): string | undefined };
   now?: () => number;
 }
 interface Interaction {
@@ -38,7 +41,11 @@ interface Interaction {
   visualContent?: ChatMessage['content']; markTypes?: string;
   text: string; session?: string; userRow?: number; toolsStarted?: boolean; tools?: ToolSession; speechStarted?: boolean; approvalReply?: boolean; reminder?: boolean; model?: ModelEntry; row?: number; saved: boolean;
   llmDone: boolean; playbackDone: boolean; speaking: boolean; ttsStartedAt?: number; announcement?: boolean;
+  /** Announcements only: lifecycle callbacks and how the line ended. */
+  hooks?: AnnounceHooks; heard?: boolean; failed?: boolean; settled?: boolean;
 }
+/** A quiet line's lifecycle: `started` when its audio begins, `done` exactly once when it ends. */
+export interface AnnounceHooks { started?(): void; done?(end: 'spoken' | 'cut' | 'failed'): void }
 export class VoiceController {
   private sequence = 0;
   private closing = false;
@@ -46,12 +53,12 @@ export class VoiceController {
   private active?: Interaction;
   private suspended?: Interaction;
   private reminderQueue: Reminder[] = [];
-  private pendingAnnouncement?: string;
+  private pendingAnnouncement?: { text: string; hooks?: AnnounceHooks };
   reminder(reminder: Reminder) {
     if (this.active) { this.reminderQueue.push(reminder); return; }
     this.preview(reminder.label, false, reminder.id);
   }
-  decideApproval(id: string, approved: boolean) { return !this.suspended && !!this.deps.approvals?.decide(id, approved); }
+  decideApproval(id: string, approved: boolean, scope?: import('../../shared/agent').TaskScope) { return !this.suspended && !!this.deps.approvals?.decide(id, approved, scope); }
   dismissReminder() { if (this.active?.reminder) this.cancel(); }
   presentApproval(card: ApprovalCard) {
     const job = this.active; if (!job) return;
@@ -84,9 +91,11 @@ export class VoiceController {
       if (!this.closing && (this.reminderQueue.length || this.pendingAnnouncement)) queueMicrotask(() => {
         if (this.active) return;
         if (this.reminderQueue.length) this.reminder(this.reminderQueue.shift());
-        else if (this.pendingAnnouncement) this.announce(this.pendingAnnouncement);
+        else if (this.pendingAnnouncement) { const next = this.pendingAnnouncement; this.pendingAnnouncement = undefined; this.announce(next.text, next.hooks); }
       });
     }
+    // Last, so a hook that pauses or restarts a lesson sees this job already finished.
+    if (job.announcement) this.settle(job);
   }
   private save(job: Interaction, interrupted = false) {
     job.timing.totalMs = job.releasedAt ? this.now() - job.releasedAt : 0;
@@ -109,7 +118,7 @@ export class VoiceController {
       clearTimeout(this.suspended.timeout); this.active = undefined;
     } else this.cancel('ptt:cancel');
     // The user is taking over; the guide re-announces only on its next change.
-    this.pendingAnnouncement = undefined;
+    this.dropPending();
     const job: Interaction = { id: ++this.sequence, phase: 'listening', controller: new AbortController(),
       releasedAt: 0, timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text: '', approvalReply: !!this.suspended, saved: false, llmDone: false, playbackDone: true, speaking: false };
     this.active = job; this.deps.setEscape(true, () => this.cancel('voice:aborted'));
@@ -138,16 +147,21 @@ export class VoiceController {
   }
   mute() {
     const job = this.active; this.deps.tts?.cancel();
-    if (job) { job.playbackDone = true; job.speaking = false; this.emit('voice:muted', job); this.complete(job); }
+    // A muted lesson line carries on as a caption rather than pausing the lesson.
+    if (job) { if (job.announcement) job.failed = true; job.playbackDone = true; job.speaking = false; this.emit('voice:muted', job); this.complete(job); }
   }
   ttsEvent(event: VoiceEvent) {
     const job = this.active; if (!job || event.id !== job.id) return;
     if (event.type === 'tts:chunk' && job.timing.ttsFirstAudioMs === undefined) job.timing.ttsFirstAudioMs = this.now() - (job.ttsStartedAt ?? job.releasedAt);
     this.deps.emit(event);
-    if (event.type === 'tts:error') { job.speaking = false; job.playbackDone = true; this.complete(job); }
+    if (event.type === 'tts:error') { job.failed = true; job.speaking = false; job.playbackDone = true; this.complete(job); }
   }
   playback(id: number, type: 'started' | 'ended' | 'failed') {
     const job = this.active; if (!job || job.id !== id || !job.speaking) return;
+    if (job.announcement) {
+      if (type === 'started') job.hooks?.started?.();
+      else if (type === 'ended') job.heard = true; else job.failed = true;
+    }
     if (type === 'started' && job.timing.voiceToVoiceMs === undefined && !job.announcement) {
       job.timing.voiceToVoiceMs = this.now() - job.releasedAt;
       if (job.row !== undefined) this.deps.history.updateMessage?.(job.row, job.timing, false);
@@ -176,22 +190,29 @@ export class VoiceController {
     this.emit('llm:done', job); this.complete(job);
   }
   /**
-   * Speak a guide line without a bubble. It never interrupts the user's own interaction: the latest
-   * line waits for it to finish. `null` cancels a queued or playing line. No voice means no line.
+   * Speak a guide or whiteboard line without a bubble. It never interrupts the user's own interaction: the
+   * latest line waits for it to finish. `null` cancels a queued or playing line. Returns false when there
+   * is no voice (the line is not spoken and no hook fires); the caller shows it as text instead.
    */
-  announce(text: string | null) {
-    if (text === null) { this.pendingAnnouncement = undefined; if (this.active?.announcement) this.drop(this.active); return; }
+  announce(text: string | null, hooks?: AnnounceHooks): boolean {
+    if (text === null) { this.dropPending(); if (this.active?.announcement) this.drop(this.active); return false; }
     const settings = this.deps.settings?.();
-    if (this.closing || !settings?.ttsEnabled || !settings.voiceId || !this.deps.tts) return;
-    if (this.active && !this.active.announcement) { this.pendingAnnouncement = text; return; }
+    if (this.closing || !settings?.ttsEnabled || !settings.voiceId || !this.deps.tts) return false;
+    if (this.active && !this.active.announcement) { this.dropPending(); this.pendingAnnouncement = { text, hooks }; return true; }
     if (this.active) this.drop(this.active);
-    this.pendingAnnouncement = undefined;
+    this.dropPending();
     const job: Interaction = { id: ++this.sequence, phase: 'processing', controller: new AbortController(), releasedAt: this.now(),
-      timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text, saved: false, llmDone: true, playbackDone: true, speaking: false, announcement: true };
+      timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text, saved: false, llmDone: true, playbackDone: true, speaking: false, announcement: true, hooks };
     this.active = job;
-    job.timeout = setTimeout(() => { if (this.active === job) this.drop(job); }, 30000);
+    job.timeout = setTimeout(() => { if (this.active === job) this.drop(job); }, 60000);
     this.emit('guide:announce', job);
     this.speak(job, text, settings);
+    return true;
+  }
+  private dropPending() { const pending = this.pendingAnnouncement; this.pendingAnnouncement = undefined; pending?.hooks?.done?.('cut'); }
+  private settle(job: Interaction) {
+    if (job.settled) return;
+    job.settled = true; job.hooks?.done?.(job.heard ? 'spoken' : job.failed ? 'failed' : 'cut');
   }
   /** Silently end an announcement; tts.cancel() tells the overlay to stop its audio. */
   private drop(job: Interaction) {
@@ -210,7 +231,7 @@ export class VoiceController {
     else this.emit('llm:error', job, { text: result === 'micDenied' ? 'Please allow microphone access in Windows Settings → Privacy & security → Microphone, including desktop apps.' : 'I couldn’t record your microphone. Check the input device and try again.' });
     if (job.approvalReply) this.cancel('voice:aborted'); else { job.controller.abort(); this.finish(job); }
   }
-  async submit(id: number, buffer: ArrayBuffer, strokes: Stroke[] = []) {
+  async submit(id: number, buffer: ArrayBuffer, strokes: Stroke[] = [], marks: string[] = []) {
     const job = this.active; if (!job || id !== job.id || job.phase !== 'awaiting') return;
     clearTimeout(job.timeout); job.phase = 'processing';
     job.timeout = setTimeout(() => {
@@ -227,7 +248,8 @@ export class VoiceController {
       const groqKey = this.deps.getKey('groq'); if (buffer.byteLength && !groqKey) throw new MissingKeyError('groq');
       const started = this.now();
       const transcript = buffer.byteLength ? (await this.deps.transcribe(new Uint8Array(buffer), groqKey, job.controller.signal)).trim() : '';
-      const text = transcript || (vision ? 'What is this?' : '');
+      const marked = job.approvalReply ? undefined : this.deps.guide?.marks?.(marks);
+      const text = transcript || (vision || marked ? 'What is this?' : '');
       if (!current()) return;
       job.timing.transcribeMs = this.now() - started;
       if (!text) { this.emit('voice:empty', job); if (job.approvalReply) this.cancel('voice:aborted'); else this.finish(job); return; }
@@ -255,11 +277,12 @@ export class VoiceController {
       job.userRow = typeof userRow === 'number' ? userRow : undefined;
       if (vision && job.userRow !== undefined) await this.deps.vision.persist(job.userRow, vision, job.controller.signal);
       if (!current()) return;
+      const said = marked ? `${text}\n[${marked}]` : text;
       const userMessage: ChatMessage = { role: 'user', content: vision ? [
-        { type: 'text', text: `${text}\n${markInstruction(vision.analysis)}` },
+        { type: 'text', text: `${said}\n${markInstruction(vision.analysis)}` },
         { type: 'image', image: vision.images.overview, mediaType: 'image/jpeg' },
         ...(vision.images.zoom ? [{ type: 'image' as const, image: vision.images.zoom, mediaType: 'image/jpeg' }] : []),
-      ] : text };
+      ] : said };
       if (vision) { job.visualContent = userMessage.content; job.markTypes = vision.analysis.marks.map(m => m.markType).join(', '); }
       this.deps.conversation.add(userMessage, Date.now());
       const settings = this.deps.settings?.();

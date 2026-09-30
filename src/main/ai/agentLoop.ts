@@ -12,7 +12,8 @@ export async function runAgentLoop(options: {
     while (calls < 4 && !options.signal.aborted) {
       const requests: { approvalId: string; toolCall: { toolCallId: string; toolName: string; input: unknown } }[] = [];
       const result = streamText({ model: options.model, system: options.system, messages, tools, maxRetries: 0, abortSignal: options.signal,
-        maxOutputTokens: 1200, providerOptions: options.providerOptions, onError: () => undefined,
+        // Whiteboard lessons and task plans are tool arguments; spoken replies stay short by instruction.
+        maxOutputTokens: 4096, providerOptions: options.providerOptions, onError: () => undefined,
         stopWhen: [stepCountIs(4), () => calls >= 4, () => options.session.hasImages],
         prepareStep: () => { if (calls >= 4) throw new BudgetError(); calls++; options.session.modelCalls = calls; return {}; },
       });

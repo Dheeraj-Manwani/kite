@@ -87,7 +87,8 @@ button { background: #255e59; color: white; border: 0; border-radius: 7px; paddi
 .annotation.pulse path { animation: ink-pulse .45s ease-out; }
 @keyframes ink-pulse { 50% { filter: drop-shadow(0 0 10px #fff); } }
 .screen-looking { position: fixed; z-index: 10001; pointer-events: none; color: white; background: #382753; border: 1px solid #d4c7ff; border-radius: 20px; padding: 8px 16px; font: 600 14px system-ui; }
-.capture-hidden .overlay > :not(.screen-looking) { opacity: 0 !important; }
+/* Content protection already keeps the whiteboard out of Kite's own captures; hiding it too would flash a large panel. */
+.capture-hidden .overlay > :not(.screen-looking):not(.board) { opacity: 0 !important; }
 
 :root { --kite-body:#147d80; --kite-shade:#0b5965; --kite-spar:#f8edca; --kite-tail:#eaa449; --kite-accent:#e9a43f; --kite-outline:#173e49; }
 @media (prefers-color-scheme: dark) { :root { --kite-body:#49c6bd; --kite-shade:#168e98; --kite-spar:#fff2cc; --kite-accent:#ffc666; --kite-outline:#f2fbf9; } }
@@ -132,3 +133,60 @@ button { background: #255e59; color: white; border: 0; border-radius: 7px; paddi
 .guide-actions .guide-stop { background: #5d3f50; color: #fff; }
 .guide-hint { display: block; margin-top: 7px; font-size: 10px; color: #8f7788; }
 .approval-steps { margin: 6px 0 4px; padding-left: 20px; font-size: 11px; color: #5d3f50; max-height: 150px; overflow: auto; }
+
+/* Whiteboard: paper, hand-drawn ink, and the kite holding the marker. Ink styles live on the SVG itself so exports match. */
+.board { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; border: 1px solid #dfe3e8; border-radius: 16px; background: #fff; color: #1e1e1e;
+  box-shadow: 0 18px 60px #0f1b2a38, 0 2px 8px #0f1b2a1f; overflow: hidden; pointer-events: auto; animation: board-in .3s ease-out; }
+@keyframes board-in { from { opacity: 0; } }
+.board header { flex: 0 0 46px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 16px; border-bottom: 1px solid #eef0f3; background: #fbfbfc; cursor: grab; user-select: none; }
+.board header:active { cursor: grabbing; }
+.board-mark { color: var(--kite-body); }
+.board-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 18px 'Ink Free', 'Segoe Print', cursive; }
+.board-progress { flex: 0 0 auto; font-size: 11px; color: #868e96; }
+.board-tools { display: flex; gap: 4px; margin-left: auto; }
+.board-tools button { padding: 5px 10px; border-radius: 7px; background: #f1f3f5; color: #343a40; font-size: 12px; }
+.board-tools button:hover { background: #e7eaee; }
+.board-tools .board-close { padding: 1px 9px; background: transparent; font-size: 19px; line-height: 1; }
+.board-canvas { position: relative; flex: 1; overflow: hidden; cursor: grab; touch-action: none; }
+.board-canvas:active { cursor: grabbing; }
+.board-svg { display: block; }
+.board-caption { flex: 0 0 auto; display: flex; align-items: center; min-height: 58px; padding: 10px 18px; border-top: 1px solid #eef0f3; background: #fbfbfc; color: #343a40; font-size: 15px; line-height: 1.45; }
+.board.paused .board-caption, .board.done .board-caption { color: #6a4c93; }
+.board-ring path { fill: none; stroke: #f59f00; stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: guide-draw .6s cubic-bezier(.3,.7,.4,1) backwards; }
+.board-ring path.pass-1 { stroke-width: 1.8; opacity: .7; animation-delay: .15s; }
+.board-resize { position: absolute; right: 3px; bottom: 3px; width: 14px; height: 14px; cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 55%, #ced4da 55%, #ced4da 65%, transparent 65%, transparent 78%, #ced4da 78%, #ced4da 88%, transparent 88%); }
+@media (prefers-color-scheme: dark) {
+  .board { border-color: #2c2f33; background: #121212; color: #e9ecef; }
+  .board header, .board-caption { border-color: #2c2f33; background: #1a1b1e; color: #dee2e6; }
+  .board-tools button { background: #2c2f33; color: #e9ecef; }
+  /* Excalidraw's dark theme: invert the paper and ink, then rotate hues back. */
+  .board-svg { filter: invert(93%) hue-rotate(180deg); }
+}
+
+/* Tasks: a progress card with a Stop button that is always there, and the guide's ring on the control in use. */
+.task-layer { position: fixed; inset: 0; pointer-events: none; }
+.task-card { position: absolute; left: 0; top: 0; width: 320px; padding: 12px 14px 10px; border: 1px solid #c9d8e6; border-radius: 14px; background: #f8fbfff7; color: #24323f;
+  box-shadow: 0 5px 24px #16242f26; pointer-events: auto; font-size: 13px; line-height: 1.45; transition: transform .35s cubic-bezier(.3,.7,.4,1); }
+.task-card header { display: flex; align-items: center; gap: 7px; font-size: 12px; color: #3d5466; }
+.task-card header span[aria-hidden] { color: var(--kite-body); }
+.task-progress { margin-left: auto; font-size: 11px; color: #7a8c9a; white-space: nowrap; }
+.task-meter { height: 3px; margin: 8px 0; border-radius: 3px; background: #e2eaf1; overflow: hidden; }
+.task-meter span { display: block; height: 100%; background: var(--kite-body); transition: width .3s; }
+.task-goal { margin: 0 0 6px; color: #24323f; font-size: 13px; }
+.task-action { display: flex; gap: 6px; margin: 0 0 6px; color: #24323f; font-size: 14px; }
+.task-action span { flex: 0 0 auto; align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: 4px; background: #e2eaf1; color: #3d5466; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
+.task-message { margin: 0 0 6px; color: #3d5466; font-size: 12px; }
+.task-card.approval { border-color: #e8b98a; }
+.task-card.approval .task-message { color: #8a4b12; }
+.task-card.done { border-color: #9fd4b4; }
+.task-card.failed, .task-card.stopped { border-color: #e3b5b5; }
+.task-approval, .task-actions { display: flex; gap: 6px; margin-top: 8px; }
+.task-approval button, .task-actions button { flex: 1; padding: 6px 4px; font-size: 11px; background: #e2eaf1; color: #24323f; }
+.task-approval button:first-child { background: #147d80; color: #fff; }
+.task-actions .task-stop { background: #b3261e; color: #fff; font-weight: 600; }
+.task-log { margin: 6px 0 0; padding-left: 18px; max-height: 110px; overflow: auto; font-size: 11px; color: #52667a; }
+.task-log li.ok::marker { content: '✓  '; color: #2f9e44; }
+.task-log li.bad::marker { content: '✗  '; color: #c92a2a; }
+.task-hint { display: block; margin-top: 7px; font-size: 10px; color: #7a8c9a; }
+.approval-buttons .approval-secondary { background: #f1e3ea; color: #5d3f50; }

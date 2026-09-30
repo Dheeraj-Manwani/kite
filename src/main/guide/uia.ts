@@ -39,7 +39,8 @@ export class LineClient {
       }, timeoutMs);
       this.pending.set(id, { resolve: value => resolve(value as T), reject, timer, cleanup: () => signal?.removeEventListener('abort', abort) });
       signal?.addEventListener('abort', abort, { once: true });
-      this.input.write(JSON.stringify({ ...payload, id }) + '\n');
+      // ASCII only: the sidecar reads stdin in the console code page, so non-ASCII text travels as \u escapes.
+      this.input.write(JSON.stringify({ ...payload, id }).replace(/[\u007f-￿]/g, c => '\\u' + c.charCodeAt(0).toString(16).padStart(4, '0')) + '\n');
     });
   }
   close(code = 'ECLOSED') {
@@ -50,13 +51,15 @@ export class LineClient {
 }
 export interface UiaWindow { title: string; process: string; pid: number; rect: ScreenBounds }
 export interface UiaSnapshot { window: UiaWindow; elements: UiElement[]; ms: number }
-type Box = [number, number, number, number];
+export type Box = [number, number, number, number];
 interface RawSnapshot { window: Omit<UiaWindow, 'rect'> & { rect: Box }; elements: (Omit<UiElement, 'rect'> & { rect: Box })[]; ms: number }
 export interface UiaOptions {
   directory: string; excludePid: number;
   /** Converts the sidecar's physical coordinates for the reported DPI awareness. */
   toDip(rect: ScreenBounds, awareness: string): ScreenBounds;
   spawn?: typeof spawn; idleMs?: number; timeoutMs?: number; startMs?: number;
+  /** Another script speaking the same protocol (the task agent's); defaults to the read-only guide script. */
+  script?: string; name?: string;
   log?(event: string, data?: Record<string, unknown>): void;
 }
 const bounds = ([x, y, width, height]: Box): ScreenBounds => ({ x, y, width, height });
@@ -73,9 +76,10 @@ export class UiaClient {
   constructor(private options: UiaOptions) {}
   get supported() { return process.platform === 'win32' && this.failures < 3; }
   private async start(): Promise<LineClient> {
-    const file = path.join(this.options.directory, `uia-${createHash('sha256').update(uiaScript).digest('hex').slice(0, 12)}.ps1`);
+    const script = this.options.script ?? uiaScript;
+    const file = path.join(this.options.directory, `${this.options.name ?? 'uia'}-${createHash('sha256').update(script).digest('hex').slice(0, 12)}.ps1`);
     await mkdir(this.options.directory, { recursive: true });
-    await writeFile(file, uiaScript, 'utf8');
+    await writeFile(file, script, 'utf8');
     const executable = path.join(process.env.SystemRoot ?? 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe');
     const child = (this.options.spawn ?? spawn)(executable, ['-NoLogo', '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', file],
       { stdio: ['pipe', 'pipe', 'pipe'], windowsHide: true });
@@ -118,6 +122,15 @@ export class UiaClient {
       if (this.child) this.idle = setTimeout(() => this.stop(), this.options.idleMs ?? 120_000);
     }
   }
+  /** One raw request (for scripts with more operations). Sidecar errors reject with SidecarError. */
+  async request<T>(payload: Record<string, unknown>, timeoutMs: number, signal?: AbortSignal): Promise<T> {
+    if (!this.supported) throw new SidecarError('EUNSUPPORTED');
+    clearTimeout(this.idle);
+    try { const client = await this.ready(); signal?.throwIfAborted(); return await client.request<T>(payload, timeoutMs, signal); }
+    finally { clearTimeout(this.idle); if (this.child) this.idle = setTimeout(() => this.stop(), this.options.idleMs ?? 120_000); }
+  }
+  /** Physical sidecar rectangle to global DIP. */
+  dip(box: Box) { return this.options.toDip(bounds(box), this.awareness); }
   stop(code = 'ECLOSED') {
     clearTimeout(this.idle);
     const child = this.child; this.client?.close(code); this.reset();
