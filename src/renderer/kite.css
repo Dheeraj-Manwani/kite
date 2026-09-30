@@ -35,3 +35,11 @@
 @keyframes stage-happy { 35% { transform: translateY(-10px) rotate(-8deg); } 70% { transform: translateY(2px) rotate(3deg); } }
 @media (prefers-reduced-motion: reduce) { .kite-stage-flight, .kite-stage-cheer { animation: none !important; } }
 .kite-paused .kite-canvas { transition: transform .6s ease-in; transform: translateY(-120vh) rotate(-12deg); }
+/* The kite in High Contrast (docs/personality.md §5.8, K-16): the sail in CanvasText with a Highlight halo, the tail in CanvasText. */
+@media (forced-colors: active) {
+  .kite-sail, .kite-stage-sail { fill: CanvasText; stroke: Highlight; }
+  .kite-tail rect, .kite-stage-tail rect { fill: CanvasText; stroke: Highlight; }
+  .sail-mark path, .sail-mark rect { fill: CanvasText; }
+  .kite-stage { background: Canvas; }
+  .kite-stage-string { stroke: GrayText; }
+}

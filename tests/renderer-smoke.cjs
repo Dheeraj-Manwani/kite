@@ -61,6 +61,11 @@ app.whenReady().then(async()=>{
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Actions & trust').click()");await delay(120);
     assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Ask before I….*Open an app.*Search the web/);
     assert.equal(await sjs("document.querySelector('.settings-view').textContent.includes('open_app')"),false);
+    // High Contrast keeps the current section visible with a Highlight outline (UX-90).
+    settings.webContents.debugger.attach('1.3');
+    await settings.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});await delay(60);
+    assert.equal(await sjs("getComputedStyle(document.querySelector('.side-item[aria-current]')).outlineStyle"),'solid');
+    await settings.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[]});settings.webContents.debugger.detach();
     const tutorial=await create('onboarding');
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Hello, I’m Kite');
     // Onboarding is a guided path: no nav, a labeled progress row, and the kite on its stage.
@@ -113,6 +118,9 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-reply').textContent"),'Hello world.');
     // The answer ends with who answered (the Settings step above switched to Claude Sonnet 5), then Copy, Pin, and Open in History (UX-14).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer .model-chip').textContent"),'Claude Sonnet 5');
+    // One short announcement per state; the streaming bubble itself is not a live region (UX-91).
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').getAttribute('aria-live')"),null);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble .sr-only').textContent"),'Answer ready');
     await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer [aria-label=\"Keep this open\"]').click()");await delay(50);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer [aria-pressed]').getAttribute('aria-pressed')"),'true');
     send({type:'voice:aborted'});await delay(100);
@@ -121,6 +129,8 @@ app.whenReady().then(async()=>{
     assert.ok(!reports.some(r=>r.event==='failed'));
     // A tap that is too short gets a one-line pill that says what to do, not a clipped "?" card.
     overlay.webContents.send('test:voice',{id:50,type:'ptt:start'});await delay(50);
+    // The kite's accessible name follows its state (personality.md K-16).
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas').getAttribute('aria-label')"),'Kite, listening');
     // Listening is a compact pill with a level meter and the release/cancel hint, not a full card (UX-12).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-status').textContent"),'Release to send · Esc to cancel');
     overlay.webContents.send('test:voice',{id:50,type:'ptt:tooShort'});await delay(80);
@@ -149,6 +159,7 @@ app.whenReady().then(async()=>{
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-countdown').textContent"),/30|29/);
     // The primary button names the action; the voice hint follows the user's shortcut.
     assert.deepEqual(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['Paste text','Not now']);
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble .sr-only').textContent"),'Kite asks: '+card.summary);
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card').textContent"),/Or hold Ctrl \+ Win and say “yes” or “no”/);
     // The question is the title; the tool id and arguments wait behind Details; the countdown says what happens (UX-22).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-details summary').textContent"),'Details');

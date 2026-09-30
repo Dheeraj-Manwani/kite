@@ -8,7 +8,7 @@ export const KiteRenderer = memo(function KiteRenderer() {
   const svg = useRef<SVGSVGElement>(null), body = useRef<SVGGElement>(null), sail = useRef<SVGPathElement>(null);
   const tail = useRef<SVGGElement>(null), eyes = useRef<SVGGElement>(null);
   useKiteLoop({ svg, body, sail, tail, eyes });
-  return <svg ref={svg} className="kite-canvas" aria-label="Kite companion" role="img">
+  return <svg ref={svg} className="kite-canvas" aria-label="Kite" role="img">
     <defs>
       <linearGradient id="kite-sail" x1="0" y1="0" x2="1" y2="1">
         <stop stopColor="var(--kite-body)" /><stop offset="1" stopColor="var(--kite-shade)" />

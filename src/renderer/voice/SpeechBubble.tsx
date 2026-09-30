@@ -191,8 +191,11 @@ export function SpeechBubble() {
   };
   // The pill stays until there is something to read or decide; then the bubble grows to hold it.
   const pill = bubble.status && !bubble.text && !bubble.error && !bubble.approval && !bubble.toolStatus && !bubble.alarm && !bubble.settings && !bubble.voiceStatus ? bubble.status : undefined;
+  // One short announcement per state instead of re-reading a streaming bubble (UX-91). The pill and errors announce themselves.
+  const announcement = !bubble.visible || pill ? '' : bubble.approval ? `Kite asks: ${bubble.approval.summary}`
+    : bubble.compact ? bubble.text : bubble.text && !bubble.streaming && !bubble.error ? 'Answer ready' : '';
   return <aside ref={element} className={`speech-bubble ${bubble.visible ? 'visible' : ''} ${bubble.compact || pill ? 'compact' : ''}`}
-    aria-live="polite" aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
+    aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
     <div className="bubble-body">{pill ? <StatusLine status={pill} /> : <>
     {bubble.transcript && <div className="bubble-transcript">You asked · {bubble.transcript}</div>}
     {(bubble.text || bubble.streaming) && <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <span className="stream-caret">▍</span>}</div>}
@@ -212,5 +215,6 @@ export function SpeechBubble() {
     </div>}
     {!bubble.compact && <div className="bubble-keys">Tab to move · Esc to close</div>}
     </>}</div>
+    <div className="sr-only" role="status" aria-live="polite">{announcement}</div>
   </aside>;
 }

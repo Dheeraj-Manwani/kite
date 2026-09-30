@@ -376,3 +376,36 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
 .task-log li.ok::marker { content: '✓  '; color: var(--success); }
 .task-log li.bad::marker { content: '✗  '; color: var(--danger); }
 .task-hint { display: block; margin-top: 7px; font-size: var(--fs-caption); color: var(--text-muted); }
+
+/* Windows High Contrast (UX-90). Chromium swaps colors for system ones, and keeps any system color set here.
+   Surfaces become Canvas and CanvasText with a Highlight edge; anything that showed state through a fill
+   (switches, dots, pills, lit keys) gets an explicit system color so the state survives. */
+@media (forced-colors: active) {
+  .speech-bubble, .speech-bubble::before, .approval-card.sensitive, .guide-card, .task-card, .app-notice, .toast, .pill, .dev-panel { border-color: Highlight; }
+  .toast, .screen-looking { border: 1px solid CanvasText; }
+  button { border-color: ButtonText; }
+  /* Chromium forces a button's text color, so the primary fill opts out and uses Highlight explicitly. */
+  button.primary { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  button:disabled, button.primary:disabled { background: Canvas; color: GrayText; border-color: GrayText; }
+  button.link { border-style: none; color: LinkText; }
+  .switch { border-color: ButtonText; }
+  .switch::after { background: ButtonText; }
+  .switch:checked { background: Highlight; border-color: Highlight; }
+  .switch:checked::after { background: HighlightText; }
+  .side-item[aria-current], .history-item.selected { outline: 2px solid Highlight; outline-offset: -2px; }
+  .side-item[aria-current]::before, .history-item.selected::before { background: Highlight; }
+  .progress-dots i, .guide-dots span { border: 1px solid GrayText; background: Canvas; }
+  .progress-dots .done, .guide-dots .done { background: CanvasText; border-color: CanvasText; }
+  .progress-dots .current, .guide-dots .current { background: Highlight; border-color: Highlight; }
+  .status-dots i { background: CanvasText; }
+  .big-key.lit, .brain-card.chosen { outline: 2px solid Highlight; }
+  .big-key.lit { background: Highlight; color: HighlightText; }
+  .guide-ring path, .board-ring path, .approval-countdown .countdown-arc { stroke: Highlight; filter: none; }
+  .annotation path { fill: Highlight; filter: none; }
+  .screen-looking::before { background: Highlight; }
+  .provider-state, .provider-state.problem, .field-error, .bubble-error strong, .step-status { color: CanvasText; }
+  /* The whiteboard's drawing is content: keep its paper and ink as drawn. */
+  .board-svg { forced-color-adjust: none; }
+}
+/* Text for screen readers only. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

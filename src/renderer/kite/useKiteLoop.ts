@@ -52,7 +52,7 @@ export function useKiteLoop(refs: KiteElements) {
     let wagPhase = 0, bobPhase = 0, lastSpin = 0, spinBase = 0, wasGuiding = false;
     let blinkAt = config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin), blinkStart = -10;
     let fpsTime = 0, fpsFrames = 0;
-    let drawnSail = { ...config.sail };
+    let drawnSail = { ...config.sail }, spokenName = '';
     function tick(now: number) {
       frame = requestAnimationFrame(tick);
       reduced = media.matches || runtime.reducedMotion;
@@ -97,6 +97,12 @@ export function useKiteLoop(refs: KiteElements) {
       const pointer = taskRuntime.anchor && taskRuntime.aim ? taskRuntime : gr;
       const guiding = !ink && !!pointer.anchor && !!pointer.aim && !vr.drawing && !voiceRuntime.bubble && (mood === 'idle' || voiceRuntime.quiet);
       const pointing = guiding || !!ink;
+      // A name that says what Kite is doing, for screen readers (docs/personality.md K-16); written only when it changes.
+      const name = document.documentElement.classList.contains('kite-paused') ? 'Kite, paused'
+        : voiceRuntime.toolPose === 'proposing' ? 'Kite, waiting for your OK' : voiceRuntime.toolPose === 'executing' ? 'Kite, working'
+        : mood === 'listening' ? 'Kite, listening' : mood === 'thinking' ? 'Kite, thinking' : mood === 'talking' ? 'Kite, talking'
+        : ink ? 'Kite, drawing' : guiding ? 'Kite, pointing' : 'Kite';
+      if (name !== spokenName) { spokenName = name; svg.setAttribute('aria-label', name); }
       if (wasGuiding && !pointing) {
         // Re-base whole turns so returning upright takes the short way round.
         spinBase = Math.round((rotation.value - config.baseAngle) / 360) * 360; lastSpin = 0;
