@@ -10,12 +10,18 @@ const { catalog } = require('../src/main/ai/catalog.ts');
 const { defaultPermissions } = require('../src/shared/permissions.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,deepseek:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose',permissions:structuredClone(defaultPermissions),jobsModel:null});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose',permissions:structuredClone(defaultPermissions),jobsModel:null,memory:true});
+const memoryFacts=[{id:1,kind:'profile',key:'profile.phone',label:'Phone number',value:'9876543210',source:'From what you said, 1 Oct',created:1,updated:1,used:null},
+  {id:2,kind:'address',key:'home.pincode',label:'Home pincode',value:'411045',source:'From the shop.example.in task, 1 Oct',created:1,updated:1,used:Date.now()},
+  {id:3,kind:'address',key:'home.city',label:'Home city',value:'Pune',source:'From the shop.example.in task, 1 Oct',created:1,updated:1,used:null},
+  {id:4,kind:'preference',key:'pref.sunfold-whey',label:'Sunfold whey',value:'Sunfold Whey Protein, 60 sachets, Unflavoured',source:'Chosen on shop.example.in, 1 Oct',created:1,updated:1,used:null}];
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
-listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyScreenshot:async id=>id===42?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==':null,historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,attachments:1,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:a=>ipcRenderer.send('test:about',a),openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
+listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyScreenshot:async id=>id===42?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==':null,historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,attachments:1,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:a=>ipcRenderer.send('test:about',a),openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:view=>ipcRenderer.send('test:openView',view),
+listMemory:()=>ipcRenderer.invoke('test:memoryList'),editMemory:(id,patch)=>ipcRenderer.invoke('test:memoryEdit',id,patch),deleteMemory:id=>ipcRenderer.invoke('test:memoryDelete',id),exportMemory:async()=>({ok:true}),
+undoMemory:token=>ipcRenderer.invoke('test:memoryUndo',token),onMemoryChanged:cb=>subscribe('memory:changed',cb),letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
@@ -25,7 +31,12 @@ onBoardEvent:cb=>subscribe('board:state',cb),boardControl:action=>ipcRenderer.se
 onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),taskChoose:index=>ipcRenderer.send('test:taskChoose',index),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
-  const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[];
+  const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[], memoryCalls=[];
+  ipcMain.handle('test:memoryList',()=>memoryFacts);
+  ipcMain.handle('test:memoryEdit',(_e,id,patch)=>{memoryCalls.push(['edit',id,patch]);return {ok:true};});
+  ipcMain.handle('test:memoryDelete',(_e,id)=>{memoryCalls.push(['delete',id]);return {ok:true};});
+  ipcMain.handle('test:memoryUndo',(_e,token)=>{memoryCalls.push(['undo',token]);return {ok:true};});
+  ipcMain.on('test:openView',(_e,view)=>memoryCalls.push(['open',view]));
   try {
     session.defaultSession.setPermissionRequestHandler((_w,_p,cb)=>cb(false));
     ipcMain.handle('test:settings',()=>snapshot);
@@ -129,6 +140,23 @@ app.whenReady().then(async()=>{
     await sjs("[...document.querySelectorAll('.settings-view button')].find(b=>b.textContent==='Remove').click()");await delay(100);
     assert.deepEqual(snapshot.settings.permissions.rules,[]);
     snapshot.settings.permissions=structuredClone(defaultPermissions);settings.webContents.send('settings:changed',snapshot);await delay(60);
+    // Memory (docs/end-to-end-jobs.md §3.4): beside History; facts by kind with where they came from; sensitive values masked until shown.
+    await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Memory').click()");await delay(250);
+    for(let i=0;i<100&&!(await sjs("!!document.querySelector('.memory-view .memory-value')"));i++)await delay(30);
+    assert.equal(await sjs("document.querySelector('.memory-view h1').textContent"),'Memory');
+    assert.deepEqual(await sjs("[...document.querySelectorAll('.memory-view .settings-group h2')].map(h=>h.textContent)"),['About you','Home address','Preferences','Privacy']);
+    assert.deepEqual(await sjs("[...document.querySelectorAll('.memory-value')].map(v=>v.textContent)"),['ending 10Show','••••••Show','Pune','Sunfold Whey Protein, 60 sachets, Unflavoured']);
+    assert.match(await sjs("document.querySelector('.memory-view').textContent"),/From the shop\.example\.in task, 1 Oct · last used/);
+    await sjs("document.querySelectorAll('.memory-value button')[1].click()");await delay(60);
+    assert.equal(await sjs("document.querySelectorAll('.memory-value')[1].textContent"),'411045Hide');
+    fs.writeFileSync(path.join(temporary,'memory.png'),(await settings.webContents.capturePage()).toPNG());
+    await sjs("[...document.querySelectorAll('.memory-fact')][1].querySelector('.row-control button').click()");await delay(60);
+    await sjs("(()=>{const i=document.querySelector('.memory-fact input');const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(i,'411046');i.dispatchEvent(new Event('input',{bubbles:true}));})()");await delay(30);
+    await sjs("document.querySelector('.memory-fact input').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))");await delay(80);
+    await sjs("document.querySelector('[aria-label=\"Forget Sunfold whey\"]').click()");await delay(80);
+    await sjs("document.querySelector('.memory-view .switch').click()");await delay(80);
+    assert.deepEqual(memoryCalls,[['edit',2,{value:'411046'}],['delete',4]]); assert.equal(snapshot.settings.memory,false,'the master switch');
+    snapshot.settings.memory=true;settings.webContents.send('settings:changed',snapshot);await delay(60);
     // The jobs model: automatic picks DeepSeek Flash when its key is saved.
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Models & keys').click()");await delay(150);
     assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Jobs model.*Automatic: DeepSeek Flash when its key is saved/);
@@ -571,6 +599,21 @@ app.whenReady().then(async()=>{
     await js("[...document.querySelectorAll('.speech-bubble.notice button')].find(b=>b.textContent==='Restart').click()");await delay(250);
     assert.deepEqual(abouts,['restart']);
     assert.equal(await js("document.querySelector('.speech-bubble.notice.visible')"),null,'the notice closes once used');
+    // Memory is never silent: "Saved … · Undo · Edit" by the kite; saved values asked for are shown here, never to a model.
+    overlay.webContents.send('app:event',{type:'memory:saved',token:'tok-1',text:'Saved your home pincode'});await delay(400);
+    assert.equal(await js("document.querySelector('.speech-bubble.notice.visible [role=status]').textContent"),'Saved your home pincode.');
+    assert.deepEqual(await js("[...document.querySelectorAll('.speech-bubble.notice button')].map(b=>b.textContent)"),['Undo','Edit']);
+    fs.writeFileSync(path.join(temporary,'memory-notice.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("[...document.querySelectorAll('.speech-bubble.notice button')].find(b=>b.textContent==='Undo').click()");await delay(250);
+    assert.deepEqual(memoryCalls.at(-1),['undo','tok-1']);
+    overlay.webContents.send('app:event',{type:'memory:saved',token:'tok-2',text:'Updated your phone number'});await delay(400);
+    await js("[...document.querySelectorAll('.speech-bubble.notice button')].find(b=>b.textContent==='Edit').click()");await delay(250);
+    assert.deepEqual(memoryCalls.at(-1),['open','memory']);
+    overlay.webContents.send('app:event',{type:'memory:show',text:'Home pincode: 411045'});await delay(400);
+    assert.equal(await js("document.querySelector('.speech-bubble.notice.visible [role=status]').textContent"),'Home pincode: 411045');
+    // Your details on screen can be put away at once.
+    await js("[...document.querySelectorAll('.speech-bubble.notice button')].find(b=>b.textContent==='Hide').click()");await delay(250);
+    assert.equal(await js("document.querySelector('.speech-bubble.notice.visible')"),null);
     // Paused: the kite says goodbye, reels out of sight, then drifts back down on resume and says hello (design.md §K5.3).
     overlay.webContents.send('app:event',{type:'paused',until:null});await delay(300);
     assert.equal(await js("document.querySelector('.speech-bubble.notice.visible [role=status]').textContent"),'Paused — see you soon.');

@@ -7,7 +7,7 @@ import type { AgentWindow, TaskAction, TaskScope, TaskView } from '../../shared/
 import type { CursorPoint, ModelEntry, ScreenBounds } from '../../shared/types';
 import type { ToolResult } from '../tools/types';
 import type { Decision, StepPrompt } from './model';
-import { TaskSession } from './session';
+import { TaskSession, type TaskMemory } from './session';
 import { routingHints } from '../ai/routing';
 import { ActClient } from './sidecar';
 import { browserApp, type JobPlan } from '../../shared/job';
@@ -32,6 +32,7 @@ export interface TaskServiceDeps {
   /** The user's permission settings, and saving an "Always" or "Never" answer (ADR 014). */
   permissions?(): PermissionSettings;
   remember?(category: Category, permission: Permission, place: string | null): void;
+  memory?: TaskMemory;
 }
 // Browsers whose executable, given a URL, opens it as a new tab of the last active window. Nothing else is launched.
 const browsers: { app: RegExp; exe: string[] }[] = [
@@ -99,7 +100,7 @@ export class TaskService {
       say: text => { if (this.session === session) this.deps.say(text); },
       audit: (type, summary, decision, result) => this.deps.audit(messageId, `task:${type}`, summary, decision, result),
       finished: (message, status) => this.deps.finished(task.goal, task.app, message, status),
-      log: this.deps.log, permissions: this.deps.permissions, remember: this.deps.remember,
+      log: this.deps.log, permissions: this.deps.permissions, remember: this.deps.remember, memory: this.deps.memory,
     }, model.supportsVision);
     this.session = session;
     this.deps.log('task:start', { ok: true });

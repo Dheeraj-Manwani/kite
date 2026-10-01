@@ -3,13 +3,17 @@
 // questions and declines anything risky or off the site. The shop's own state decides pass or fail.
 //   npm run test:job -- [runs] [provider:model] [--ambiguous]   (default: 1 run on deepseek:deepseek-flash)
 // --ambiguous asks only for "60 sachets of Sunfold protein": whey or isolate, and which flavour, are the user's to choose.
+// --memory starts with a saved name and pincode (phase 3): the pincode prompt can be filled from memory, and the run fails
+// if any prompt sent to the model carries a saved value.
 // Edge comes to the front while a job runs; keys are only sent while it is in front.
 require('./register.cjs');
 const { spawn, execFileSync } = require('node:child_process');
 const fs = require('node:fs'), os = require('node:os'), path = require('node:path');
 const { ActClient } = require('../src/main/agent/sidecar.ts');
 const { TaskSession } = require('../src/main/agent/session.ts');
-const { decideStep } = require('../src/main/agent/model.ts');
+const { decideStep, agentSystem, agentPrompt } = require('../src/main/agent/model.ts');
+const { createMemory } = require('../src/main/memory/store.ts');
+const { factsFromAnswer } = require('../src/shared/memory.ts');
 const { planJob } = require('../src/main/agent/planner.ts');
 const { getModel } = require('../src/main/ai/providers.ts');
 const { describeModel, providerTraits } = require('../src/main/ai/catalog.ts');
@@ -34,7 +38,19 @@ async function job(shop, run) {
     '--window-position=40,40', '--window-size=1400,980', 'about:blank'], { stdio: 'ignore' });
   const client = new ActClient({ directory: path.join(dir, 'agent'), excludePid: process.pid, toDip: r => r });
   const model = getModel(entry.provider, entry.id, { getKey: () => key }), toolChoice = providerTraits[entry.provider].requiredToolChoice ? 'required' : 'auto';
-  const record = { run, questions: [], approvals: [], log: [], started: Date.now() };
+  const record = { run, questions: [], approvals: [], log: [], started: Date.now(), leaks: [] };
+  // Memory over an in-memory table with a stand-in cipher: what matters here is what reaches the model.
+  let memory;
+  if (process.argv.includes('--memory')) {
+    const rows = new Map(); let id = 0;
+    const store = createMemory({ list: () => [...rows.values()], put: r => { const old = [...rows.values()].find(x => x.key === r.key); const row = { ...r, id: old?.id ?? ++id, used_at: null }; rows.set(row.id, row); return row.id; },
+      remove: i => rows.delete(i), removeAll: () => { rows.clear(); return 0; }, touch: () => {} },
+    { isEncryptionAvailable: () => true, encryptString: v => Buffer.from(v), decryptString: b => b.toString() }, { enabled: () => true });
+    store.save({ kind: 'profile', key: 'profile.name', label: 'Name', value: 'Asha Kulkarni', source: 'live test' });
+    store.save({ kind: 'address', key: 'home.pincode', label: 'Home pincode', value: '411045', source: 'live test' });
+    memory = { context: () => store.context(), redact: t => store.redact(t), fill: t => store.fill(t), chose: () => {},
+      learn: (q, a, where) => { for (const f of factsFromAnswer(q, a, where)) store.save(f); } };
+  }
   try {
     await delay(3000);
     let session;
@@ -50,7 +66,11 @@ async function job(shop, run) {
           // The fictional store lives on this machine: point the plan at it, keeping the model's kind and search words.
           return { ...plan, site: '127.0.0.1', scope: ['127.0.0.1'], start: shop.url };
         },
-        decide: (prompt, signal) => decideStep({ model, prompt, signal, toolChoice, providerOptions: providerOptionsFor(entry) }),
+        decide: (prompt, signal) => {
+          if (memory) { const sent = agentSystem(prompt) + JSON.stringify(agentPrompt(prompt)); for (const v of ['411045', 'Asha', 'Kulkarni']) if (sent.includes(v)) record.leaks.push(`step ${prompt.step}: ${v}`); }
+          return decideStep({ model, prompt, signal, toolChoice, providerOptions: providerOptionsFor(entry) });
+        },
+        memory,
         displayOf: r => r,
         emit: view => {
           if (!view || view.id !== run) return;
@@ -81,7 +101,7 @@ async function job(shop, run) {
     if (result.status === 'timeout') session.control('stop');
     const state = shop.state();
     Object.assign(record, result, { steps: session.steps, ms: Date.now() - record.started, cart: state.cart, orders: state.orders.length,
-      history: session.view().log, pass: result.status === 'done' && state.orders.length === 0 && state.cart.length === 1 && state.cart[0].sku === wanted && state.cart[0].qty === 1 && /60 sachets/.test(result.message)
+      history: session.view().log, pincode: state.pincode ?? null, pass: record.leaks.length === 0 && result.status === 'done' && state.orders.length === 0 && state.cart.length === 1 && state.cart[0].sku === wanted && state.cart[0].qty === 1 && /60 sachets/.test(result.message)
         // A vague request must be asked about, not settled by the page's defaults.
         && (!process.argv.includes('--ambiguous') || record.questions.length >= 1) });
     return record;
@@ -104,6 +124,7 @@ async function job(shop, run) {
       console.log(`  cart: ${JSON.stringify(r.cart.map(l => `${l.qty} × ${l.sku}`))} · orders ${r.orders}`);
       if (r.questions.length) console.log(`  questions: ${r.questions.join(' | ')}`);
       if (r.approvals.length) console.log(`  approvals: ${r.approvals.join(' | ')}`);
+      if (process.argv.includes('--memory')) console.log(`  memory: shop pincode ${r.pincode ?? 'not set'} · ${r.leaks.length ? `LEAKS ${r.leaks.join(', ')}` : 'no saved value in any prompt'}`);
       console.log(r.log.map(l => `    ${l}`).join('\n'));
     }
   } finally { await shop.close(); }

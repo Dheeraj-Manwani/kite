@@ -32,4 +32,6 @@ export interface PerfSnapshot { mainMB: number; rendererMB: number; rendererFPS:
 /** Where onboarding's stage kite was when "Let's fly" closed the window: screen DIPs, and its scale. */
 export interface StageKite { x: number; y: number; scale: number }
 export type AppEvent = { type: 'paused'; until: number | null } | { type: 'resumed' | 'update:ready' | 'fault' | 'hotkey:detected' }
+  /** Memory: a fact was saved (Undo by token), or saved values to show the user and never a model. */
+  | { type: 'memory:saved'; token: string; text: string } | { type: 'memory:show'; text: string }
   | { type: 'onboarding:done'; from: StageKite };

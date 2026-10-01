@@ -35,6 +35,20 @@ export interface TaskDeps {
   permissions?(): PermissionSettings;
   /** "Always" or "Never" on a question: save it for this place, or for every place when place is null. */
   remember?(category: Category, permission: Permission, place: string | null): void;
+  /** What Kite remembers about the user (docs/end-to-end-jobs.md §3.4). Absent: no memory. */
+  memory?: TaskMemory;
+}
+export interface TaskMemory {
+  /** The memory as the model may see it: placeholders and masks, for the system prompt. */
+  context(): string;
+  /** Saved values in text replaced by their placeholders; applied to everything sent to the model. */
+  redact(text: string): string;
+  /** Placeholders in text to type replaced by their values, when the step runs. */
+  fill(text: string): { text: string; missing: string[] };
+  /** The user answered a question Kite asked: facts in it may be saved, with a notice. */
+  learn(question: string, answer: string, where: string): void;
+  /** The user chose an option in a store job: saved as a preference for what was searched. */
+  chose(topic: string, choice: string, where: string): void;
 }
 type Answer = Exclude<TaskAction, 'pause' | 'resume'>;
 const yes = (answer: Answer) => answer === 'allow' || answer === 'allowAll' || answer === 'always' || answer === 'alwaysEverywhere';
@@ -285,8 +299,12 @@ export class TaskSession {
     }
     const image = this.lookNext && this.vision && this.deps.look ? await this.deps.look(this.window, signal).catch((error: unknown): null => { if (signal.aborted) throw error; return null; }) : null;
     this.lookNext = false;
-    const decision = await this.decide({ goal: this.goal, app: this.app, step: this.step + 1, budget: this.budget, history: this.history.slice(-14),
-      snapshot, controls, image, vision: this.vision, forbidden: this.forbidden(), url: this.plan ? this.url : undefined, job: this.plan ? { plan: this.plan, phase: this.phase, phaseStep: this.phaseSteps } : null }, signal);
+    // Saved values never reach the model: the controls, the steps so far and the page address carry placeholders instead.
+    const redact = (text: string) => this.deps.memory?.redact(text) ?? text;
+    const url = this.plan && this.url ? redact(this.url) : this.plan ? this.url : undefined;
+    const decision = await this.decide({ goal: redact(this.goal), app: this.app, step: this.step + 1, budget: this.budget, history: this.history.slice(-14).map(redact),
+      snapshot: { ...snapshot, window: { ...snapshot.window, title: redact(snapshot.window.title) } }, controls: redact(controls), image, vision: this.vision, forbidden: this.forbidden(),
+      memory: this.deps.memory?.context() || undefined, url, job: this.plan ? { plan: this.plan, phase: this.phase, phaseStep: this.phaseSteps } : null }, signal);
     signal.throwIfAborted();
     if (!decision) { this.end('failed', 'I couldn’t reach the model, so I stopped. Nothing else will be clicked or typed.'); return; }
     this.step++; this.phaseSteps++;
@@ -321,6 +339,7 @@ export class TaskSession {
         this.action = null; this.set('asking', decision.question); this.deps.say(decision.question);
         const answer = String(await waitFor<string | number>(signal, resolve => { this.answer = resolve; }));
         this.answer = undefined;
+        this.deps.memory?.learn(decision.question, answer, this.plan?.site ?? this.app);
         this.note(`Asked “${decision.question}”; the user answered “${answer.slice(0, 300)}”.`, true, `You answered: ${answer.slice(0, 60)}`); return;
       }
     }
@@ -334,8 +353,11 @@ export class TaskSession {
     this.deps.say(`${question} ${options.map((o, i) => `Option ${i + 1}: ${o.label}${o.detail ? `, ${o.detail}` : ''}.`).join(' ')}`);
     const answer = await waitFor<string | number>(signal, resolve => { this.answer = resolve; });
     this.answer = undefined; this.choices = null;
-    const picked = typeof answer === 'number' ? (answer < 0 ? 'none' : answer) : matchChoice(answer, options);
-    return { picked: typeof picked === 'number' && !options[picked] ? null : picked, answer: String(answer) };
+    let picked = typeof answer === 'number' ? (answer < 0 ? 'none' : answer) : matchChoice(answer, options);
+    if (typeof picked === 'number' && !options[picked]) picked = null;
+    // What was chosen for this search is a preference for next time (shown in Memory, with Undo).
+    if (typeof picked === 'number' && this.plan?.kind === 'store') this.deps.memory?.chose(this.plan.search ?? this.goal, options[picked].label, this.plan.site ?? this.app);
+    return { picked, answer: String(answer) };
   }
   /**
    * The variant floor, decided by code: before "Add to cart" in a store job, an option group whose selected option the
@@ -479,7 +501,18 @@ export class TaskSession {
     this.set('acting', summary);
     // Point first: the kite flies to the control so the user sees what is about to happen.
     await sleep(this.timing.pointMs, signal);
-    const result = await this.execute(action, element, snapshot, signal);
+    let run = action;
+    if (action.type === 'type_text' && /\{\{/.test(action.text)) {
+      // Saved values are typed by code: the model only ever wrote the placeholder.
+      const filled = this.deps.memory?.fill(action.text) ?? { text: action.text, missing: [...action.text.matchAll(/\{\{([^}]+)\}\}/g)].map(m => m[1]) };
+      if (filled.missing.length) {
+        this.deps.audit(action.type, summary, decision, { ok: false, message: 'Nothing saved for that.' });
+        this.note(`${summary} → not typed: nothing is saved for ${filled.missing.map(k => `{{${k}}}`).join(', ')}. Ask the user with ask_user.`, false, summary);
+        this.emit(); return;
+      }
+      run = { ...action, text: filled.text };
+    }
+    const result = await this.execute(run, element, snapshot, signal);
     const message = result.ok ? result.message : result.message || 'That didn’t work.';
     this.deps.audit(action.type, summary, decision, { ok: result.ok, message });
     this.note(`${summary} → ${message}`, result.ok, summary);

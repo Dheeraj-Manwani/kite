@@ -5,7 +5,7 @@ import { catalog, mergeCatalog, providerIds } from '../ai/catalog';
 import { defaultPermissions, validPermissions } from '../../shared/permissions';
 export const defaultSettings: AppSettings = { onboardingComplete: false, hotkey: ['Control','Meta'], launchOnStartup: false, reducedMotion: false, toolApprovals: { get_datetime: false, list_reminders: false, open_app: true, web_search: true }, visionModel: { provider: 'moonshot', id: 'kimi-k2.5' }, screenWithoutAsking: false, keepScreenshots: false, model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
   fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google', guideMode: true, whiteboard: true, computerUse: true, kiteSize: 'standard', earcons: false, liveliness: 'lively', kiteSkin: 'rose',
-  permissions: defaultPermissions, jobsModel: null };
+  permissions: defaultPermissions, jobsModel: null, memory: true };
 export function validModel(value: unknown): value is ModelSelection {
   if (!value || typeof value !== 'object') return false;
   const m = value as ModelSelection;
@@ -26,7 +26,7 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
       const old = get(); const next = { ...old };
       for (const [key, value] of Object.entries(patch)) {
         if (key === 'model' || key === 'fallback' || key === 'visionModel') { if (!validModel(value) || !hasKey(value.provider)) throw new Error('Save a key for this provider first.'); next[key] = value; }
-        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun' || key === 'keepScreenshots' || key === 'onboardingComplete' || key === 'launchOnStartup' || key === 'reducedMotion' || key === 'guideMode' || key === 'whiteboard' || key === 'computerUse' || key === 'earcons') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
+        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun' || key === 'keepScreenshots' || key === 'onboardingComplete' || key === 'launchOnStartup' || key === 'reducedMotion' || key === 'guideMode' || key === 'whiteboard' || key === 'computerUse' || key === 'earcons' || key === 'memory') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
         else if (key === 'hotkey') { if (!validateHotkey(value)) throw new Error('Use two or more modifiers only; other keys would type into the focused app.'); next.hotkey = [...value]; }
         else if (key === 'screenWithoutAsking') { if (value !== false) throw new Error('Screen access always requires confirmation in v1.'); }
         else if (key === 'toolApprovals') {

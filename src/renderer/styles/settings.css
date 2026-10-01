@@ -115,3 +115,10 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
 .money-field { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); }
 .money-field input { width: 120px; box-sizing: border-box; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font-variant-numeric: tabular-nums; }
 .row-control:has(> .money-field) { flex: none; }
+/* Memory (docs/end-to-end-jobs.md §3.4): one row per fact, with where it came from. */
+.memory-fact .row-text { flex: 1; }
+.memory-value { display: flex; align-items: center; gap: 4px; color: var(--text); overflow-wrap: anywhere; }
+.memory-fact input { margin: 2px 0; padding: 6px 8px; }
+.memory-view .custom-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.memory-empty { margin: 0 0 24px; }
+.speech-bubble.notice span[role='status'] { white-space: pre-line; }

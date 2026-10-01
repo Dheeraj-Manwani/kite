@@ -11,7 +11,7 @@ import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, i
 import { mkdir, open } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { openSecrets } from '../settings/secrets';
+import { openSecrets, osCipher } from '../settings/secrets';
 import { openDatabase } from '../storage/database';
 import { Conversation } from '../ai/conversation';
 import { transcribeAudio } from '../ai/transcribe';
@@ -49,6 +49,10 @@ import { planJob } from '../agent/planner';
 import { doTask } from '../tools/impl/do_task';
 import { jobsModel, taskActions, taskScopes, type TaskAction, type TaskScope } from '../../shared/agent';
 import { remember } from '../../shared/permissions';
+import { createMemory } from '../memory/store';
+import { factsFromAnswer, slug } from '../../shared/memory';
+import { memoryTools } from '../tools/impl/memory';
+import { registerMemoryIPC } from '../ipc/memory';
 const validProvider = (value: unknown): value is SecretId => [...providerIds, 'cartesia'].includes(value as SecretId);
 export function startVoiceService() {
   const secrets = openSecrets();
@@ -58,6 +62,28 @@ export function startVoiceService() {
   const history = openDatabase(path.join(app.getPath('userData'), 'kite.db'));
   configureProviders(secrets);
   const preferences = openPreferences(id => secrets.hasKey(id));
+  // Memory (docs/end-to-end-jobs.md §3.4): values encrypted like API keys; the Memory view hears about every change.
+  const memory = createMemory(history.memory, osCipher, { enabled: () => preferences.get().memory !== false,
+    changed: () => { const win = getSettingsWindow(); if (win && !win.isDestroyed()) win.webContents.send('memory:changed'); } });
+  registerMemoryIPC(memory);
+  const today = () => new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  // Every save shows "Saved … · Undo · Edit" by the kite; nothing is saved silently.
+  const savedNotice = (result: { token: string; updated: boolean; fact: { label: string } }) =>
+    appEvent({ type: 'memory:saved', token: result.token, text: `${result.updated ? 'Updated' : 'Saved'} your ${result.fact.label.charAt(0).toLowerCase()}${result.fact.label.slice(1)}` });
+  const taskMemory = {
+    context: () => memory.context(), redact: (text: string) => memory.redact(text), fill: (text: string) => memory.fill(text),
+    learn: (question: string, answer: string, where: string) => {
+      for (const fact of factsFromAnswer(question, answer, `From the ${where} task, ${today()}`)) { const r = memory.save(fact); if (r.ok && r.token) savedNotice(r); }
+    },
+    chose: (topic: string, choice: string, where: string) => {
+      const label = topic.trim().slice(0, 60); if (!label) return;
+      const r = memory.save({ kind: 'preference', key: `pref.${slug(label)}`, label: label.charAt(0).toUpperCase() + label.slice(1), value: choice, source: `Chosen on ${where}, ${today()}` });
+      if (r.ok && r.token) savedNotice(r);
+    },
+  };
+  /** Saved values out of everything a chat model is sent, including earlier turns. */
+  const redactMessages = (messages: import('../ai/conversation').ChatMessage[]) => messages.map(m => m.role === 'assistant' ? { ...m, content: memory.redact(m.content) }
+    : { ...m, content: typeof m.content === 'string' ? memory.redact(m.content) : m.content.map(part => part.type === 'text' ? { ...part, text: memory.redact(part.text) } : part) });
   let ownsEscape = false;
   const emit = (event: import('../../shared/types').VoiceEvent) => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send(event.type, event); const setup = getSettingsWindow(); if (setup?.webContents.getURL().endsWith('#onboarding')) setup.webContents.send(event.type, event); logEvent(event.type, event.timing); };
   const tts = new TTSService(() => secrets.getKey('cartesia'), event => controller.ttsEvent(event));
@@ -117,7 +143,7 @@ export function startVoiceService() {
       toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
     planner: (model, key) => (goal, app, signal) => planJob({ model: getModel(model.provider, model.id, { getKey: () => key }), goal, app, signal,
       toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
-    permissions: () => preferences.get().permissions,
+    permissions: () => preferences.get().permissions, memory: taskMemory,
     remember: (category, permission, place) => {
       try { preferences.update({ permissions: remember(preferences.get().permissions, category, permission, place) }); }
       catch { logEvent('permissions:remember', { ok: false }); }
@@ -128,7 +154,7 @@ export function startVoiceService() {
   /** Local commands and context for whatever is running: a task first, then the whiteboard, then the guide. */
   const sessions = {
     command: (text: string) => agent.command(text) ?? board.command(text) ?? guide.command(text),
-    context: () => [agent.context(), board.context(), guide.context()].filter(Boolean).join('\n') || undefined,
+    context: () => [agent.context(), board.context(), guide.context(), memory.context()].filter(Boolean).join('\n') || undefined,
     marks: (ids: string[]) => board.marks(ids),
   };
   const controller = new VoiceController({
@@ -147,7 +173,8 @@ export function startVoiceService() {
     approvals,
     tools: (messageId, signal, activity, model, captureTiming) => new ToolSession({
       imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
-      definitions: [...createTools(apps, history, preferences.get()), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
+      definitions: [...createTools(apps, history, preferences.get()),
+        ...memoryTools({ store: memory, show: text => appEvent({ type: 'memory:show', text }), saved: savedNotice, source: () => `From what you said, ${today()}` }), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
         ...(preferences.get().whiteboard ? [explainOnWhiteboard(lesson => board.start(lesson))] : []),
         ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions)] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
         captureSignal.throwIfAborted(); const captured = await captureUnderCursor(captureSignal); captureSignal.throwIfAborted();
@@ -160,7 +187,7 @@ export function startVoiceService() {
       event: (type, name, result) => { if (!signal.aborted) controller.toolEvent(type, name, result); } }),
     getKey: provider => secrets.getKey(provider), history,
     conversation, guide: sessions,
-    transcribe: transcribeAudio, ask, tts,
+    transcribe: transcribeAudio, ask: (messages, ...rest) => ask(redactMessages(messages), ...rest), tts,
     settings: preferences.get, describe: model => describeModel(model, preferences.snapshot().models),
     emit,
     setEscape: (active, abort) => {

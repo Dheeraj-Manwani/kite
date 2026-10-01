@@ -36,6 +36,16 @@ app.whenReady().then(() => {
     assert.equal(db.listReminders().length,1);assert.equal(db.listReminders()[0].id,reminder);
     assert.equal(db.claimReminder(reminder),true);assert.equal(db.claimReminder(reminder),false);assert.equal(db.listReminders().length,0);
     assert.equal(db.recentTools()[0].decision,'timeout');assert.equal(db.recentTools()[0].dry_run,1);assert.equal(db.recentTools()[0].message_id,row);
+    // Memory (ADR 015): values encrypted with the OS, never plain text on disk, readable again after a restart.
+    const { createMemory } = require('../src/main/memory/store.ts'), { osCipher } = require('../src/main/settings/secrets.ts');
+    let memory=createMemory(db.memory,osCipher,{enabled:()=>true});
+    assert.equal(memory.save({kind:'address',key:'home.pincode',label:'Home pincode',value:'411045',source:'smoke'}).ok,true);
+    assert.equal(memory.save({kind:'profile',key:'profile.phone',label:'Card number',value:'4111 1111 1111 1111',source:'smoke'}).ok,false);
+    db.close();
+    for(const file of fs.readdirSync(temporary).filter(f=>f.startsWith('kite.db')))assert.ok(!fs.readFileSync(path.join(temporary,file)).includes('411045'),file);
+    db=openDatabase(dbPath);memory=createMemory(db.memory,osCipher,{enabled:()=>true});
+    assert.equal(memory.lookup('home.pincode'),'411045');assert.equal(memory.redact('pin 411045'),'pin {{home.pincode}}');
+    assert.equal(memory.forget(memory.find('home.pincode').id),true);assert.equal(db.memory.list().length,0);
     db.annotate(row,{marks:[{markType:'tap',region:{x:-40,y:50,width:0,height:0}}]},35);
     db.attach(row,'fixture.jpg');
     assert.equal(db.recent().at(-1).capture_ms,35);assert.match(db.recent().at(-1).annotation_json,/tap/);

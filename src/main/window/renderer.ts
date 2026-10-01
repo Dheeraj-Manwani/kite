@@ -15,7 +15,7 @@ export function isAppURL(value: string) {
   } catch { return false; }
 }
 /** `mica` tells the page that the window draws Mica behind it, so it leaves its own background off (UX-57). */
-export function loadRenderer(win: BrowserWindow, view: 'overlay' | 'settings' | 'history' | 'onboarding', options: { mica?: boolean } = {}) {
+export function loadRenderer(win: BrowserWindow, view: 'overlay' | import('../../shared/types').View, options: { mica?: boolean } = {}) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', event => event.preventDefault());
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {

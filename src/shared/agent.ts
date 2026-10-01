@@ -1,5 +1,6 @@
 import type { ModelEntry, ModelSelection, ProviderId, ScreenBounds } from './types';
 import type { Category, StepClass } from './permissions';
+import { placeholderLabel } from './memory';
 /**
  * "Do it for me" tasks: shared, pure pieces. Kite operates one app through UI Automation patterns and
  * keyboard input only; it never moves the pointer. Summaries and risk checks are deterministic (ADR 008),
@@ -110,7 +111,12 @@ export const describeElement = (e: Pick<AgentElement, 'name' | 'role' | 'automat
 export function describeAction(action: AgentAction, element?: AgentElement): string {
   switch (action.type) {
     case 'click': return `Click ${element ? describeElement(element) : 'a control'}`;
-    case 'type_text': return `${action.replace ? 'Replace the text in' : 'Type into'} ${element ? describeElement(element) : 'the focused field'}: “${clip(action.text)}”${action.submit ? ', then press Enter' : ''}`;
+    case 'type_text': {
+      // A saved value is described, never shown: "your saved Home pincode".
+      const whole = action.text.match(/^\{\{([a-z0-9.-]+)\}\}$/);
+      const what = whole ? `your saved ${placeholderLabel(whole[1])}` : `“${clip(action.text.replace(/\{\{([a-z0-9.-]+)\}\}/g, (_m, key: string) => `[your ${placeholderLabel(key)}]`))}”`;
+      return `${action.replace ? 'Replace the text in' : 'Type into'} ${element ? describeElement(element) : 'the focused field'}: ${what}${action.submit ? ', then press Enter' : ''}`;
+    }
     case 'press_keys': { const chord = parseKeys(action.keys); return `Press ${chord ? chordLabel(chord) : action.keys}${(action.times ?? 1) > 1 ? ` ×${action.times}` : ''}`; }
     case 'scroll': return `Scroll ${action.direction} in ${element ? describeElement(element) : 'the window'}`;
     case 'wait': return `Wait ${action.seconds} s`;

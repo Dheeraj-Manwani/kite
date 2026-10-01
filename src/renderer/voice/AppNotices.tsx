@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 import { runtime } from '../kite/runtime';
 import { react, voiceRuntime } from './runtime';
 
-interface Notice { text: string; ms: number; at: number; action?: { label: string; run(): void } }
+interface Action { label: string; run(): void }
+interface Notice { text: string; ms: number; at: number; actions?: Action[] }
 
 /**
  * App notices as small bubbles from the kite (docs/design.md UX-18): pause, resume, an update, a fault.
@@ -20,7 +21,7 @@ export function AppNotices() {
   };
   useEffect(() => {
     let leave: ReturnType<typeof setTimeout> | undefined, welcome: ReturnType<typeof setTimeout> | undefined;
-    const say = (text: string, ms: number, action?: Notice['action']) => { pending.current = { text, ms, at: performance.now(), action }; };
+    const say = (text: string, ms: number, ...actions: Action[]) => { pending.current = { text, ms, at: performance.now(), actions }; };
     const off = window.kite.onAppEvent(e => {
       if (e.type === 'paused') {
         document.documentElement.classList.add('kite-paused'); clearTimeout(welcome); clearTimeout(leave);
@@ -34,7 +35,11 @@ export function AppNotices() {
         react('costume', .5); say('I have an update ready.', 15000, { label: 'Restart', run: () => window.kite.aboutAction('restart') });
       } else if (e.type === 'fault') {
         react('tangled'); say('Something went wrong. Try again, or open the logs.', 12000, { label: 'Open logs', run: () => window.kite.aboutAction('logs') });
-      } else if (e.type === 'onboarding:done') runtime.flight = e.from;
+      } else if (e.type === 'memory:saved') {
+        // Memory is never silent (docs/end-to-end-jobs.md §3.4): what was saved, with Undo and Edit.
+        say(`${e.text}.`, 8000, { label: 'Undo', run: () => { void window.kite.undoMemory(e.token); } }, { label: 'Edit', run: () => window.kite.openView('memory') });
+      } else if (e.type === 'memory:show') say(e.text, 15000, { label: 'Hide', run: () => undefined });
+      else if (e.type === 'onboarding:done') runtime.flight = e.from;
     });
     // One notice at a time, and never over an answer: it waits, and a notice that waited past its moment is dropped.
     const timer = setInterval(() => {
@@ -57,6 +62,6 @@ export function AppNotices() {
   return <aside ref={element} className={`speech-bubble notice${shown ? ' visible' : ''}`} aria-hidden={!shown}
     onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
     <div className="bubble-body"><span role="status">{shown ? notice?.text : ''}</span>
-      {shown && notice?.action && <button className="primary" onClick={() => { notice.action?.run(); hide(); }}>{notice.action.label}</button>}</div>
+      {shown && notice?.actions?.map((action, i) => <button key={action.label} className={i ? 'ghost' : 'primary'} onClick={() => { action.run(); hide(); }}>{action.label}</button>)}</div>
   </aside>;
 }

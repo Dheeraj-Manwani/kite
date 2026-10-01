@@ -29,7 +29,13 @@ export const migrations = [
    CREATE TRIGGER messages_au AFTER UPDATE OF content ON messages BEGIN
      INSERT INTO messages_fts(messages_fts,rowid,content) VALUES('delete',old.id,old.content);
      INSERT INTO messages_fts(rowid,content) VALUES(new.id,new.content); END;`,
+  // Memory (docs/end-to-end-jobs.md §3.4): one row per fact; the value is encrypted with safeStorage by memory/store.ts.
+  `CREATE TABLE memory (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK(kind IN ('profile','address','preference','order')),
+     key TEXT NOT NULL UNIQUE, label TEXT NOT NULL, value TEXT NOT NULL, source TEXT NOT NULL,
+     created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, used_at INTEGER);`,
 ];
+/** A memory row as stored: `value` is ciphertext (base64). */
+export interface MemoryRow { id: number; kind: string; key: string; label: string; value: string; source: string; created_at: number; updated_at: number; used_at: number | null }
 export function openDatabase(filename: string) {
   const db = new Database(filename);
   db.pragma('secure_delete = ON');
@@ -103,6 +109,18 @@ export function openDatabase(filename: string) {
       })();
       db.exec("INSERT INTO messages_fts(messages_fts) VALUES('optimize')");
       db.pragma('wal_checkpoint(TRUNCATE)'); return files.map(f => f.path);
+    },
+    memory: {
+      list: () => db.prepare('SELECT * FROM memory ORDER BY kind, key').all() as MemoryRow[],
+      /** Insert or replace by key; returns the row id. */
+      put(row: Omit<MemoryRow, 'id' | 'used_at'>) {
+        db.prepare(`INSERT INTO memory(kind,key,label,value,source,created_at,updated_at) VALUES(@kind,@key,@label,@value,@source,@created_at,@updated_at)
+          ON CONFLICT(key) DO UPDATE SET kind=excluded.kind, label=excluded.label, value=excluded.value, source=excluded.source, updated_at=excluded.updated_at`).run(row);
+        return (db.prepare('SELECT id FROM memory WHERE key=?').get(row.key) as { id: number }).id;
+      },
+      remove(id: number) { const removed = !!db.prepare('DELETE FROM memory WHERE id=?').run(id).changes; db.pragma('wal_checkpoint(TRUNCATE)'); return removed; },
+      removeAll() { const n = db.prepare('DELETE FROM memory').run().changes; db.pragma('wal_checkpoint(TRUNCATE)'); return n; },
+      touch(id: number, at: number) { db.prepare('UPDATE memory SET used_at=? WHERE id=?').run(at, id); },
     },
     voiceStats() {
       const values = (db.prepare('SELECT voice_to_voice_ms AS value FROM messages WHERE role=\'assistant\' AND voice_to_voice_ms IS NOT NULL AND interrupted=0 ORDER BY voice_to_voice_ms').all() as {value:number}[]).map(r=>r.value);

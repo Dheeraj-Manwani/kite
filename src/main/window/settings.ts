@@ -7,7 +7,7 @@ import { MIN_SIZE, restoredSize, supportsMica, type WindowSize } from './size';
 let settingsWindow: BrowserWindow | null = null;
 let sizes: Store<{ settings?: WindowSize }> | null = null;
 export const getSettingsWindow = () => settingsWindow;
-export function createSettingsWindow(view: 'settings' | 'history' | 'onboarding' = 'settings'): BrowserWindow {
+export function createSettingsWindow(view: import('../../shared/types').View = 'settings'): BrowserWindow {
   if (settingsWindow) {
     if (settingsWindow.isMinimized()) settingsWindow.restore();
     settingsWindow.show();

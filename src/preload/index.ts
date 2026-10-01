@@ -3,9 +3,15 @@ import type { CursorPoint, CursorGeometry, KiteAPI, VoiceEvent, VoiceEventType }
 
 const api: KiteAPI = {
   setHotkeyRecording: active => ipcRenderer.send('hotkey:recording', active),
-  onViewChange(callback) { const listener = (_e: IpcRendererEvent, view: 'settings' | 'history' | 'onboarding') => callback(view); ipcRenderer.on('view:change', listener); return () => ipcRenderer.removeListener('view:change', listener); },
+  onViewChange(callback) { const listener = (_e: IpcRendererEvent, view: import('../shared/types').View) => callback(view); ipcRenderer.on('view:change', listener); return () => ipcRenderer.removeListener('view:change', listener); },
   onAppEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/release').AppEvent) => callback(event); ipcRenderer.on('app:event', listener); return () => ipcRenderer.removeListener('app:event', listener); },
   openView: view => ipcRenderer.send('view:open', view),
+  listMemory: () => ipcRenderer.invoke('memory:list'),
+  editMemory: (id, patch) => ipcRenderer.invoke('memory:edit', id, patch),
+  deleteMemory: id => ipcRenderer.invoke('memory:delete', id),
+  exportMemory: () => ipcRenderer.invoke('memory:export'),
+  undoMemory: token => ipcRenderer.invoke('memory:undo', token),
+  onMemoryChanged(callback) { const listener = () => callback(); ipcRenderer.on('memory:changed', listener); return () => ipcRenderer.removeListener('memory:changed', listener); },
   letsFly: from => ipcRenderer.send('onboarding:fly', from),
   listHistory: query => ipcRenderer.invoke('history:list', query),
   historyDetail: id => ipcRenderer.invoke('history:detail', id),

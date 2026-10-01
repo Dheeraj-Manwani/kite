@@ -41,6 +41,15 @@ A task in a browser ("buy me 60 sachets of protein") is a **job** ([end-to-end-j
 - **In the background.** The site opens in a new tab, leaving your tab alone. Fields are filled and buttons clicked through UI Automation, which works while you use another app; only Enter and shortcuts need the browser in front.
 - **Budgets.** About 12 steps to find, 6 to choose, 6 for the cart; past a phase's budget Kite asks "keep going?". At most 45 steps and 20 minutes.
 
+## Memory
+
+Kite remembers your details so the next errand needs fewer questions ([ADR 015](adr/015-memory.md)). Your answers to its questions during a task (pincode, phone, email, name, address), your choices in store jobs, and anything you ask it to remember are saved, each with a "Saved … · Undo · Edit" notice.
+
+- **Models never see your details.** The agent sees "{{home.pincode}}: Home pincode (saved)" and types the placeholder; Kite fills in the value. Saved values on the page, in the address and in the steps so far are replaced by placeholders before each step goes to the model.
+- **Ask in chat:** "what's my pincode?" shows it on screen, not to the model; "remember that…"; "forget my work address" (asks first).
+- **Never saved:** passwords, card and bank numbers, CVVs, one-time codes, UPI PINs, Aadhaar and PAN numbers.
+- **The Memory view** (beside History): every fact with where it came from, plus Edit, Forget, Forget everything, Export, and a switch to turn memory off.
+
 ## Privacy and safety
 
 - Control names, values, and window titles of the task's app go to your configured model while the task runs. Password fields are never read. Screenshots, when your model asks for one, show only the task's window, appear with the **Kite is looking** indicator, and are never saved.
@@ -50,6 +59,7 @@ A task in a browser ("buy me 60 sachets of protein") is a **job** ([end-to-end-j
 
 ## Verification
 
+- `npm test` (`tests/memory.test.cjs`): never-save patterns, masks, redaction, placeholders, facts from answers, matching, the encrypted store with Undo and the switch, the chat tools, and a scripted checkout where no prompt carries a saved value. `npm run test:job -- 2 --memory` does it live.
 - `npm test` (`tests/permissions.test.cjs`): every category × mode, the floor, rules per site and app, validation, the checkout corpus (no money step allowed with the default limit), the page total, the jobs model, and hands-off, "always", "never" and Don't allow through the real session.
 - `npm test` (`tests/agent.test.cjs`): key parsing, the step classifier, commands, action descriptions, control listing (dialogs first, no password values), app matching, model output validation, and the task state machine (acting, setting and typing, approvals by scope, risky steps, strict budget, pause, takeover, questions, invalid and failed steps, a held modifier, screenshots), plus `do_task` approval scopes through the real broker.
 - `npm run test:agent`: a real WinForms window operated through the real task sidecar (set value, invoke, toggle, stale refs, Unicode typing, select-all replace, key chords, line-break refusal) and an end-to-end task with a scripted decider. It checks that the mouse pointer never moved.

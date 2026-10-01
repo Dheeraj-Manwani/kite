@@ -20,6 +20,7 @@ const Board = lazy(() => import('./board/BoardLayer').then(m => ({ default: m.Bo
 const Task = lazy(() => import('./agent/TaskLayer').then(m => ({ default: m.TaskLayer })));
 const Settings = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
 const History = lazy(() => import('./components/HistoryView'));
+const Memory = lazy(() => import('./components/MemoryView'));
 const Onboarding = lazy(() => import('./components/Onboarding'));
 const DevPanel = import.meta.env.DEV ? lazy(() => import('./kite/DevPanel')) : null;
 function Overlay() {
@@ -53,11 +54,11 @@ function DesktopWindow(){
   // The onboarding stage's kite wears the chosen color and liveliness too (K-15); it keeps its own sizes.
   const prefs=useSettings();
   useEffect(()=>{if(prefs)applyKitePreferences(prefs.settings,{size:false});},[prefs]);
-  const current=view==='history'?'History':sections.find(s=>s.id===section)?.label??'Settings';
+  const current=view==='history'?'History':view==='memory'?'Memory':sections.find(s=>s.id===section)?.label??'Settings';
   // The window title names the view, so the taskbar and Alt+Tab say where you are.
   useEffect(()=>{document.title=view==='onboarding'?'Set up Kite':`Kite · ${current}`;},[view,current]);
   const go=(next:string,to?:Section)=>{location.hash=next;setView(next);if(to)setSection(to);};
-  const content=<Suspense fallback={<p className="loading"><Working text="Opening Kite…" /></p>}>{view==='history'?<History/>:view==='onboarding'?<Onboarding/>:<Settings section={section}/>}</Suspense>;
+  const content=<Suspense fallback={<p className="loading"><Working text="Opening Kite…" /></p>}>{view==='history'?<History/>:view==='memory'?<Memory/>:view==='onboarding'?<Onboarding/>:<Settings section={section}/>}</Suspense>;
   if(view==='onboarding')return content;
   return <div className="window-layout">
     <nav className="window-sidebar" aria-label="Kite">
@@ -65,11 +66,12 @@ function DesktopWindow(){
       {sections.map(s=><button key={s.id} className="side-item" aria-current={view==='settings'&&section===s.id?'page':undefined} onClick={()=>go('settings',s.id)}>{s.label}</button>)}
       <hr />
       <button className="side-item" aria-current={view==='history'?'page':undefined} onClick={()=>go('history')}>History</button>
+      <button className="side-item" aria-current={view==='memory'?'page':undefined} onClick={()=>go('memory')}>Memory</button>
     </nav>
     <div className="window-content">{content}</div>
   </div>;
 }
-const isWindow=['settings','history','onboarding'].includes(location.hash.slice(1));
+const isWindow=['settings','history','memory','onboarding'].includes(location.hash.slice(1));
 document.documentElement.dataset.view=isWindow?'settings':'overlay';
 if(isWindow&&new URLSearchParams(location.search).has('mica'))document.documentElement.classList.add('mica');
 const root=document.getElementById('root');if(!root)throw new Error('Kite root missing');

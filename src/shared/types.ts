@@ -12,7 +12,9 @@ export interface AppSettings { onboardingComplete: boolean; hotkey: import('./re
   /** What tasks and jobs may do without asking (ADR 014). */
   permissions: import('./permissions').PermissionSettings;
   /** The model that runs tasks and jobs; null picks one automatically (agent.ts `jobsModel`). */
-  jobsModel: ModelSelection | null }
+  jobsModel: ModelSelection | null;
+  /** Memory's master switch: off, nothing is saved or used (saved facts stay until deleted). */
+  memory: boolean }
 export interface AboutInfo { version: string; updateStatus: string; updateReady: boolean }
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
@@ -30,11 +32,19 @@ export interface ApprovalCard { approvalId: string; toolName: string; summary: s
 export interface ToolAudit { id: number; message_id: number | null; tool: string; input_json: string; summary: string; decision: ToolDecision; result_json: string | null; error: string | null; dry_run: number; duration_ms: number; created_at: number }
 export interface Reminder { id: number; at: number; label: string; status: 'pending' | 'fired' | 'cancelled' }
 export interface OperationResult { ok: boolean; error?: string }
+export type View = 'settings' | 'history' | 'memory' | 'onboarding';
 export interface KiteAPI {
   setHotkeyRecording(active: boolean): void;
-  onViewChange(callback: (view: 'settings' | 'history' | 'onboarding') => void): () => void;
+  onViewChange(callback: (view: View) => void): () => void;
   onAppEvent(callback: (event: import('./release').AppEvent) => void): () => void;
-  openView(view: 'settings' | 'history' | 'onboarding'): void;
+  openView(view: View): void;
+  listMemory(): Promise<import('./memory').MemoryFact[]>;
+  editMemory(id: number, patch: { label?: string; value?: string }): Promise<OperationResult>;
+  /** null: forget everything (asks first). */
+  deleteMemory(id: number | null): Promise<OperationResult>;
+  exportMemory(): Promise<OperationResult>;
+  undoMemory(token: string): Promise<OperationResult>;
+  onMemoryChanged(callback: () => void): () => void;
   /** "Let's fly": close onboarding and hand its kite (client px in this window) to the overlay. */
   letsFly(from: import('./release').StageKite): void;
   listHistory(query?: string): Promise<import('./release').ConversationSummary[]>;
