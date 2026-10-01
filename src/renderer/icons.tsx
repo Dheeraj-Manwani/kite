@@ -18,6 +18,7 @@ export const ResumeIcon = () => <Icon><path className="filled" d="M5 3.2v9.6L12.
 export const StopIcon = () => <Icon><path d="M4 4l8 8M12 4l-8 8" /></Icon>;
 export const LookAgainIcon = () => <Icon><path d="M13 8a5 5 0 1 1-1.5-3.6" /><path d="M13 2.5v3h-3" /></Icon>;
 export const CheckIcon = () => <Icon><path d="M3.5 8.5 6.5 11.5 12.5 4.5" /></Icon>;
+export const ChevronIcon = () => <Icon><path d="M4.5 6.5 8 10l3.5-3.5" /></Icon>;
 export const MoreIcon = () => <Icon><circle className="filled" cx="3.5" cy="8" r=".9" /><circle className="filled" cx="8" cy="8" r=".9" /><circle className="filled" cx="12.5" cy="8" r=".9" /></Icon>;
 export const LockIcon = () => <Icon><rect x="3.5" y="7" width="9" height="6.5" rx="1.5" /><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2" /></Icon>;
 export const ExternalIcon = () => <Icon><path d="M9 3h4v4M13 3 7.5 8.5" /><path d="M11.5 9.5v2.5a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5.5a1 1 0 0 1 1-1h2.5" /></Icon>;

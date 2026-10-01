@@ -7,6 +7,7 @@ import { cursorInput } from '../kite/useKiteLoop';
 import { react } from '../voice/runtime';
 import { ringPaths } from '../guide/ring';
 import { taskRuntime } from './runtime';
+import { useKiteScale } from '../hooks/useSettings';
 const overlaps = (a: ScreenBounds, b: ScreenBounds) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 const ended = (view: TaskView) => ['done', 'failed', 'stopped'].includes(view.status);
 const heading: Partial<Record<TaskView['status'], string>> = { done: 'Done', failed: 'Couldn’t finish', stopped: 'Stopped', paused: 'Paused', approval: 'Your OK', asking: 'Question' };
@@ -36,8 +37,9 @@ export function TaskLayer() {
   const local = (r: ScreenBounds) => ({ ...r, x: r.x - origin.x, y: r.y - origin.y });
   const display = view?.display ? local(view.display) : geometry ? local(geometry.display) : { x: 0, y: 0, width: innerWidth, height: innerHeight };
   const target = view?.target && !ended(view) && view.status !== 'paused' ? local(view.target) : null;
-  const layout = useMemo(() => target ? layoutGuide(target, display, { width: 0, height: 0 }) : null,
-    [target?.x, target?.y, target?.width, target?.height, display.x, display.y, display.width, display.height]);
+  const scale = useKiteScale();
+  const layout = useMemo(() => target ? layoutGuide(target, display, { width: 0, height: 0 }, scale) : null,
+    [target?.x, target?.y, target?.width, target?.height, display.x, display.y, display.width, display.height, scale]);
   const ring = view && layout && (view.status === 'acting' || view.status === 'approval');
   const paths = useMemo(() => ring && layout ? ringPaths(layout.ring, view.id * 97 + view.step) : [], [ring, layout, view?.id, view?.step]);
   useEffect(() => {

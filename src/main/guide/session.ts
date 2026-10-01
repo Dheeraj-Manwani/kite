@@ -2,7 +2,7 @@ import type { ScreenBounds } from '../../shared/types';
 import type { GuidePlan, GuideStatus, GuideStep, GuideView } from '../../shared/guide';
 import { insideTarget } from './grounding';
 /** A grounded step target in global DIP. `done` means UI state already satisfies the step. */
-export interface Located { rect: ScreenBounds; display: ScreenBounds; source: 'uia' | 'vision'; verified: boolean; done?: boolean }
+export interface Located { rect: ScreenBounds; display: ScreenBounds; source: 'uia' | 'vision'; verified: boolean; done?: boolean; nearby?: ScreenBounds[] }
 export interface GuideSessionDeps {
   locate(step: GuideStep, options: { vision: boolean; signal: AbortSignal; near: ScreenBounds | null }): Promise<Located | null>;
   emit(view: GuideView | null): void;
@@ -50,7 +50,7 @@ export class GuideSession {
     const shown = this.located ?? this.last;
     return { id: this.id, goal: this.plan.goal, app: this.plan.app, index: this.index, total: this.plan.steps.length, completed: this.completed,
       instruction: this.step.instruction, target: this.step.target, status: this.status, rect: shown?.rect ?? null, display: shown?.display ?? null,
-      source: this.located?.source ?? null, verified: !!this.located?.verified };
+      source: this.located?.source ?? null, verified: !!this.located?.verified, nearby: shown?.nearby ?? [] };
   }
   line() { return `Step ${this.index + 1} of ${this.plan.steps.length}: ${this.step.instruction}`; }
   start() { this.touch(); void this.locate(true); }

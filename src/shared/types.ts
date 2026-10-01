@@ -8,7 +8,7 @@ export type SecretId = ProviderId | 'cartesia';
 export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }
 export interface VoiceChoice { id: string; name: string }
-export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean; whiteboard: boolean; computerUse: boolean }
+export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean; whiteboard: boolean; computerUse: boolean; kiteSize: import('./release').KiteSize; earcons: boolean }
 export interface AboutInfo { version: string; updateStatus: string; updateReady: boolean }
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
@@ -35,6 +35,8 @@ export interface KiteAPI {
   letsFly(from: import('./release').StageKite): void;
   listHistory(query?: string): Promise<import('./release').ConversationSummary[]>;
   historyDetail(id: string): Promise<import('./release').HistoryDetail>;
+  /** The marked screenshot kept with a question, as a data URL, or null (UX-74). */
+  historyScreenshot(messageId: number): Promise<string | null>;
   deleteHistory(id: string | null): Promise<OperationResult>;
   exportHistory(id: string): Promise<OperationResult>;
   reportFrame(fps: number, frameMs: number): void;

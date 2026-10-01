@@ -108,6 +108,22 @@ const contains = (r: ScreenBounds, p: { x: number; y: number }) => p.x >= r.x &&
 export function insideTarget(rect: ScreenBounds, point: { x: number; y: number }, slack = 8) {
   return contains({ x: rect.x - slack, y: rect.y - slack, width: rect.width + slack * 2, height: rect.height + slack * 2 }, point);
 }
+// Controls with labels a user reads: the kite shouldn't sit on them while it points at a neighbour (personality.md §5.6, K-08).
+const labelled = new Set(['Button', 'SplitButton', 'MenuItem', 'Hyperlink', 'ListItem', 'TabItem', 'CheckBox', 'RadioButton', 'ComboBox', 'Edit',
+  'Text', 'TreeItem', 'DataItem', 'Slider', 'Spinner', 'HeaderItem']);
+const encloses = (outer: ScreenBounds, inner: ScreenBounds) => inner.x >= outer.x - 1 && inner.y >= outer.y - 1
+  && inner.x + inner.width <= outer.x + outer.width + 1 && inner.y + inner.height <= outer.y + outer.height + 1;
+/**
+ * The named controls around a target, nearest first: its neighbours on a ribbon or toolbar, which are what the user checks
+ * next. Containers of the target and the target's own parts are left out.
+ */
+export function neighbours(elements: UiElement[], target: ScreenBounds, reach = 90, limit = 40): ScreenBounds[] {
+  const gap = (r: ScreenBounds) => Math.hypot(Math.max(0, target.x - (r.x + r.width), r.x - (target.x + target.width)),
+    Math.max(0, target.y - (r.y + r.height), r.y - (target.y + target.height)));
+  return elements.filter(e => e.name.trim() && labelled.has(e.role) && area(e.rect) <= 60_000 && !encloses(e.rect, target) && !encloses(target, e.rect))
+    .map(e => ({ rect: e.rect, distance: gap(e.rect) })).filter(n => n.distance <= reach)
+    .sort((a, b) => a.distance - b.distance).slice(0, limit).map(n => n.rect);
+}
 /** Verify a model-proposed box against the UI Automation tree: snap to the control it lands on. */
 export function snapToElement(box: ScreenBounds, elements: UiElement[], step: Pick<GuideStep, 'target' | 'role'>): UiElement | null {
   const point = center(box), limit = Math.max(area(box) * 6, 96 * 96);

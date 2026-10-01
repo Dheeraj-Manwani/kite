@@ -295,7 +295,9 @@ export function useKiteLoop(refs: KiteElements) {
       const shine = reduced && rippling ? (rippleStrength * Math.sin(rippleT * Math.PI)).toFixed(2) : '';
       if (shine !== glint) { glint = shine; svg.style.setProperty('--kite-glint', shine || '0'); }
       svg.style.visibility = gone && fade <= 0 ? 'hidden' : 'visible';
-      svg.style.opacity = String((1 + (motion.opacity - 1) * ambient) * fade);
+      // Pointing over a neighbouring control's label, the kite lets the label show through (personality.md §5.6, K-08).
+      const see = guiding && pointer === gr && gr.dim ? .85 : 1;
+      svg.style.opacity = String((1 + (motion.opacity - 1) * ambient) * fade * see);
       const squash = captureBlink ? .65 : vr.drawing ? .88 : look && mood === 'thinking' ? .78 : 1;
       bodyNode.setAttribute('transform', `translate(${body.x.value} ${body.y.value}) rotate(${direction * 180 / Math.PI}) scale(${along} ${1 / along}) rotate(${rotation.value - direction * 180 / Math.PI}) scale(${scale}) scale(1 ${squash})`);
       // The sail's shape eases toward the pose, on top of the tunable rest shape; the path is rewritten only when it changes.

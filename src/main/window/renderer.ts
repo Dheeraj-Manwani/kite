@@ -14,13 +14,15 @@ export function isAppURL(value: string) {
     return url.protocol === 'file:' && url.pathname === allowed.pathname && url.host === allowed.host;
   } catch { return false; }
 }
-export function loadRenderer(win: BrowserWindow, view: 'overlay' | 'settings' | 'history' | 'onboarding') {
+/** `mica` tells the page that the window draws Mica behind it, so it leaves its own background off (UX-57). */
+export function loadRenderer(win: BrowserWindow, view: 'overlay' | 'settings' | 'history' | 'onboarding', options: { mica?: boolean } = {}) {
   win.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   win.webContents.on('will-navigate', event => event.preventDefault());
   if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
     const url = new URL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
     url.hash = view;
+    if (options.mica) url.searchParams.set('mica', '1');
     return win.loadURL(url.toString());
   }
-  return win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), { hash: view });
+  return win.loadFile(path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`), { hash: view, query: options.mica ? { mica: '1' } : undefined });
 }

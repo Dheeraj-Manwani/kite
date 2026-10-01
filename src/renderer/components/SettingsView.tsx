@@ -1,12 +1,14 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { HotkeyRecorder } from './HotkeyRecorder';
 import { Keycaps } from './Keycaps';
 import { sections, type Section } from './sections';
-import { configurableTools, type ConfigurableTool } from '../../shared/release';
+import { configurableTools, type ConfigurableTool, type KiteSize } from '../../shared/release';
 import { routeVision } from '../../shared/vision';
 import type { AboutInfo, AppSettings, ModelSelection, OperationResult, ProviderId, SettingsSnapshot } from '../../shared/types';
 import { BusyDots, LockIcon, Working } from '../icons';
 import { ProviderRow } from './ProviderRow';
+import { ModelPicker } from './ModelPicker';
+import { previewEarcons } from '../voice/earcons';
 
 // Groq comes first: without it Kite can't hear you.
 const providers: { id: ProviderId; label: string; badge?: string }[] = [
@@ -18,7 +20,10 @@ const toolLabels: Record<ConfigurableTool, string> = { open_app: 'Open an app', 
 const askByDefault = (name: ConfigurableTool) => !['get_datetime', 'list_reminders'].includes(name);
 const alwaysAsks = ['Type or paste into an app', 'Read or change your clipboard', 'Look at your screen', 'Start a guide', 'Do a task in an app'];
 const encode = (m: ModelSelection) => `${m.provider}:${m.id}`;
-const decode = (s: string): ModelSelection => ({ provider: s.slice(0, s.indexOf(':')) as ProviderId, id: s.slice(s.indexOf(':') + 1) });
+const kiteSizeLabels: Record<KiteSize, string> = { standard: 'Standard', large: 'Large', extraLarge: 'Extra large' };
+// The speed slider's range, and where 1.0× ("Normal") sits on it (UX-56).
+const SPEED = { min: .6, max: 1.5 };
+const speedAt = (value: number) => (value - SPEED.min) / (SPEED.max - SPEED.min);
 
 function Group({ title, hint, children }: { title?: string; hint?: ReactNode; children: ReactNode }) {
   return <section className="settings-group">{title && <h2>{title}</h2>}{hint && <p className="group-hint">{hint}</p>}<div className="group-card">{children}</div></section>;
@@ -59,15 +64,11 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
   const update = (patch: Partial<AppSettings>) => { void operation(() => window.kite.updateSettings(patch)); };
   function picker(label: string, value: ModelSelection, change: (model: ModelSelection) => void, options: { visionOnly?: boolean; disabled?: boolean } = {}) {
     if (!snapshot) return null;
-    const models = snapshot.models.filter(m => snapshot.keys[m.provider]);
-    const selected = models.some(m => encode(m) === encode(value));
-    return <select aria-label={label} value={encode(value)} disabled={options.disabled} onChange={e => change(decode(e.target.value))}>
-      {!selected && <option value={encode(value)}>{value.id} {snapshot.keys[value.provider] ? '(custom)' : '(add this provider’s key)'}</option>}
-      {providers.filter(p => snapshot.keys[p.id]).map(p => <optgroup key={p.id} label={p.label}>
-        {models.filter(m => m.provider === p.id && (!options.visionOnly || m.supportsVision)).map(m =>
-          <option key={m.id} value={encode(m)}>{m.label} · {m.tier}{m.supportsVision ? ' · Vision' : ''}{m.supportsTools ? ' · Actions' : ' · Chat only'}</option>)}
-      </optgroup>)}
-    </select>;
+    // Models from providers with a key, grouped by provider (UX-55).
+    const groups = providers.filter(p => snapshot.keys[p.id]).map(p => ({ provider: p.id, label: p.label,
+      models: snapshot.models.filter(m => m.provider === p.id && (!options.visionOnly || m.supportsVision)) })).filter(g => g.models.length);
+    return <ModelPicker label={label} value={value} groups={groups} change={change} disabled={options.disabled}
+      missing={snapshot.keys[value.provider] ? 'Custom' : 'Needs a key'} />;
   }
   const title = sections.find(s => s.id === section)?.label ?? 'Settings';
   const shell = (content: ReactNode) => <main className="settings-view">
@@ -87,19 +88,25 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
       <div className="setting-row stacked"><HotkeyRecorder value={hotkey} change={value => update({ hotkey: value })} /></div>
       <SwitchRow label="Launch at startup" description="Start Kite when you sign in to Windows." checked={!!s.launchOnStartup} change={v => update({ launchOnStartup: v })} />
       <SwitchRow label="Reduce motion" description="Calmer motion for the kite and the overlay, even if Windows animations are on." checked={!!s.reducedMotion} change={v => update({ reducedMotion: v })} />
+      <Row label="Kite size" description="Larger is easier to see on high-resolution screens.">
+        <select aria-label="Kite size" value={s.kiteSize ?? 'standard'} onChange={e => update({ kiteSize: e.target.value as KiteSize })}>
+          {(Object.keys(kiteSizeLabels) as KiteSize[]).map(size => <option key={size} value={size}>{kiteSizeLabels[size]}</option>)}</select></Row>
     </Group>);
     case 'models': return shell(<>
       <Group title="Providers" hint="Groq turns your voice into text. Add at least one more provider for answers. Keys stay encrypted on this computer.">
         {providers.map(p => <ProviderRow key={p.id} id={p.id} label={p.label} badge={p.badge} snapshot={snapshot} toast={setToast} />)}</Group>
       <Group title="Models">
         <Row label="Main model" description="Answers every question.">{picker('Main model', s.model, model => update({ model }))}</Row>
-        <SwitchRow label="Retry on a backup model" description="Only after a connection error, server error, or rate limit, before the first word arrives."
-          checked={s.fallbackEnabled} change={v => update({ fallbackEnabled: v })} />
-        <Row label="Backup model">{picker('Backup model', s.fallback, fallback => update({ fallback }), { disabled: !s.fallbackEnabled })}</Row>
         <Row label="Vision model" description="Looks at your screen when you circle something or approve a look.">{picker('Vision model', s.visionModel, visionModel => update({ visionModel }), { visionOnly: true })}</Row>
       </Group>
-      <details className="advanced"><summary>Use a custom model ID</summary>
-        <div className="custom-model"><label>Provider<select value={customProvider} onChange={e => setCustomProvider(e.target.value as ProviderId)}>
+      {/* The backup model and custom IDs are for when the defaults don't fit (UX-55). */}
+      <details className="advanced"><summary>Advanced</summary>
+        <div className="group-card">
+          <SwitchRow label="Retry on a backup model" description="Only after a connection error, server error, or rate limit, before the first word arrives."
+            checked={s.fallbackEnabled} change={v => update({ fallbackEnabled: v })} />
+          <Row label="Backup model">{picker('Backup model', s.fallback, fallback => update({ fallback }), { disabled: !s.fallbackEnabled })}</Row>
+        </div>
+        <div className="custom-model"><strong>Use a custom model ID</strong><label>Provider<select value={customProvider} onChange={e => setCustomProvider(e.target.value as ProviderId)}>
           {providers.map(p => <option key={p.id} value={p.id} disabled={!snapshot.keys[p.id]}>{p.label}</option>)}</select></label>
           <label>Model ID<input value={customId} onChange={e => setCustomId(e.target.value)} placeholder="Exact API model ID" /></label>
           <div className="custom-actions"><button disabled={!customId.trim() || !snapshot.keys[customProvider]} onClick={() => update({ model: { provider: customProvider, id: customId.trim() } })}>Use as main model</button>
@@ -108,12 +115,22 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
     </>);
     case 'voice': return shell(<>
       <Group title="Cartesia" hint="Optional. Gives Kite a voice; without it, answers are text only."><ProviderRow id="cartesia" label="Cartesia" snapshot={snapshot} toast={setToast} /></Group>
-      <Group>
+      {/* Without a key the voice controls can't do anything, so one line says what would turn them on (UX-56). */}
+      <Group>{snapshot.keys.cartesia ? <>
         <SwitchRow label="Speak replies" checked={s.ttsEnabled} change={v => update({ ttsEnabled: v })} />
         <Row label="Voice"><select aria-label="Voice" value={s.voiceId} onChange={e => update({ voiceId: e.target.value })}>
           <option value="">Choose a voice</option>{snapshot.voices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
           <BusyButton disabled={!s.ttsEnabled} run={() => operation(() => window.kite.previewVoice(), 'Playing a preview.')}>Preview</BusyButton></Row>
-        <Row label="Speed" description={`${s.speed.toFixed(2)}×`}><input aria-label="Speed" type="range" min="0.6" max="1.5" step="0.05" value={s.speed} onChange={e => update({ speed: Number(e.target.value) })} /></Row>
+        <Row label="Speed" description={s.speed === 1 ? 'Normal' : `${s.speed.toFixed(2)}×`}>
+          <span className="range-field" style={{ '--normal': speedAt(1) } as CSSProperties}>
+            <input className="range" aria-label="Speed" aria-valuetext={s.speed === 1 ? 'Normal' : `${s.speed.toFixed(2)} times`} type="range" min={SPEED.min} max={SPEED.max} step="0.05" value={s.speed}
+              style={{ '--fill': `${speedAt(s.speed) * 100}%` } as CSSProperties} onChange={e => update({ speed: Number(e.target.value) })} />
+            <button type="button" className="range-tick" onClick={() => update({ speed: 1 })}>Normal</button></span></Row>
+      </> : <div className="setting-row"><span className="row-text"><span className="row-label">Add a Cartesia key to hear Kite speak.</span>
+        <small>Until then, answers are text only.</small></span></div>}</Group>
+      <Group title="Sounds">
+        <SwitchRow label="Sound cues" checked={!!s.earcons} change={v => { update({ earcons: v }); if (v) previewEarcons(); }}
+          description="A short chirp when Kite starts listening, a soft note when you let go, and a chime when Kite needs your OK." />
       </Group>
     </>);
     case 'privacy': return shell(<>

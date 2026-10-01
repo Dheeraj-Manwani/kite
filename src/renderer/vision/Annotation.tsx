@@ -3,13 +3,20 @@ import { analyzeStrokes, contains, type ScreenEvent, type Stroke } from '../../s
 import { visionRuntime as vr } from './runtime';
 import { inkPath } from './ink';
 import { cursorInput } from '../kite/useKiteLoop';
+// First-run hints for marking (docs/ui-ux-improvements.md UX-41): shown for the first three marking sessions on this computer.
+const HINT_KEY = 'kite.markHints', HINTS = 3, MARKS = 5;
+const nearCursor = () => {
+  const g = cursorInput.geometry; if (!g) return null;
+  return { x: Math.min(innerWidth - 290, Math.max(8, cursorInput.point.x - g.origin.x + 16)), y: Math.min(innerHeight - 40, Math.max(8, cursorInput.point.y - g.origin.y - 40)) };
+};
 export function Annotation() {
   const [preparing, setPreparing] = useState(false);
   const [mode, setMode] = useState<Extract<ScreenEvent, { type: 'annotate' }> | null>(null);
   const [strokes, setStrokes] = useState<Stroke[]>([]), [looking, setLooking] = useState(false), [fading, setFading] = useState(false), [pulse, setPulse] = useState(false);
+  const [hint, setHint] = useState<{ x: number; y: number } | null>(null);
   const active = useRef<number | null>(null), current = useRef(mode), fadeTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   useEffect(() => {
-    const leave = () => { setPreparing(false); current.current = null; setMode(null); vr.drawing = false; vr.pen = null; active.current = null; window.kite.setOverlayInteractive(false); };
+    const leave = () => { setPreparing(false); setHint(null); current.current = null; setMode(null); vr.drawing = false; vr.pen = null; active.current = null; window.kite.setOverlayInteractive(false); };
     const clear = () => { leave(); clearTimeout(fadeTimer.current); vr.strokes = []; vr.glanceUntil = 0; vr.target = null; setStrokes([]); setFading(false); };
     const screen = window.kite.onScreenEvent(event => {
       if (event.type === 'looking') {
@@ -22,6 +29,9 @@ export function Annotation() {
       } else if (event.type === 'annotate') {
         if (vr.id !== event.id) return;
         setPreparing(false); current.current = event; setMode(event); vr.drawing = true; window.kite.setOverlayInteractive(true);
+        let uses = HINTS;
+        try { uses = Number(localStorage.getItem(HINT_KEY)) || 0; localStorage.setItem(HINT_KEY, String(uses + 1)); } catch { /* no storage, no hint */ }
+        setHint(uses < HINTS ? nearCursor() : null);
       } else clear();
     });
     let approvalPending = false;
@@ -60,12 +70,16 @@ export function Annotation() {
   };
   const geometry = cursorInput.geometry;
   const indicator = geometry ? { left: geometry.display.x - geometry.origin.x + 24, top: geometry.display.y - geometry.origin.y + 24 } : { left: 24, top: 24 };
+  // Teach in context, then get out of the way: the hint goes when drawing starts; a counter shows once there are two marks.
+  const end = strokes.at(-1)?.at(-1);
   return <>
     {looking && <div className="screen-looking" style={indicator} role="status">Kite is looking</div>}
+    {mode && hint && !strokes.length && <div className="mark-hint" style={{ left: hint.x, top: hint.y }} role="status">Circle, underline, point, or tap · up to {MARKS}</div>}
+    {mode && end && strokes.length >= 2 && <div className="mark-hint count" style={{ left: Math.min(innerWidth - 70, end.x + 14), top: Math.min(innerHeight - 34, end.y + 12) }} role="status">{strokes.length} of {MARKS}</div>}
     <svg className={`annotation ${mode ? 'drawing' : ''} ${preparing ? 'preparing' : ''} ${fading ? 'fading' : ''} ${pulse ? 'pulse' : ''}`}
       onPointerDown={e => {
         e.preventDefault(); e.stopPropagation(); const m = current.current;
-        if (!m || e.button !== 0 || active.current !== null || vr.strokes.length >= 5 || vr.strokes.reduce((n, s) => n + s.length, 0) >= 2000) return;
+        if (!m || e.button !== 0 || active.current !== null || vr.strokes.length >= MARKS || vr.strokes.reduce((n, s) => n + s.length, 0) >= 2000) return;
         const p = point(e); if (!contains(m.display.bounds, { x: p.x + m.origin.x, y: p.y + m.origin.y })) return;
         e.currentTarget.setPointerCapture(e.pointerId); active.current = e.pointerId; vr.strokes.push([p]); vr.pen = p; publish();
       }} onPointerMove={add} onPointerUp={e => { add(e); active.current = null; }} onPointerCancel={() => { active.current = null; }}>

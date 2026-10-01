@@ -7,6 +7,9 @@ import { sections, type Section } from './components/sections';
 import { SpeechBubble } from './voice/SpeechBubble';
 import { AppNotices } from './voice/AppNotices';
 import { runtime } from './kite/runtime';
+import { config } from './kite/config';
+import { earcons } from './voice/earcons';
+import { kiteSizes } from '../shared/release';
 import './tokens.css';
 import './kite.css';
 import './styles.css';
@@ -21,7 +24,8 @@ const Onboarding = lazy(() => import('./components/Onboarding'));
 const DevPanel = import.meta.env.DEV ? lazy(() => import('./kite/DevPanel')) : null;
 function Overlay() {
   useEffect(()=>{
-    const settings=(s: import('../shared/types').SettingsSnapshot)=>{runtime.reducedMotion=s.settings.reducedMotion;document.documentElement.classList.toggle('reduce-motion',s.settings.reducedMotion);};
+    // The kite's size (K-14) and sound cues (K-13) apply live, read by the loop and the bubble without a re-render.
+    const settings=(s: import('../shared/types').SettingsSnapshot)=>{runtime.reducedMotion=s.settings.reducedMotion;document.documentElement.classList.toggle('reduce-motion',s.settings.reducedMotion);config.scale=kiteSizes[s.settings.kiteSize]??1;earcons.enabled=!!s.settings.earcons;};
     void window.kite.getSettings().then(settings);const off=window.kite.onSettingsChanged(settings);
     // Keyboard controls (tray, or Ctrl + Alt + K): focus the first control on screen. With nothing to control,
     // hand focus straight back so the user's typing never disappears into a transparent window. Esc also hands it back.
@@ -64,5 +68,6 @@ function DesktopWindow(){
 }
 const isWindow=['settings','history','onboarding'].includes(location.hash.slice(1));
 document.documentElement.dataset.view=isWindow?'settings':'overlay';
+if(isWindow&&new URLSearchParams(location.search).has('mica'))document.documentElement.classList.add('mica');
 const root=document.getElementById('root');if(!root)throw new Error('Kite root missing');
 createRoot(root).render(<StrictMode>{isWindow?<DesktopWindow/>:<Overlay/>}</StrictMode>);

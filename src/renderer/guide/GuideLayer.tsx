@@ -6,6 +6,7 @@ import { cursorInput } from '../kite/useKiteLoop';
 import { react } from '../voice/runtime';
 import { guideRuntime } from './runtime';
 import { ringPaths } from './ring';
+import { useKiteScale } from '../hooks/useSettings';
 import { BackIcon, BusyDots, LookAgainIcon, PauseIcon, ResumeIcon, SkipIcon, StopIcon } from '../icons';
 const estimate = { width: 280, height: 150 };
 function message(view: GuideView) {
@@ -37,13 +38,14 @@ export function GuideLayer() {
   const geometry = cursorInput.geometry, origin = geometry?.origin ?? { x: 0, y: 0 };
   const local = (r: ScreenBounds) => ({ ...r, x: r.x - origin.x, y: r.y - origin.y });
   // The overlay origin only changes with display layout, which re-emits the view.
-  const layout = useMemo(() => view?.rect && view.display ? layoutGuide(local(view.rect), local(view.display), size) : null, [view, size, origin.x, origin.y]);
+  const scale = useKiteScale();
+  const layout = useMemo(() => view?.rect && view.display ? layoutGuide(local(view.rect), local(view.display), size, scale, (view.nearby ?? []).map(local)) : null, [view, size, origin.x, origin.y, scale]);
   const pointing = view?.status === 'pointing' && !!layout;
   const paths = useMemo(() => pointing && layout && view ? ringPaths(layout.ring, view.id * 31 + view.index) : [], [pointing, layout, view]);
   useEffect(() => {
     // Between steps the kite hovers where it was; lost, paused, and done hand it back to the cursor.
-    if (pointing && layout) { guideRuntime.anchor = layout.anchor; guideRuntime.aim = layout.aim; }
-    else if (view?.status !== 'locating') { guideRuntime.anchor = null; guideRuntime.aim = null; }
+    if (pointing && layout) { guideRuntime.anchor = layout.anchor; guideRuntime.aim = layout.aim; guideRuntime.dim = layout.dim; }
+    else if (view?.status !== 'locating') { guideRuntime.anchor = null; guideRuntime.aim = null; guideRuntime.dim = false; }
   }, [pointing, layout, view?.status]);
   const position = layout?.card ?? (geometry
     ? { x: geometry.display.x - origin.x + geometry.display.width - size.width - 24, y: geometry.display.y - origin.y + geometry.display.height - size.height - 72 }

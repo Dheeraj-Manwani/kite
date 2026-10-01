@@ -84,8 +84,10 @@ export function openDatabase(filename: string) {
         ${match ? 'WHERE c.id IN (SELECT m.conversation_id FROM messages_fts f JOIN messages m ON m.id=f.rowid WHERE messages_fts MATCH ?)' : ''}
         ORDER BY c.started_at DESC LIMIT 300`).all(...(match ? [match, match] : [])) as import('../../shared/release').ConversationSummary[];
     },
+    /** The first image kept for a message: the marked overview (vision/history.ts saves it before the zoom). */
+    screenshot(messageId: number) { return (db.prepare('SELECT path FROM attachments WHERE message_id=? ORDER BY id LIMIT 1').get(messageId) as { path: string } | undefined)?.path ?? null; },
     detail(id: string): import('../../shared/release').HistoryDetail {
-      return { messages: db.prepare('SELECT * FROM messages WHERE conversation_id=? ORDER BY id').all(id) as import('../../shared/release').HistoryMessage[],
+      return { messages: db.prepare('SELECT m.*, (SELECT COUNT(*) FROM attachments a WHERE a.message_id=m.id) AS attachments FROM messages m WHERE m.conversation_id=? ORDER BY m.id').all(id) as import('../../shared/release').HistoryMessage[],
         tools: db.prepare('SELECT t.* FROM tool_calls t JOIN messages m ON m.id=t.message_id WHERE m.conversation_id=? ORDER BY t.id').all(id) as ToolAudit[] };
     },
     deleteHistory(id: string | null) {

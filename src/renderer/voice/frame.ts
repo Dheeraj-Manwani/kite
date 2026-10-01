@@ -1,5 +1,6 @@
 import type { CursorGeometry } from '../../shared/types';
 import { clamp } from '../kite/physics/vector';
+import { config } from '../kite/config';
 import { voiceRuntime, type Reaction } from './runtime';
 
 const still = () => ({ x: 0, y: 0, tilt: 0, stretch: 1, tailY: 0, flutter: 0 });
@@ -80,8 +81,10 @@ export function positionBubble(x: number, y: number, geometry: CursorGeometry, n
     bubble.style.maxWidth = Math.max(80, right - left - 24) + 'px';
     bubble.style.maxHeight = Math.max(60, bottom - top - 24) + 'px';
     const width = bubble.offsetWidth, height = bubble.offsetHeight;
-    const fitsRight = x + 24 + width <= right - 12;
-    const bubbleX = clamp(fitsRight ? x + 24 : x - 24 - width, left + 12, Math.max(left + 12, right - width - 12));
+    // The gap clears the kite's wings at every size setting: 24 px at Standard (personality.md K-14).
+    const gap = 11 + 13 * config.scale;
+    const fitsRight = x + gap + width <= right - 12;
+    const bubbleX = clamp(fitsRight ? x + gap : x - gap - width, left + 12, Math.max(left + 12, right - width - 12));
     const bubbleY = clamp(y + height < bottom - 12 ? y - 12 : y - height + 12, top + 12, Math.max(top + 12, bottom - height - 12));
     bubble.dataset.side = fitsRight ? 'right' : 'left';
     bubble.style.translate = `${bubbleX}px ${bubbleY}px`;

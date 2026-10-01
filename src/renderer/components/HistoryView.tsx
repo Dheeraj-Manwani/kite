@@ -9,6 +9,15 @@ import { dayLabel, duration, markLabel, snippetParts, toolLine } from './history
 
 const time = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
+/** The screen you marked, kept with your question when "Keep screenshots in history" is on (UX-74). Click to see it larger. */
+function Screenshot({ messageId }: { messageId: number }) {
+  const [src, setSrc] = useState<string | null>(null), [large, setLarge] = useState(false);
+  useEffect(() => { let alive = true; void window.kite.historyScreenshot(messageId).then(url => { if (alive) setSrc(url); }); return () => { alive = false; }; }, [messageId]);
+  if (!src) return null;
+  return <button type="button" className={`chat-shot${large ? ' large' : ''}`} aria-expanded={large} aria-label={large ? 'Show the screenshot smaller' : 'Show the screenshot larger'}
+    onClick={() => setLarge(v => !v)}><img src={src} alt="The screen you marked" /></button>;
+}
+
 /** History as a readable chat: the content first, details on request (docs/ui-ux-improvements.md UX-70 to UX-73). */
 export default function HistoryView() {
   const settings = useSettings();
@@ -71,6 +80,7 @@ export default function HistoryView() {
             {m.role !== 'user' && <span className="chat-avatar" aria-label="Kite"><SailMark size={16} /></span>}
             <div className="chat-body">
               <p>{m.content}</p>
+              {m.role === 'user' && !!m.attachments && <Screenshot messageId={m.id} />}
               {mark && <span className="annotation-badge">{mark}</span>}
               {details && <details className="chat-details"><summary>Details</summary>
                 {m.role === 'assistant' && <p className="chat-meta">{modelName(m)} · answered in {duration(m.total_ms || 0)}{m.voice_to_voice_ms != null ? ` · ${duration(m.voice_to_voice_ms)} voice to voice` : ''}</p>}

@@ -139,6 +139,11 @@ test('layout keeps ring, card, and kite on the display without covering the targ
     assert.equal(intersects(cardBox, target), false, 'card covers target ' + JSON.stringify(target));
     assert.ok(l.anchor.x >= display.x && l.anchor.x <= display.x + display.width && l.anchor.y >= display.y && l.anchor.y <= display.y + display.height);
     assert.equal(intersects({ x: l.anchor.x - 12, y: l.anchor.y - 12, width: 24, height: 24 }, target), false, 'kite body covers target');
+    // A Large or Extra large kite (personality.md K-14) is placed further out, so it stays off the target too.
+    for (const scale of [1.3, 1.6]) {
+      const big = layoutGuide(target, display, card, scale), half = 12 * scale;
+      assert.equal(intersects({ x: big.anchor.x - half, y: big.anchor.y - half, width: half * 2, height: half * 2 }, target), false, `a ${scale}x kite covers target ` + JSON.stringify(target));
+    }
     assert.deepEqual(l.aim, { x: target.x + target.width / 2, y: target.y + target.height / 2 });
   }
   const below = layoutGuide({ x: 100, y: 100, width: 40, height: 20 }, { x: 0, y: 0, width: 1920, height: 1080 }, card);
@@ -436,4 +441,45 @@ test('guide voice commands are answered locally; other speech goes to the model 
   const next = other.controller.start(); other.controller.stop(); await other.controller.submit(next, new ArrayBuffer(8));
   assert.deepEqual(other.asks, ['A show_me_how guide is running.']);
   await v.controller.shutdown(); await other.controller.shutdown();
+});
+
+test('on a ribbon the kite stays off the next control, and dims only when it has no choice (K-08)', () => {
+  const display = { x: 0, y: 0, width: 1920, height: 1080 }, card = { width: 280, height: 150 };
+  const intersects = (a, b) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+  // A Word-like window from y = 100: quick access buttons and the title, a row of tabs, then the ribbon's buttons.
+  const quick = [10, 34, 58].map(x => ({ x, y: 106, width: 20, height: 20 })), title = { x: 800, y: 106, width: 220, height: 20 };
+  const tabs = [[10, 40], [56, 52], [114, 52], [172, 48], [226, 60], [292, 58]].map(([x, width]) => ({ x, y: 140, width, height: 26 }));
+  const ribbon = [];
+  for (let x = 10; x < 600; x += 90) for (const y of [174, 198, 222]) ribbon.push({ x, y, width: 80, height: 22 });
+  const insert = tabs[2], nearby = [...quick, title, ...tabs.filter(t => t !== insert), ...ribbon];
+  const layout = layoutGuide(insert, display, card, 1, nearby), body = { x: layout.anchor.x - 14, y: layout.anchor.y - 14, width: 28, height: 28 };
+  assert.ok(layout.anchor.y < insert.y, 'a wide tab with buttons below: the kite goes above it ' + JSON.stringify(layout.anchor));
+  assert.ok(nearby.every(r => !intersects(body, r)) && !layout.dim, 'and covers no label');
+  assert.ok(!intersects({ ...layout.card, ...card }, insert) && !intersects({ ...layout.card, ...card }, { x: layout.anchor.x - 20, y: layout.anchor.y - 20, width: 40, height: 40 }), 'the card clears the tab and the kite');
+  // With open space below, a wide target gets the kite underneath, where pointing up at it reads naturally.
+  const open = layoutGuide(insert, display, card, 1, tabs.filter(t => t !== insert));
+  assert.ok(open.anchor.y > insert.y + insert.height && !open.dim, 'below first ' + JSON.stringify(open.anchor));
+  // A tall, narrow target with neighbours above and below: the kite goes to the side.
+  const tall = { x: 900, y: 400, width: 24, height: 120 }, stack = [{ x: 900, y: 360, width: 24, height: 30 }, { x: 900, y: 530, width: 24, height: 30 }];
+  const side = layoutGuide(tall, display, card, 1, stack);
+  assert.ok((side.anchor.x > tall.x + tall.width || side.anchor.x < tall.x) && side.anchor.y > tall.y && side.anchor.y < tall.y + tall.height, 'beside ' + JSON.stringify(side.anchor));
+  // Crowded on every side: the kite still avoids the target and the card, and dims so labels show through.
+  const crowd = [];
+  for (let x = 0; x < 1920; x += 40) for (let y = 0; y < 1080; y += 30) crowd.push({ x, y, width: 36, height: 26 });
+  const target = { x: 960, y: 510, width: 36, height: 26 }, crowded = layoutGuide(target, display, card, 1, crowd.filter(r => !intersects(r, target)));
+  assert.equal(crowded.dim, true);
+  assert.equal(intersects({ x: crowded.anchor.x - 14, y: crowded.anchor.y - 14, width: 28, height: 28 }, target), false);
+});
+
+const { neighbours } = require('../src/main/guide/grounding.ts');
+test('neighbours are the named controls near a target, not its containers or its own parts (K-08)', () => {
+  const target = { x: 114, y: 140, width: 52, height: 26 };
+  const el = (name, role, rect) => ({ name, role, automationId: '', help: '', enabled: true, layer: 0, rect });
+  const found = neighbours([
+    el('Home', 'TabItem', { x: 56, y: 140, width: 52, height: 26 }), el('Draw', 'TabItem', { x: 172, y: 140, width: 48, height: 26 }),
+    el('Ribbon Tabs', 'Tab', { x: 0, y: 136, width: 800, height: 34 }), el('Insert', 'Text', { x: 120, y: 144, width: 40, height: 16 }),
+    el('', 'Button', { x: 230, y: 140, width: 20, height: 20 }), el('Far away', 'Button', { x: 1200, y: 600, width: 60, height: 24 }),
+    el('Ribbon', 'Pane', { x: 0, y: 170, width: 1900, height: 100 }),
+  ], target);
+  assert.deepEqual(found, [{ x: 56, y: 140, width: 52, height: 26 }, { x: 172, y: 140, width: 48, height: 26 }]);
 });

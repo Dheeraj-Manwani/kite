@@ -44,6 +44,8 @@ app.whenReady().then(() => {
     assert.equal(db.listConversations('')[0].snippet,undefined);
     assert.equal(db.listConversations('" OR injection').length,0);
     assert.ok(db.detail('test').messages.length>=3);
+    // History knows which question kept a screenshot, and finds its marked overview (UX-74).
+    assert.equal(db.detail('test').messages.find(m=>m.id===row).attachments,1);assert.equal(db.screenshot(row),'fixture.jpg');assert.equal(db.screenshot(row+999),null);
     assert.equal(db.voiceStats().voiceMedianMs, null); // interrupted voice sample is excluded
     const paths=db.deleteHistory('test');assert.deepEqual(paths,['fixture.jpg']);
     assert.equal(db.listConversations('hello').length,0);assert.equal(db.detail('test').messages.length,0);assert.equal(db.recentTools().length,0);
@@ -60,6 +62,10 @@ app.whenReady().then(() => {
     assert.ok(preferences.snapshot().models.some(m=>m.id==='custom-test'));
     assert.throws(()=>preferences.update({speed:10}));assert.throws(()=>preferences.update({model:{provider:'unknown',id:'x'}}));
     assert.equal(preferences.get().speed,1.2);
+    // Kite size (K-14) and sound cues (K-13): Standard and off by default, and only known values are kept.
+    assert.equal(preferences.get().kiteSize,'standard');assert.equal(preferences.get().earcons,false);
+    preferences.update({kiteSize:'extraLarge',earcons:true});assert.equal(preferences.get().kiteSize,'extraLarge');assert.equal(preferences.get().earcons,true);
+    assert.throws(()=>preferences.update({kiteSize:'huge'}));assert.throws(()=>preferences.update({earcons:'yes'}));
     const {createKiteTray}=require('../src/main/tray.ts');const tray=createKiteTray(preferences);tray.update();tray.destroy();
     console.log('PASS safeStorage, SQLite migration/metrics/audit/reminders across restart, settings persistence and native tray');
   } catch(error) { console.error(error);process.exitCode=1; }

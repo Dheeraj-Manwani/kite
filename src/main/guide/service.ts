@@ -7,7 +7,7 @@ import { captureDisplay, prepareImages } from '../vision/service';
 import { getModel } from '../ai/providers';
 import { providerOptionsFor } from '../ai/ask';
 import type { ToolResult } from '../tools/types';
-import { alreadyDone, matchTarget, snapToElement, visionAllowed } from './grounding';
+import { alreadyDone, matchTarget, neighbours, snapToElement, visionAllowed } from './grounding';
 import { GuideSession, type Located } from './session';
 import { UiaClient } from './uia';
 import { locateWithVision } from './vision';
@@ -67,7 +67,8 @@ export class GuideService {
       const match = matchTarget(snapshot.elements, step, options.near);
       if (match) {
         this.guidedProcess = snapshot.window.process;
-        return { rect: match.element.rect, display: displayOf(match.element.rect).bounds, source: 'uia', verified: true, done: alreadyDone(match.element) };
+        return { rect: match.element.rect, display: displayOf(match.element.rect).bounds, source: 'uia', verified: true, done: alreadyDone(match.element),
+          nearby: neighbours(snapshot.elements, match.element.rect) };
       }
     }
     if (!options.vision) return null;
@@ -95,7 +96,8 @@ export class GuideService {
       // Verify against the accessibility tree: snap to the real control under the proposed box.
       const element = snapshot ? snapToElement(found.rect, snapshot.elements, step) : null;
       if (snapshot) this.guidedProcess = snapshot.window.process;
-      return { rect: element?.rect ?? found.rect, display: found.display.bounds, source: 'vision', verified: !!element };
+      const rect = element?.rect ?? found.rect;
+      return { rect, display: found.display.bounds, source: 'vision', verified: !!element, nearby: snapshot ? neighbours(snapshot.elements, rect) : [] };
     } catch {
       options.signal.throwIfAborted();
       this.deps.log('guide:vision', { ok: false, durationMs: performance.now() - started, code: 'EVISION' });

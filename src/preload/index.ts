@@ -9,6 +9,7 @@ const api: KiteAPI = {
   letsFly: from => ipcRenderer.send('onboarding:fly', from),
   listHistory: query => ipcRenderer.invoke('history:list', query),
   historyDetail: id => ipcRenderer.invoke('history:detail', id),
+  historyScreenshot: messageId => ipcRenderer.invoke('history:screenshot', messageId),
   deleteHistory: id => ipcRenderer.invoke('history:delete', id),
   exportHistory: id => ipcRenderer.invoke('history:export', id),
   reportFrame: (fps, ms) => ipcRenderer.send('perf:frame', fps, ms),

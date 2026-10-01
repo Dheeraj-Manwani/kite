@@ -8,10 +8,13 @@ import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
 import { MarkdownView } from './MarkdownView';
+import { earcon } from './earcons';
 import { modelLabel, useSettings } from '../hooks/useSettings';
-import { AlertIcon, BusyDots, CopyIcon, HistoryIcon, PinIcon, SetupIcon, Working } from '../icons';
+import { AlertIcon, BusyDots, ChevronIcon, CopyIcon, HistoryIcon, PinIcon, SetupIcon, Working } from '../icons';
 interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean; status?: Status; error?: { title: string; text: string; setup?: boolean } }
 type Status = 'listening' | 'thinking';
+/** An answer's first line as plain words, for the folded answer below a decision (UX-23). */
+const firstLine = (text: string) => displayText(text).split('\n').map(l => l.replace(/^\s*(#{1,6}|[-*+•]|\d{1,3}[.)])\s+/, '').replace(/\*\*|__|`/g, '').trim()).find(Boolean) ?? '';
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
 /**
  * Listening and thinking as a compact pill beside the kite (UX-12), sharing the tail's three-dot rhythm.
@@ -100,6 +103,7 @@ export function SpeechBubble() {
         if (event.type === 'ptt:start') {
           useKiteStore.getState().setMood('listening');
           if (voiceRuntime.reaction?.kind !== 'flinch') react('perk');
+          earcon('listen');
           void recorder.start(event.id);
         } else { useKiteStore.getState().setMood('thinking'); if (event.text !== 'Voice preview') react('costume'); }
         void player.warm().catch((): void => undefined); return;
@@ -113,7 +117,7 @@ export function SpeechBubble() {
       if (event.id !== latest.current) return;
       if (event.timing) { voiceRuntime.timing = event.timing; if (event.timing.voiceAverageMs !== undefined) voiceRuntime.voiceAverageMs = event.timing.voiceAverageMs; }
       switch (event.type) {
-        case 'ptt:stop': recorder.stop(event.id); voiceRuntime.waitingSince = performance.now(); useKiteStore.getState().setMood('thinking'); react('nod'); update({ ...state.current, status: 'thinking' }); break;
+        case 'ptt:stop': earcon('release'); recorder.stop(event.id); voiceRuntime.waitingSince = performance.now(); useKiteStore.getState().setMood('thinking'); react('nod'); update({ ...state.current, status: 'thinking' }); break;
         case 'voice:thinking': voiceRuntime.waitingSince ||= performance.now(); useKiteStore.getState().setMood('thinking'); break;
         case 'voice:transcript': update({ ...state.current, visible: true, transcript: event.text ?? '', text: '', streaming: true }); break;
         case 'tts:start': player.begin(); words = []; starts = []; offsets = []; wordIndex = 0; textBase = state.current.text.length; firstAudioAt = 0; noTimestamps = false; speaking = true; playbackDone = false; update({ ...state.current, revealed: state.current.approval ? Infinity : textBase }); break;
@@ -130,7 +134,7 @@ export function SpeechBubble() {
         case 'voice:metrics': break;
         case 'tool:approvalRequired':
           expires.current = Infinity; remaining.current = Infinity; voiceRuntime.toolPose = 'proposing'; voiceRuntime.approvalEndsAt = event.approval?.expiresAt ?? 0;
-          update({ ...state.current, visible: true, approval: event.approval, revealed: Infinity, toolStatus: '' }); react('proposing'); break;
+          update({ ...state.current, visible: true, approval: event.approval, revealed: Infinity, toolStatus: '' }); react('proposing'); earcon('approval'); break;
         case 'tool:decision':
           voiceRuntime.toolPose = null; update({ ...state.current, approval: undefined, revealed: Infinity,
             toolStatus: event.decision === 'approved' ? 'On it…' : event.decision === 'timeout' ? 'Timed out. Nothing ran.' : 'Okay, cancelled.' });
@@ -196,11 +200,20 @@ export function SpeechBubble() {
   return <aside ref={element} className={`speech-bubble ${bubble.visible ? 'visible' : ''} ${bubble.compact || pill ? 'compact' : ''}`}
     aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
     <div className="bubble-body">{pill ? <StatusLine status={pill} /> : <>
-    {bubble.transcript && <div className="bubble-transcript">You asked · {bubble.transcript}</div>}
-    {(bubble.text || bubble.streaming) && <div className="bubble-reply"><MarkdownView text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <BusyDots />}</div>}
+    {bubble.approval ? <>
+      {/* Only one thing needs a decision, so it comes first; what was said before folds into one line (UX-23). */}
+      <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />
+      {(bubble.transcript || bubble.text) && <details className="bubble-earlier">
+        <summary><span>{firstLine(bubble.text) || `You asked · ${bubble.transcript}`}</span><ChevronIcon /></summary>
+        {bubble.transcript && <div className="bubble-transcript">You asked · {bubble.transcript}</div>}
+        {bubble.text && <div className="bubble-reply"><MarkdownView text={bubble.text} /></div>}
+      </details>}
+    </> : <>
+      {bubble.transcript && <div className="bubble-transcript">You asked · {bubble.transcript}</div>}
+      {(bubble.text || bubble.streaming) && <div className="bubble-reply"><MarkdownView text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <BusyDots />}</div>}
+    </>}
     {bubble.error && <div className={`bubble-error${bubble.error.setup ? ' setup' : ''}`} role="alert">
       <strong>{bubble.error.setup ? <SetupIcon /> : <AlertIcon />}{bubble.error.title}</strong><p>{bubble.error.text}</p></div>}
-    {bubble.approval && <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />}
     {bubble.toolStatus && <div className="bubble-tool-status" role="status"><Working text={bubble.toolStatus} /></div>}
     {bubble.alarm && <button className="primary" onClick={() => { voiceRuntime.alarmUntil = 0; voiceRuntime.reaction = null; window.kite.dismissReminder(); update({ ...state.current, alarm: false }); }}>Dismiss reminder</button>}
     {bubble.voiceStatus && <div className="bubble-voice-status">{bubble.voiceStatus}</div>}

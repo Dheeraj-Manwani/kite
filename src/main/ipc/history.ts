@@ -1,5 +1,5 @@
 import { app, dialog, ipcMain } from 'electron';
-import { writeFile, unlink } from 'node:fs/promises';
+import { readFile, writeFile, unlink } from 'node:fs/promises';
 import path from 'node:path';
 import { trusted } from './trust';
 import type { openDatabase } from '../storage/database';
@@ -8,6 +8,14 @@ export function registerHistoryIPC(db: ReturnType<typeof openDatabase>, reset: (
   const idOK = (id: unknown): id is string => typeof id === 'string' && id.length > 0 && id.length <= 100;
   ipcMain.handle('history:list', (e, query = '') => trusted(e, 'settings') && typeof query === 'string' && query.length <= 300 ? db.listConversations(query) : []);
   ipcMain.handle('history:detail', (e, id) => trusted(e, 'settings') && idOK(id) ? db.detail(id) : { messages: [], tools: [] });
+  // The marked screenshot kept with a question (UX-74), as a data URL; only files inside the screens folder are read.
+  ipcMain.handle('history:screenshot', async (e, messageId) => {
+    if (!trusted(e, 'settings') || !Number.isSafeInteger(messageId) || messageId < 1) return null;
+    const file = db.screenshot(messageId); if (!file) return null;
+    const root = path.resolve(app.getPath('userData'), 'screens'), resolved = path.resolve(file), relative = path.relative(root, resolved);
+    if (!relative || relative.startsWith('..') || path.isAbsolute(relative)) return null;
+    try { return `data:image/jpeg;base64,${(await readFile(resolved)).toString('base64')}`; } catch { return null; }
+  });
   ipcMain.handle('history:delete', async (e, id) => {
     if (!trusted(e, 'settings') || !(id === null || idOK(id))) return { ok: false };
     const choice = await dialog.showMessageBox(getSettingsWindow(), { type: 'warning', buttons: ['Cancel', 'Delete'], defaultId: 0, cancelId: 0,

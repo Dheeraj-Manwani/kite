@@ -9,12 +9,12 @@ require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
-listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:a=>ipcRenderer.send('test:about',a),openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
+listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyScreenshot:async id=>id===42?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==':null,historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,attachments:1,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:a=>ipcRenderer.send('test:about',a),openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
@@ -44,21 +44,58 @@ app.whenReady().then(async()=>{
     assert.equal(await sjs("document.title"),'Kite · General');
     assert.equal(await sjs("document.querySelector('.side-item[aria-current]').textContent"),'General');
     assert.match(await sjs("document.querySelector('.hotkey-current').textContent"),/Push to talk\s*Ctrl\s*Win/);
+    // Kite size (personality.md K-14): Standard, Large, and Extra large.
+    assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Kite size\"]').options].map(o=>o.textContent)"),['Standard','Large','Extra large']);
+    await sjs("const k=document.querySelector('select[aria-label=\"Kite size\"]');k.value='large';k.dispatchEvent(new Event('change',{bubbles:true}));");await delay(80);
+    assert.equal(snapshot.settings.kiteSize,'large');snapshot.settings.kiteSize='standard';
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Models & keys').click()");
     for(let i=0;i<100 && await sjs("document.querySelectorAll('.provider-row').length")!==5;i++)await delay(30);
     assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),5);
-    assert.equal(await sjs("document.querySelectorAll('optgroup').length"),15);
+    // Models are a listbox grouped by provider, each row with tier, Vision, and Actions badges; the backup is under Advanced (UX-55).
+    assert.equal(await sjs("document.querySelectorAll('.model-picker').length"),3);
+    assert.ok(await sjs("!document.querySelector('.advanced').open&&document.querySelector('.advanced').textContent.includes('Backup model')"));
     // A connected provider shows its state; rarer actions wait in a menu (UX-51).
     assert.match(await sjs("document.querySelector('.provider-state').textContent"),/Connected · \d+ models/);
     await sjs("document.querySelector('.overflow summary').click()");await delay(30);
     await sjs("[...document.querySelectorAll('.overflow .menu button')].find(b=>b.textContent==='Check connection').click()");await delay(120);
     assert.match(await sjs("document.querySelector('.provider-state').textContent"),/Connected/);
-    await sjs("const s=document.querySelector('select:has(optgroup)');s.value='anthropic:claude-sonnet-5';s.dispatchEvent(new Event('change',{bubbles:true}));");await delay(100);
+    await sjs("document.querySelector('.model-picker-button').click()");await delay(60);
+    assert.equal(await sjs("document.querySelectorAll('[role=listbox] .model-group').length"),5);
+    const sonnet="[...document.querySelectorAll('[role=option]')].find(o=>o.querySelector('.model-name').textContent==='Claude Sonnet 5')";
+    assert.deepEqual(await sjs(`[...${sonnet}.querySelectorAll('.badge')].map(b=>b.textContent)`),['Fast','Vision','Actions']);
+    fs.writeFileSync(path.join(temporary,'model-picker.png'),(await settings.webContents.capturePage()).toPNG());
+    await sjs(`${sonnet}.click()`);await delay(100);
     assert.equal(snapshot.settings.model.provider,'anthropic');
+    assert.equal(await sjs("document.querySelector('[role=listbox]')"),null,'the list closes after a choice');
+    // By keyboard: ArrowDown opens, End moves to the last model, Enter chooses it, and focus goes back to the button.
+    const key=(selector,k)=>sjs(`document.querySelector('${selector}').dispatchEvent(new KeyboardEvent('keydown',{key:'${k}',bubbles:true}))`);
+    await sjs("document.querySelectorAll('.model-picker-button')[1].focus()");
+    await sjs("document.querySelectorAll('.model-picker-button')[1].dispatchEvent(new KeyboardEvent('keydown',{key:'ArrowDown',bubbles:true}))");await delay(60);
+    await key('[role=listbox]','End');await delay(30);
+    const lastVision=await sjs("[...document.querySelectorAll('[role=option] .model-name')].at(-1).textContent");
+    await key('[role=listbox]','Enter');await delay(100);
+    assert.equal(await sjs("document.activeElement.classList.contains('model-picker-button')"),true);
+    assert.equal(await sjs("document.querySelectorAll('.model-picker-button')[1].querySelector('.model-name').textContent"),lastVision);
     fs.writeFileSync(path.join(temporary,'settings.png'),(await settings.webContents.capturePage()).toPNG());
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Voice').click()");await delay(120);
     assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),1);
+    // Speed is an ink slider with a "Normal" tick that resets it to 1.0× (UX-56).
+    await sjs("const r=document.querySelector('.range');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(r,'1.25');r.dispatchEvent(new Event('input',{bubbles:true}));");await delay(100);
+    assert.equal(snapshot.settings.speed,1.25);
+    assert.ok(Math.abs(parseFloat(await sjs("document.querySelector('.range').style.getPropertyValue('--fill')"))-72.22)<.01,'filled to the value');
+    await sjs("document.querySelector('.range-tick').click()");await delay(100);
+    assert.equal(snapshot.settings.speed,1);
+    assert.ok(await sjs("[...document.querySelectorAll('.setting-row')].some(r=>/Speed\s*Normal/.test(r.textContent))"));
+    // Sound cues (K-13) are off until turned on; turning them on plays a preview.
+    assert.equal(await sjs("[...document.querySelectorAll('.switch-row')].find(r=>r.textContent.startsWith('Sound cues')).querySelector('input').checked"),false);
+    await sjs("[...document.querySelectorAll('.switch-row')].find(r=>r.textContent.startsWith('Sound cues')).querySelector('input').click()");await delay(80);
+    assert.equal(snapshot.settings.earcons,true);snapshot.settings.earcons=false;
     fs.writeFileSync(path.join(temporary,'voice-settings.png'),(await settings.webContents.capturePage()).toPNG());
+    // Without a Cartesia key, one line replaces the voice controls that couldn't work (UX-56).
+    snapshot.keys.cartesia=false;settings.webContents.send('settings:changed',snapshot);await delay(100);
+    assert.equal(await sjs("document.querySelector('.range')"),null);
+    assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Add a Cartesia key to hear Kite speak\./);
+    snapshot.keys.cartesia=true;settings.webContents.send('settings:changed',snapshot);await delay(60);
     // Trust settings use plain actions and switches, not tool ids (UX-54).
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Actions & trust').click()");await delay(120);
     assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Ask before I….*Open an app.*Search the web/);
@@ -68,6 +105,10 @@ app.whenReady().then(async()=>{
     await settings.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});await delay(60);
     assert.equal(await sjs("getComputedStyle(document.querySelector('.side-item[aria-current]')).outlineStyle"),'solid');
     await settings.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[]});settings.webContents.debugger.detach();
+    const micaWindow=new BrowserWindow({width:760,height:500,show:false,webPreferences:{preload,sandbox:true,contextIsolation:true,offscreen:true}});
+    await micaWindow.loadFile(path.join(__dirname,'../.vite/renderer/main_window/index.html'),{hash:'settings',query:{mica:'1'}});await delay(300);
+    assert.deepEqual(await micaWindow.webContents.executeJavaScript("[document.documentElement.classList.contains('mica'),getComputedStyle(document.documentElement).backgroundColor,getComputedStyle(document.querySelector('.window-sidebar')).backgroundColor]"),[true,'rgba(0, 0, 0, 0)','rgba(0, 0, 0, 0)']);
+    micaWindow.destroy();
     const tutorial=await create('onboarding');
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Hello, I’m Kite');
     // Onboarding is a guided path: no nav, a labeled progress row, and the kite on its stage.
@@ -141,6 +182,10 @@ app.whenReady().then(async()=>{
     // Friendly day groups, human labels for marks and tools, and icon actions (UX-70 to UX-73).
     assert.equal(await history.webContents.executeJavaScript("document.querySelector('.history-day').textContent"),'Today');
     assert.equal(await history.webContents.executeJavaScript("document.querySelector('.annotation-badge').textContent"),'Circled');
+    // A kept screenshot shows on the question as a thumbnail that opens larger in place (UX-74).
+    assert.match(await history.webContents.executeJavaScript("document.querySelector('.from-user .chat-shot img').src"),/^data:image\//);
+    await history.webContents.executeJavaScript("document.querySelector('.chat-shot').click()");await delay(50);
+    assert.equal(await history.webContents.executeJavaScript("document.querySelector('.chat-shot').getAttribute('aria-expanded')"),'true');
     assert.equal(await history.webContents.executeJavaScript("document.querySelector('.tool-line summary').textContent"),'Saved a note · you approved');
     assert.equal(await history.webContents.executeJavaScript("document.body.textContent.includes('create_note')"),false);
     await history.webContents.executeJavaScript("document.querySelector('[aria-label=\"Export as Markdown\"]').click()");await delay(60);
@@ -210,6 +255,9 @@ app.whenReady().then(async()=>{
     const card={approvalId:'test-approval',toolName:'type_text',summary:'Paste "meeting at 5" into the currently focused app?',input:{text:'meeting at 5'},expiresAt:Date.now()+30000,dryRun:false};
     overlay.webContents.send('test:voice',{id:2,type:'tool:approvalRequired',approval:card});await delay(100);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-summary').textContent"),card.summary);
+    // The decision is the first thing in the bubble; the answer before it folds into one line below (UX-23).
+    assert.ok(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble .bubble-body').firstElementChild.classList.contains('approval-card')"));
+    assert.deepEqual(await overlay.webContents.executeJavaScript("(()=>{const d=document.querySelector('.bubble-earlier');return [d.open,d.querySelector('summary').textContent];})()"),[false,'Streaming without timestamps.']);
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card pre').textContent"),/meeting at 5/);
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-countdown').textContent"),/30|29/);
     // The primary button names the action; the voice hint follows the user's shortcut.
@@ -259,6 +307,8 @@ app.whenReady().then(async()=>{
     await delay(350);assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-shutter').getAttribute('opacity')"),'0','the ring has faded');
     overlay.webContents.send('screen:event',{type:'annotate',id:3,display:{id:1,bounds:{x:0,y:0,width:760,height:960},scaleFactor:1},origin:{x:0,y:0}});await delay(60);
     assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).cursor"),'crosshair');
+    // On a first use, a tiny hint says which marks work and how many (UX-41).
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.mark-hint').textContent"),'Circle, underline, point, or tap · up to 5');
     for(let stroke=0;stroke<6;stroke++){
       const x=100+stroke*40,y=700;
       overlay.webContents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});
@@ -267,6 +317,8 @@ app.whenReady().then(async()=>{
       await delay(30);
     }
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),5);
+    // Once marking starts the hint gives way to a count (UX-41).
+    assert.equal(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.mark-hint')].map(h=>h.textContent).join()"),'5 of 5');
     overlay.webContents.send('test:voice',{id:3,type:'ptt:stop'});await delay(50);
     assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).pointerEvents"),'none');
     overlay.webContents.send('test:voice',{id:3,type:'tool:approvalRequired',approval:{...card,approvalId:'vision-approval'}});await delay(50);
@@ -296,6 +348,11 @@ app.whenReady().then(async()=>{
     const view={id:9,goal:'Add a footer',app:'Word',index:0,total:3,completed:0,instruction:'Click the Insert tab.',target:'Insert',status:'pointing',rect:{x:300,y:120,width:60,height:26},display:{x:0,y:0,width:760,height:960},source:'uia',verified:true};
     overlay.webContents.send('guide:state',view);await delay(900);
     assert.equal(await js("document.querySelectorAll('.guide-ring path').length"),2);
+    assert.equal(await js("getComputedStyle(document.querySelector('.kite-canvas')).opacity"),'1','clear of other controls, the kite is solid');
+    const crowd=[];for(let x=0;x<760;x+=40)for(let y=0;y<960;y+=30)if(!(x<366&&x+36>294&&y<152&&y+26>114))crowd.push({x,y,width:36,height:26});
+    overlay.webContents.send('guide:state',{...view,nearby:crowd});await delay(200);
+    assert.equal(await js("Number(getComputedStyle(document.querySelector('.kite-canvas')).opacity).toFixed(2)"),'0.85','over neighbouring labels, the kite lets them show through (K-08)');
+    overlay.webContents.send('guide:state',view);await delay(200);
     assert.match(await js("document.querySelector('.guide-card').textContent"),/Step 1 of 3.*Click the Insert tab\..*Insert/);
     // The goal titles the card, the control is a keycap, and there is no Back on step 1 (UX-30, UX-32).
     assert.equal(await js("document.querySelector('.guide-goal').textContent+' '+document.querySelector('.guide-app').textContent"),'Add a footer · Word');
@@ -461,6 +518,13 @@ app.whenReady().then(async()=>{
     const back=await kiteFrame();
     assert.ok(Math.hypot(back.x-382,back.y-278)<6,'back by the cursor: '+JSON.stringify(back));
     assert.equal(await js("document.querySelector('.speech-bubble.notice.visible [role=status]').textContent"),'Welcome back.');
+    // Extra large (K-14): the kite is 1.6x, sits at its scaled offset, and its bubble keeps clear of its wings.
+    snapshot.settings.kiteSize='extraLarge';overlay.webContents.send('settings:changed',snapshot);await delay(800);
+    voice(403,{type:'ptt:start'});await delay(40);voice(403,{type:'ptt:tooShort'});await delay(600);
+    const xl=await kiteFrame(), pill=await js("parseFloat(document.querySelector('.speech-bubble').style.translate)");
+    assert.ok(xl.scale===1.6&&Math.hypot(xl.x-(350+32*1.6),xl.y-(250+28*1.6))<6,'scaled kite at its scaled offset: '+JSON.stringify(xl));
+    assert.ok(pill-xl.x>=11+13*1.6-1,'the bubble clears the bigger kite: '+(pill-xl.x));
+    snapshot.settings.kiteSize='standard';overlay.webContents.send('settings:changed',snapshot);await delay(200);
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
     console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding, guide ring/card/flight/controls, whiteboard drawing/pen/highlight/export/controls, task approval scopes/card/ring/pointing/controls. Screenshots: '+temporary);
   } catch(error) {console.error(error);process.exitCode=1;}

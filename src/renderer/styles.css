@@ -84,6 +84,9 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 @media (prefers-reduced-motion: reduce) { .status-dots i, .busy-dots i { transform: none !important; animation: none !important; } .status-dots[data-status='thinking'] i:nth-child(2), .busy-dots i:nth-child(2) { opacity: 1; } }
 .reduce-motion .status-dots i, .reduce-motion .busy-dots i { transform: none !important; } .reduce-motion .status-dots[data-status='thinking'] i:nth-child(2), .reduce-motion .busy-dots i:nth-child(2) { opacity: 1; }
 html[data-view='settings'] { background: var(--bg); color-scheme: light dark; }
+/* Mica (UX-57): on Windows 11 the page is see-through, so the system backdrop shows behind the sidebar and the page;
+   cards and controls sit on it as --surface layers. --bg stays the fallback wherever Mica isn't available. */
+html.mica[data-view='settings'], html.mica .window-sidebar { background: transparent; }
 .settings { max-width: 520px; padding: 32px; margin: 0 auto; }
 h1 { font-size: var(--fs-display); margin: 14px 0 8px; }
 p { font-size: var(--fs-body); line-height: 1.6; color: var(--text-muted); margin: 0 0 24px; }
@@ -120,6 +123,16 @@ button:disabled { opacity: .45; cursor: default; }
 .row-control select { width: 260px; max-width: 100%; }
 .row-control button { white-space: nowrap; }
 .row-control input[type='range'] { width: 200px; max-width: 100%; margin: 0; padding: 0; accent-color: var(--ink); }
+/* Sliders (UX-56): an ink fill and thumb on a border rail, filled up to the value (--fill), with a "Normal" tick under 1.0×. */
+.range-field { position: relative; display: inline-block; padding-bottom: 16px; }
+.row-control .range { display: block; -webkit-appearance: none; appearance: none; height: 20px; border: 0; background: transparent; cursor: pointer; }
+.range::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-pill); background: linear-gradient(to right, var(--ink) var(--fill, 50%), var(--border) var(--fill, 50%)); }
+.range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border: 2px solid var(--surface); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+/* The thumb's centre runs from 7 px to the width minus 7 px, so the tick sits where 1.0× really is. */
+.settings-view .range-tick { position: absolute; left: calc(7px + (100% - 14px) * var(--normal)); top: 20px; transform: translateX(-50%); padding: 0 2px; border: 0; background: transparent; color: var(--text-muted); font-size: 11px; line-height: 14px; }
+.settings-view .range-tick::before { content: ''; position: absolute; left: 50%; top: -6px; width: 1px; height: 4px; background: var(--text-muted); }
+.settings-view .range-tick:hover { background: transparent; color: var(--text); }
 .switch-row { cursor: pointer; }
 /* Windows-style switch; "on" is ink, not pink (UX-54). */
 .switch { appearance: none; flex: none; position: relative; width: 40px; height: 20px; margin: 0; padding: 0; border: 1px solid var(--text-muted); border-radius: var(--radius-pill); background: transparent; cursor: pointer; }
@@ -151,6 +164,27 @@ button:disabled { opacity: .45; cursor: default; }
 .advanced { margin: -8px 0 24px; }
 .advanced summary { padding: 4px 0; font-size: var(--fs-caption); color: var(--text-muted); cursor: pointer; }
 .custom-model { display: grid; gap: 4px; margin-top: 8px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m); }
+.advanced > .group-card { margin-top: 8px; }
+/* The model listbox (UX-55): a button that shows the choice, and a list grouped by provider with tier, Vision, and Actions badges. */
+.model-picker { position: relative; width: 300px; max-width: 100%; }
+.settings-view .model-picker-button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px 6px 10px; text-align: left; }
+.model-picker-button .model-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-picker-button > .icon { flex: none; color: var(--text-muted); }
+.model-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 6; width: max(100%, 360px); max-height: 320px; overflow: auto; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m); box-shadow: var(--shadow-overlay); }
+.model-list.up { top: auto; bottom: calc(100% + 4px); }
+.model-list:focus { outline: none; }
+.model-list:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.model-group { padding: 8px 8px 4px; font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); }
+.model-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-s); cursor: default; }
+.model-option.active { background: var(--surface-subtle); }
+.model-option .model-name { flex: 1; min-width: 0; }
+.model-option[aria-selected='true'] .model-name { font-weight: 600; }
+.model-check { flex: none; width: 16px; line-height: 0; }
+.model-badges { display: inline-flex; flex: none; gap: 4px; }
+.badge { padding: 0 6px; border-radius: var(--radius-pill); background: var(--surface-subtle); color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 18px; white-space: nowrap; }
+.model-option.active .badge { background: var(--surface); }
+.badge.quiet { background: transparent; box-shadow: inset 0 0 0 1px var(--border); font-weight: 400; }
 .custom-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .setting-field, .custom-model label { display: grid; gap: 6px; margin: 8px 0; font-size: var(--fs-body); }
 .settings-view select, .custom-model input { box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); }
@@ -199,6 +233,16 @@ button:disabled { opacity: .45; cursor: default; }
 .speech-bubble.notice button { flex: none; margin-top: 0; }
 
 .approval-card { border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--surface-subtle); padding: 12px; margin-top: 10px; }
+/* A decision comes first in the bubble (UX-23); the answer before it folds into one line below. */
+.bubble-body > .approval-card:first-child { margin-top: 0; }
+.bubble-earlier { margin-top: 10px; font-size: var(--fs-caption); color: var(--text-muted); }
+.bubble-earlier > summary { display: flex; align-items: center; gap: 4px; list-style: none; cursor: pointer; }
+.bubble-earlier > summary::-webkit-details-marker { display: none; }
+.bubble-earlier > summary span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bubble-earlier > summary .icon { flex: none; transform: rotate(-90deg); transition: transform .15s; }
+.bubble-earlier[open] > summary .icon { transform: none; }
+.bubble-earlier[open] > summary span { white-space: normal; }
+.bubble-earlier .bubble-transcript, .bubble-earlier .bubble-reply { margin-top: 8px; font-size: var(--fs-body); color: var(--text); }
 /* Risk tiers (UX-21): low-risk approvals sit lightly in the bubble; sensitive ones are framed and say what leaves this PC. */
 .approval-card.low { background: transparent; border: 0; padding: 0; margin-top: 14px; }
 .approval-flow { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; font-size: var(--fs-caption); line-height: 1.45; color: var(--text); }
@@ -235,6 +279,10 @@ button:disabled { opacity: .45; cursor: default; }
 @keyframes ink-pulse { 50% { filter: drop-shadow(0 0 10px #fff); } }
 .screen-looking { position: fixed; z-index: 10001; pointer-events: none; display: inline-flex; align-items: center; gap: 8px; color: #f4f5f7; background: #1b212a; border: 1px solid rgb(255 255 255 / .16); border-radius: var(--radius-pill); padding: 8px 16px; font: 600 var(--fs-body) var(--font-text); }
 .screen-looking::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--kite-body); animation: looking-pulse 1.6s ease-in-out infinite; }
+/* First-run marking hints (UX-41): which marks work, then a count; small, by the cursor, and never under the pointer. */
+.mark-hint { position: fixed; z-index: 10001; pointer-events: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); font-size: var(--fs-caption); white-space: nowrap; }
+.mark-hint.count { font-variant-numeric: tabular-nums; }
 /* The pink dot says it's Kite doing the looking; it pulses, and holds steady under reduced motion (UX-40). */
 @keyframes looking-pulse { 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .screen-looking::before { animation: none; } }
@@ -281,6 +329,11 @@ button:disabled { opacity: .45; cursor: default; }
 .tool-line summary { color: var(--text); cursor: pointer; }
 .history-message .tool-line p { margin: 4px 0; font-size: var(--fs-caption); color: var(--text-muted); }
 .tool-line pre { padding: 8px; border-radius: var(--radius-s); background: var(--surface-subtle); font: var(--fs-caption) var(--font-mono); white-space: pre-wrap; overflow-wrap: anywhere; }
+/* The marked screenshot on your question (UX-74): a thumbnail that opens larger in place. */
+.history-view .chat-shot { display: block; margin: 8px 0 0; padding: 0; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); line-height: 0; overflow: hidden; cursor: zoom-in; }
+.history-view .chat-shot img { display: block; width: 240px; max-width: 100%; height: auto; }
+.history-view .chat-shot.large { cursor: zoom-out; }
+.history-view .chat-shot.large img { width: 100%; }
 .annotation-badge { display: inline-block; margin-top: 6px; padding: 2px 10px; border-radius: var(--radius-pill); background: color-mix(in srgb, var(--sun) 24%, transparent); color: var(--text); font-size: var(--fs-caption); }
 @media (max-width: 560px) { .history-layout { grid-template-columns: 1fr; } .history-view { padding: 20px 16px 40px; } }
 /* Onboarding (UX-60): the stage carries the character (kite.css); the step below it is a plain form. */
@@ -414,7 +467,7 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
    Surfaces become Canvas and CanvasText with a Highlight edge; anything that showed state through a fill
    (switches, dots, pills, lit keys) gets an explicit system color so the state survives. */
 @media (forced-colors: active) {
-  .speech-bubble, .speech-bubble::before, .approval-card.sensitive, .guide-card, .task-card, .toast, .pill, .dev-panel { border-color: Highlight; }
+  .speech-bubble, .speech-bubble::before, .approval-card.sensitive, .guide-card, .task-card, .toast, .pill, .dev-panel, .mark-hint { border-color: Highlight; }
   .toast, .screen-looking { border: 1px solid CanvasText; }
   button { border-color: ButtonText; }
   /* Chromium forces a button's text color, so the primary fill opts out and uses Highlight explicitly. */
@@ -432,6 +485,13 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
   .progress-dots .current, .guide-dots .current { background: Highlight; border-color: Highlight; }
   .status-dots i, .busy-dots i { forced-color-adjust: none; background: currentColor; }
   .big-key.lit, .brain-card.chosen { outline: 2px solid Highlight; }
+  .model-option.active { outline: 1px solid Highlight; }
+  .badge { box-shadow: inset 0 0 0 1px CanvasText; }
+  .range { forced-color-adjust: none; }
+  .range::-webkit-slider-runnable-track { background: linear-gradient(to right, Highlight var(--fill, 50%), GrayText var(--fill, 50%)); }
+  .range::-webkit-slider-thumb { background: Highlight; border-color: Canvas; box-shadow: 0 0 0 1px Highlight; }
+  .range-tick::before { background: GrayText; }
+  html.mica[data-view='settings'] { background: Canvas; }
   .big-key.lit { background: Highlight; color: HighlightText; }
   .guide-ring path, .board-ring path, .approval-countdown .countdown-arc { stroke: Highlight; filter: none; }
   .annotation path, .practice-ink { fill: Highlight; filter: none; }
