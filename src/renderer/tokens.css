@@ -13,7 +13,6 @@
   --sun: #e9a43f;
   --success: #0f7b0f;
   --danger: #c42b1c;
-  --on-danger: #ffffff;
   --stage: #1b212a;
   --surface-overlay: color-mix(in srgb, var(--surface) 96%, transparent);
   --shadow-overlay: 0 6px 24px rgb(27 33 42 / .14), 0 1px 3px rgb(27 33 42 / .1);
@@ -49,7 +48,6 @@
     --accent: #ff6f91;
     --success: #6ccb5f;
     --danger: #ff7a64;
-    --on-danger: #1b212a;
     --stage: #111418;
     --shadow-overlay: 0 8px 28px rgb(0 0 0 / .45), 0 1px 3px rgb(0 0 0 / .3);
   }

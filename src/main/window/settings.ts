@@ -26,7 +26,7 @@ export function createSettingsWindow(view: 'settings' | 'history' | 'onboarding'
     webPreferences: { preload: preloadPath, contextIsolation: true, nodeIntegration: false, sandbox: true },
   });
   // Mica on Windows 11 (UX-57): the method also clears the page's background so the backdrop shows through, and the
-  // renderer then drops its own --bg (styles.css, html.mica).
+  // renderer then drops its own --bg (styles/window.css, html.mica).
   const mica = supportsMica(process.platform, os.release());
   if (mica) win.setBackgroundMaterial('mica');
   settingsWindow = win;

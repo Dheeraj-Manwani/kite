@@ -1,0 +1,37 @@
+/* Guide mode: a marker ring on the control and a step card that never covers it. */
+.guide-layer { position: fixed; inset: 0; pointer-events: none; }
+.guide-ring { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; }
+.guide-ring path { fill: none; stroke: var(--sun); stroke-width: 3.4; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; stroke-dashoffset: 0;
+  filter: drop-shadow(0 0 1.2px #000a) drop-shadow(0 0 6px color-mix(in srgb, var(--sun) 55%, transparent)); animation: guide-draw .5s cubic-bezier(.3,.7,.4,1) backwards; }
+.guide-ring path.pass-1 { stroke-width: 1.8; opacity: .72; animation-delay: .16s; }
+@keyframes guide-draw { from { stroke-dashoffset: 1; } }
+.guide-card { position: absolute; left: 0; top: 0; width: 280px; padding: 12px 14px 10px; border: 1px solid var(--border); border-radius: var(--radius-l); background: var(--surface-overlay); color: var(--text);
+  box-shadow: var(--shadow-overlay); pointer-events: auto; font-size: var(--fs-body); line-height: 1.5; transition: transform .35s cubic-bezier(.3,.7,.4,1), opacity .2s; }
+.guide-card header { display: flex; align-items: center; gap: 6px; font-size: var(--fs-caption); color: var(--text-muted); }
+.guide-goal { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: var(--fs-body); }
+.guide-app { flex: none; white-space: nowrap; }
+.guide-progress { margin-left: auto; flex: none; white-space: nowrap; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+/* Progress in the kite tail's three-dot rhythm: done in ink, current in pink, upcoming neutral (UX-30). */
+.guide-dots { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 8px; }
+.guide-dots span { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.guide-dots .done { background: var(--text); }
+.guide-dots .current { background: var(--accent); }
+.guide-instruction { margin: 0 0 6px; color: var(--text); font-size: var(--fs-lead); line-height: 1.45; }
+.guide-target { display: flex; align-items: baseline; flex-wrap: wrap; gap: 6px; font-size: var(--fs-caption); color: var(--text-muted); }
+/* The control to click, as a keycap (UX-30). */
+.guide-key { padding: 1px 7px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: 600 var(--fs-caption) var(--font-text); overflow-wrap: anywhere; }
+.guide-card.locating { opacity: .55; pointer-events: none; }
+.guide-card.lost { border-color: var(--sun); }
+.guide-card.done { border-color: var(--success); }
+.guide-actions { display: flex; gap: 6px; margin-top: 10px; }
+.guide-actions button { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 3px; font-size: var(--fs-caption); padding: 6px 4px; white-space: nowrap; }
+.guide-actions .icon { width: 14px; height: 14px; }
+.guide-actions .guide-stop { flex: 0 1 auto; padding-inline: 8px; color: var(--text-muted); }
+.guide-hint { display: block; margin-top: 7px; font-size: var(--fs-caption); color: var(--text-muted); }
+@media (forced-colors: active) {
+  .guide-card { border-color: Highlight; }
+  .guide-dots span { border: 1px solid GrayText; background: Canvas; }
+  .guide-dots .done { background: CanvasText; border-color: CanvasText; }
+  .guide-dots .current { background: Highlight; border-color: Highlight; }
+  .guide-ring path { stroke: Highlight; filter: none; }
+}

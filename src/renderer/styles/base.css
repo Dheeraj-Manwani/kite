@@ -1,0 +1,37 @@
+/* Base (UX-08): element defaults, buttons, and the few pieces every surface shares. Colors and type come from tokens.css
+   (UI) and kite.css (the kite); no literal colors in these files, except content such as the whiteboard's paper. */
+:root { font-family: var(--font-text); color: var(--text); background: transparent; }
+* { box-sizing: border-box; }
+html, body, #root { margin: 0; width: 100%; height: 100%; }
+body { font-size: var(--fs-body); }
+button, input, select, textarea { font: inherit; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
+b, strong { font-weight: 600; }
+:where(button, input, select, textarea, summary, a):focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+html[data-view='overlay'] { overflow: hidden; background: transparent; }
+.overlay { width: 100vw; height: 100vh; pointer-events: none; background: transparent; }
+h1 { font-size: var(--fs-display); margin: 14px 0 8px; }
+p { font-size: var(--fs-body); line-height: 1.6; color: var(--text-muted); margin: 0 0 24px; }
+label { display: block; font-size: var(--fs-caption); font-weight: 600; margin-bottom: 15px; }
+input { display: block; width: 100%; margin-top: 7px; padding: 11px 12px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); }
+/* Buttons (UX-03): secondary by default, like Windows 11's standard button. At most one .primary per view;
+   .ghost for quiet actions; .danger for destructive ones, filled only inside a confirmation step. */
+button { background: var(--surface); color: var(--text); border: 1px solid var(--border); border-radius: var(--radius-s); padding: 11px 24px; cursor: pointer; }
+button:where(:hover:not(:disabled)) { background: var(--surface-subtle); }
+button.primary { background: var(--ink); color: var(--on-ink); border-color: transparent; }
+button.primary:where(:hover:not(:disabled)) { background: color-mix(in srgb, var(--ink) 86%, var(--bg)); }
+button.ghost { background: transparent; border-color: transparent; }
+button.ghost:where(:hover:not(:disabled)) { background: var(--surface-subtle); }
+button.danger { background: transparent; color: var(--danger); border-color: color-mix(in srgb, var(--danger) 45%, transparent); }
+button.danger:where(:hover:not(:disabled)) { background: color-mix(in srgb, var(--danger) 10%, transparent); }
+button:disabled { opacity: .45; cursor: default; }
+.icon { flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.icon .filled { fill: currentColor; }
+/* The user's shortcut as keycaps (UX-52). */
+.keycaps { display: inline-flex; gap: 4px; vertical-align: middle; }
+.keycap { min-width: 26px; padding: 1px 7px; border: 1px solid var(--border); border-bottom-width: 2px; border-radius: var(--radius-s); background: var(--surface); color: var(--text); font: 600 var(--fs-caption) var(--font-text); text-align: center; }
+.toast { position: fixed; left: 50%; bottom: 24px; z-index: 20; transform: translateX(-50%); padding: 9px 16px; border-radius: var(--radius-pill); background: var(--ink); color: var(--on-ink); font-size: var(--fs-body); box-shadow: var(--shadow-overlay); }
+.loading { padding: 36px; }
+.reduce-motion *, .reduce-motion *::before { animation: none !important; transition: none !important; }
+/* Text for screen readers only. */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }

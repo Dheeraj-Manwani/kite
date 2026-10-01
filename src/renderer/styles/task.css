@@ -1,0 +1,26 @@
+/* Tasks: a progress card with a Stop button that is always there, and the guide's ring on the control in use. */
+.task-layer { position: fixed; inset: 0; pointer-events: none; }
+.task-card { position: absolute; left: 0; top: 0; width: 320px; padding: 12px 14px 10px; border: 1px solid var(--border); border-radius: var(--radius-l); background: var(--surface-overlay); color: var(--text);
+  box-shadow: var(--shadow-overlay); pointer-events: auto; font-size: var(--fs-body); line-height: 1.45; transition: transform .35s cubic-bezier(.3,.7,.4,1); }
+.task-card header { display: flex; align-items: center; gap: 7px; font-size: var(--fs-caption); color: var(--text-muted); }
+.task-progress { margin-left: auto; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+.task-meter { height: 3px; margin: 8px 0; border-radius: var(--radius-pill); background: var(--surface-subtle); overflow: hidden; }
+.task-meter span { display: block; height: 100%; background: var(--ink); transition: width .3s; }
+.task-goal { margin: 0 0 6px; color: var(--text); font-size: var(--fs-body); }
+.task-action { display: flex; gap: 6px; margin: 0 0 6px; color: var(--text); font-size: var(--fs-lead); }
+.task-action span { flex: 0 0 auto; align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: var(--radius-s); background: var(--surface-subtle); color: var(--text-muted); font-size: var(--fs-caption); }
+.task-message { margin: 0 0 6px; color: var(--text-muted); font-size: var(--fs-caption); }
+.task-card.approval { border-color: var(--sun); }
+.task-card.approval .task-message { color: var(--text); }
+.task-card.done { border-color: var(--success); }
+.task-card.failed, .task-card.stopped { border-color: var(--danger); }
+.task-approval, .task-actions { display: flex; gap: 6px; margin-top: 8px; }
+.task-approval button, .task-actions button { flex: 1; padding: 6px 4px; font-size: var(--fs-caption); }
+.task-actions .task-stop { font-weight: 600; }
+.task-log { margin: 6px 0 0; padding-left: 18px; max-height: 110px; overflow: auto; font-size: var(--fs-caption); color: var(--text-muted); }
+.task-log li.ok::marker { content: '✓  '; color: var(--success); }
+.task-log li.bad::marker { content: '✗  '; color: var(--danger); }
+.task-hint { display: block; margin-top: 7px; font-size: var(--fs-caption); color: var(--text-muted); }
+@media (forced-colors: active) {
+  .task-card { border-color: Highlight; }
+}

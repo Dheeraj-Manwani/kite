@@ -12,7 +12,7 @@ import { earcons } from './voice/earcons';
 import { kiteSizes } from '../shared/release';
 import './tokens.css';
 import './kite.css';
-import './styles.css';
+import './styles/index.css';
 import './logging';
 const Annotation = lazy(() => import('./vision/Annotation').then(m => ({ default: m.Annotation })));
 const Guide = lazy(() => import('./guide/GuideLayer').then(m => ({ default: m.GuideLayer })));

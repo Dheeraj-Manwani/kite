@@ -1,0 +1,12 @@
+/* Windows High Contrast (UX-90). Chromium swaps colors for system ones, and keeps any system color set here. Surfaces become
+   Canvas and CanvasText with a Highlight edge; anything that showed state through a fill gets an explicit system color.
+   Each component's own High Contrast rules sit at the end of its file; these shared ones load last, so they win over any
+   component's button or toast styles. */
+@media (forced-colors: active) {
+  .toast { border: 1px solid CanvasText; }
+  button { border-color: ButtonText; }
+  /* Chromium forces a button's text color, so the primary fill opts out and uses Highlight explicitly. */
+  button.primary { forced-color-adjust: none; background: Highlight; color: HighlightText; border-color: Highlight; }
+  button:disabled, button.primary:disabled { background: Canvas; color: GrayText; border-color: GrayText; }
+  button.link { border-style: none; color: LinkText; }
+}

@@ -1,0 +1,26 @@
+/* Screen marks sit above all controls while the global hold is active. */
+.annotation { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10000; overflow: visible; opacity: 1; transition: opacity .8s; }
+.annotation.preparing { pointer-events: auto; cursor: progress; touch-action: none; }
+.annotation.drawing { pointer-events: auto; cursor: crosshair; touch-action: none; }
+/* Screen ink, and onboarding's practice ink, which must look exactly like it (UX-64). */
+.annotation path, .practice-ink { fill: var(--sun); filter: drop-shadow(0 0 4px var(--sun)); }
+.annotation.fading { opacity: 0; }
+.annotation.pulse path { animation: ink-pulse .45s ease-out; }
+@keyframes ink-pulse { 50% { filter: drop-shadow(0 0 10px #fff); } }
+.screen-looking { position: fixed; z-index: 10001; pointer-events: none; display: inline-flex; align-items: center; gap: 8px; color: #f4f5f7; background: #1b212a; border: 1px solid rgb(255 255 255 / .16); border-radius: var(--radius-pill); padding: 8px 16px; font: 600 var(--fs-body) var(--font-text); }
+.screen-looking::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: var(--kite-body); animation: looking-pulse 1.6s ease-in-out infinite; }
+/* First-run marking hints (UX-41): which marks work, then a count; small, by the cursor, and never under the pointer. */
+.mark-hint { position: fixed; z-index: 10001; pointer-events: none; padding: 4px 10px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+  background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); font-size: var(--fs-caption); white-space: nowrap; }
+.mark-hint.count { font-variant-numeric: tabular-nums; }
+/* The pink dot says it's Kite doing the looking; it pulses, and holds steady under reduced motion (UX-40). */
+@keyframes looking-pulse { 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .screen-looking::before { animation: none; } }
+/* Content protection already keeps the whiteboard out of Kite's own captures; hiding it too would flash a large panel. */
+.capture-hidden .overlay > :not(.screen-looking):not(.board) { opacity: 0 !important; }
+@media (forced-colors: active) {
+  .mark-hint { border-color: Highlight; }
+  .screen-looking { border: 1px solid CanvasText; }
+  .annotation path, .practice-ink { fill: Highlight; filter: none; }
+  .screen-looking::before { background: Highlight; }
+}
