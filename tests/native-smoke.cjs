@@ -66,6 +66,10 @@ app.whenReady().then(() => {
     assert.equal(preferences.get().kiteSize,'standard');assert.equal(preferences.get().earcons,false);
     preferences.update({kiteSize:'extraLarge',earcons:true});assert.equal(preferences.get().kiteSize,'extraLarge');assert.equal(preferences.get().earcons,true);
     assert.throws(()=>preferences.update({kiteSize:'huge'}));assert.throws(()=>preferences.update({earcons:'yes'}));
+    // Liveliness and kite color (K-15): Lively and rose by default; only the known values are kept.
+    assert.equal(preferences.get().liveliness,'lively');assert.equal(preferences.get().kiteSkin,'rose');
+    preferences.update({liveliness:'calm',kiteSkin:'teal'});assert.equal(preferences.get().liveliness,'calm');assert.equal(preferences.get().kiteSkin,'teal');
+    assert.throws(()=>preferences.update({liveliness:'wild'}));assert.throws(()=>preferences.update({kiteSkin:'white'}));
     const {createKiteTray}=require('../src/main/tray.ts');const tray=createKiteTray(preferences);tray.update();tray.destroy();
     console.log('PASS safeStorage, SQLite migration/metrics/audit/reminders across restart, settings persistence and native tray');
   } catch(error) { console.error(error);process.exitCode=1; }

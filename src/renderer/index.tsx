@@ -7,9 +7,9 @@ import { sections, type Section } from './components/sections';
 import { SpeechBubble } from './voice/SpeechBubble';
 import { AppNotices } from './voice/AppNotices';
 import { runtime } from './kite/runtime';
-import { config } from './kite/config';
+import { applyKitePreferences } from './kite/config';
+import { useSettings } from './hooks/useSettings';
 import { earcons } from './voice/earcons';
-import { kiteSizes } from '../shared/release';
 import './tokens.css';
 import './kite.css';
 import './styles/index.css';
@@ -24,8 +24,8 @@ const Onboarding = lazy(() => import('./components/Onboarding'));
 const DevPanel = import.meta.env.DEV ? lazy(() => import('./kite/DevPanel')) : null;
 function Overlay() {
   useEffect(()=>{
-    // The kite's size (K-14) and sound cues (K-13) apply live, read by the loop and the bubble without a re-render.
-    const settings=(s: import('../shared/types').SettingsSnapshot)=>{runtime.reducedMotion=s.settings.reducedMotion;document.documentElement.classList.toggle('reduce-motion',s.settings.reducedMotion);config.scale=kiteSizes[s.settings.kiteSize]??1;earcons.enabled=!!s.settings.earcons;};
+    // The kite's size (K-14), liveliness and color (K-15), and sound cues (K-13) apply live, without a re-render.
+    const settings=(s: import('../shared/types').SettingsSnapshot)=>{runtime.reducedMotion=s.settings.reducedMotion;document.documentElement.classList.toggle('reduce-motion',s.settings.reducedMotion);applyKitePreferences(s.settings);earcons.enabled=!!s.settings.earcons;};
     void window.kite.getSettings().then(settings);const off=window.kite.onSettingsChanged(settings);
     // Keyboard controls (tray, or Ctrl + Alt + K): focus the first control on screen. With nothing to control,
     // hand focus straight back so the user's typing never disappears into a transparent window. Esc also hands it back.
@@ -50,6 +50,9 @@ function DesktopWindow(){
   const [view,setView]=useState(location.hash.slice(1)||'settings');
   const [section,setSection]=useState<Section>('general');
   useEffect(()=>window.kite.onViewChange(v=>{location.hash=v;setView(v);}),[]);
+  // The onboarding stage's kite wears the chosen color and liveliness too (K-15); it keeps its own sizes.
+  const prefs=useSettings();
+  useEffect(()=>{if(prefs)applyKitePreferences(prefs.settings,{size:false});},[prefs]);
   const current=view==='history'?'History':sections.find(s=>s.id===section)?.label??'Settings';
   // The window title names the view, so the taskbar and Alt+Tab say where you are.
   useEffect(()=>{document.title=view==='onboarding'?'Set up Kite':`Kite · ${current}`;},[view,current]);

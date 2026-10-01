@@ -2,7 +2,8 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { HotkeyRecorder } from './HotkeyRecorder';
 import { Keycaps } from './Keycaps';
 import { sections, type Section } from './sections';
-import { configurableTools, type ConfigurableTool, type KiteSize } from '../../shared/release';
+import { configurableTools, kiteSkins, livelinessLevels, type ConfigurableTool, type KiteSize, type KiteSkin, type Liveliness } from '../../shared/release';
+import { SailMark } from '../kite/SailMark';
 import { routeVision } from '../../shared/vision';
 import type { AboutInfo, AppSettings, ModelSelection, OperationResult, ProviderId, SettingsSnapshot } from '../../shared/types';
 import { BusyDots, LockIcon, Working } from '../icons';
@@ -21,6 +22,8 @@ const askByDefault = (name: ConfigurableTool) => !['get_datetime', 'list_reminde
 const alwaysAsks = ['Type or paste into an app', 'Read or change your clipboard', 'Look at your screen', 'Start a guide', 'Do a task in an app'];
 const encode = (m: ModelSelection) => `${m.provider}:${m.id}`;
 const kiteSizeLabels: Record<KiteSize, string> = { standard: 'Standard', large: 'Large', extraLarge: 'Extra large' };
+const livelinessLabels: Record<Liveliness, string> = { lively: 'Lively', calm: 'Calm' };
+const skinLabels: Record<KiteSkin, string> = { rose: 'Rose', teal: 'Teal', violet: 'Violet', sky: 'Sky' };
 // The speed slider's range, and where 1.0× ("Normal") sits on it (UX-56).
 const SPEED = { min: .6, max: 1.5 };
 const speedAt = (value: number) => (value - SPEED.min) / (SPEED.max - SPEED.min);
@@ -91,6 +94,14 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
       <Row label="Kite size" description="Larger is easier to see on high-resolution screens.">
         <select aria-label="Kite size" value={s.kiteSize ?? 'standard'} onChange={e => update({ kiteSize: e.target.value as KiteSize })}>
           {(Object.keys(kiteSizeLabels) as KiteSize[]).map(size => <option key={size} value={size}>{kiteSizeLabels[size]}</option>)}</select></Row>
+      {/* The kite's character, within its rules (docs/personality.md K-15): how much it moves, and what it wears. */}
+      <Row label="Liveliness" description="How much the kite moves on its own. Calm halves its idle motion; it still shows what it's doing.">
+        <select aria-label="Liveliness" value={s.liveliness ?? 'lively'} onChange={e => update({ liveliness: e.target.value as Liveliness })}>
+          {[...livelinessLevels].reverse().map(level => <option key={level} value={level}>{livelinessLabels[level]}</option>)}</select></Row>
+      <Row label="Kite color" description="The logo stays rose.">
+        <span className="kite-color-preview" data-skin={s.kiteSkin ?? 'rose'} aria-hidden="true"><SailMark size={22} live /></span>
+        <select aria-label="Kite color" value={s.kiteSkin ?? 'rose'} onChange={e => update({ kiteSkin: e.target.value as KiteSkin })}>
+          {kiteSkins.map(skin => <option key={skin} value={skin}>{skinLabels[skin]}</option>)}</select></Row>
     </Group>);
     case 'models': return shell(<>
       <Group title="Providers" hint="Groq turns your voice into text. Add at least one more provider for answers. Keys stay encrypted on this computer.">

@@ -9,7 +9,7 @@ require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose'});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
@@ -48,6 +48,14 @@ app.whenReady().then(async()=>{
     assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Kite size\"]').options].map(o=>o.textContent)"),['Standard','Large','Extra large']);
     await sjs("const k=document.querySelector('select[aria-label=\"Kite size\"]');k.value='large';k.dispatchEvent(new Event('change',{bubbles:true}));");await delay(80);
     assert.equal(snapshot.settings.kiteSize,'large');snapshot.settings.kiteSize='standard';
+    // Liveliness and kite color (K-15), with a live preview of the color; the logo in the sidebar stays rose.
+    assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Liveliness\"]').options].map(o=>o.textContent)"),['Lively','Calm']);
+    assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Kite color\"]').options].map(o=>o.textContent)"),['Rose','Teal','Violet','Sky']);
+    await sjs("const c=document.querySelector('select[aria-label=\"Kite color\"]');c.value='violet';c.dispatchEvent(new Event('change',{bubbles:true}));");await delay(80);
+    assert.equal(snapshot.settings.kiteSkin,'violet');
+    assert.equal(await sjs("getComputedStyle(document.querySelector('.kite-color-preview .sail-mark path')).fill"),'rgb(154, 107, 255)');
+    assert.equal(await sjs("getComputedStyle(document.querySelector('.sidebar-brand .sail-mark path')).fill"),'rgb(255, 66, 111)');
+    snapshot.settings.kiteSkin='rose';
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Models & keys').click()");
     for(let i=0;i<100 && await sjs("document.querySelectorAll('.provider-row').length")!==5;i++)await delay(30);
     assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),5);
@@ -525,6 +533,14 @@ app.whenReady().then(async()=>{
     assert.ok(xl.scale===1.6&&Math.hypot(xl.x-(350+32*1.6),xl.y-(250+28*1.6))<6,'scaled kite at its scaled offset: '+JSON.stringify(xl));
     assert.ok(pill-xl.x>=11+13*1.6-1,'the bubble clears the bigger kite: '+(pill-xl.x));
     snapshot.settings.kiteSize='standard';overlay.webContents.send('settings:changed',snapshot);await delay(200);
+    // A kite color (K-15) recolors the sail's gradient in the overlay; rose comes back when chosen again.
+    const sailStop=()=>js("getComputedStyle(document.querySelector('.kite-glint-body')).stopColor");
+    const rose=await sailStop();
+    snapshot.settings.kiteSkin='teal';overlay.webContents.send('settings:changed',snapshot);await delay(150);
+    assert.equal(await js("document.documentElement.dataset.skin"),'teal');
+    assert.notEqual(await sailStop(),rose,'the sail wears teal');
+    snapshot.settings.kiteSkin='rose';overlay.webContents.send('settings:changed',snapshot);await delay(150);
+    assert.equal(await sailStop(),rose);
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
     console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding, guide ring/card/flight/controls, whiteboard drawing/pen/highlight/export/controls, task approval scopes/card/ring/pointing/controls. Screenshots: '+temporary);
   } catch(error) {console.error(error);process.exitCode=1;}
