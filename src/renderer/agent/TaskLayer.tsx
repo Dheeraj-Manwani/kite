@@ -67,7 +67,7 @@ export function TaskLayer() {
       <header><SailMark /><strong>{heading[view.status] ?? 'Doing it'} · {view.app}</strong>
         <span className="task-progress">Step {view.step} of {view.budget}</span></header>
       <div className="task-meter" aria-hidden="true"><span style={{ width: `${Math.min(100, view.step / view.budget * 100)}%` }} /></div>
-      <p className="task-goal">{view.goal}</p>
+      <p className="task-goal" title={view.goal}>{view.goal}</p>
       {view.action && <p className="task-action"><span>{view.status === 'approval' ? 'Next' : 'Now'}</span>{view.action}</p>}
       {view.message && <p className="task-message" role="status" aria-live="polite">{view.message}</p>}
       {view.status === 'approval' && <div className="task-approval">

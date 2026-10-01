@@ -10,6 +10,7 @@ const keyPages: Record<SecretId, string> = {
   google: 'https://aistudio.google.com/apikey',
   groq: 'https://console.groq.com/keys',
   moonshot: 'https://platform.moonshot.ai/console/api-keys',
+  deepseek: 'https://platform.deepseek.com/api_keys',
   cartesia: 'https://play.cartesia.ai/keys',
 };
 

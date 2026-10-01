@@ -91,6 +91,11 @@ test('model output is validated into one action; the prompt carries controls, hi
   assert.equal(model.doGenerateCalls[0].toolChoice.type, 'required');
   const chatty = new MockLanguageModelV3({ doGenerate: async () => ({ content: [{ type: 'text', text: 'I will click File.' }], finishReason: 'stop', usage: { inputTokens: { total: 1 }, outputTokens: { total: 1 } }, warnings: [] }) });
   assert.equal((await decideStep({ model: chatty, prompt: base, signal: new AbortController().signal, toolChoice: 'auto' })).type, 'invalid');
+  // A provider holding the request open (keep-alives) can't stall a step: the decision times out as an error.
+  const held = new MockLanguageModelV3({ doGenerate: ({ abortSignal }) => new Promise((_, reject) => abortSignal.addEventListener('abort', () => reject(abortSignal.reason))) });
+  const started = Date.now();
+  await assert.rejects(decideStep({ model: held, prompt: base, signal: new AbortController().signal, timeoutMs: 50 }), e => e.name === 'TimeoutError');
+  assert.ok(Date.now() - started < 2000);
 });
 
 const timing = { pointMs: 0, settleMs: 0, retryMs: 1, launchMs: 3000, wallMs: 60000, lingerMs: 5, rateRetries: 4, rateMaxMs: 5 };

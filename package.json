@@ -24,7 +24,8 @@
     "test:unit": "vitest run",
     "test:packaged": "node scripts/smoke.cjs",
     "assets": "python scripts/brand.py",
-    "perf": "electron scripts/perf.cjs"
+    "perf": "electron scripts/perf.cjs",
+    "eval:routing": "node scripts/routing-eval.cjs"
   },
   "keywords": [
     "electron",

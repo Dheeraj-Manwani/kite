@@ -25,7 +25,7 @@ import { settingsConfig } from '../settings/config';
 import type { AppSettings, OperationResult, SecretId } from '../../shared/types';
 
 import { configureProviders, getModel } from '../ai/providers';
-import { providerIds, describeModel } from '../ai/catalog';
+import { providerIds, providerTraits, describeModel } from '../ai/catalog';
 import { openPreferences } from '../settings/preferences';
 import { listModels, listVoices, testKey } from '../ai/discovery';
 import { TTSService } from './tts';
@@ -112,8 +112,7 @@ export function startVoiceService() {
     },
     finished: (goal, name, message, status) => conversation.add({ role: 'assistant', content: `[Task in ${name}: "${goal}". Result: ${status}. ${message}]` }, Date.now()),
     decider: (model, key) => (prompt, signal) => decideStep({ model: getModel(model.provider, model.id, { getKey: () => key }), prompt, signal,
-      // Moonshot's OpenAI-compatible API does not accept a required tool choice.
-      toolChoice: model.provider === 'moonshot' ? 'auto' : 'required', providerOptions: providerOptionsFor(model) }),
+      toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
   });
   /** Local commands and context for whatever is running: a task first, then the whiteboard, then the guide. */
   const sessions = {
@@ -136,7 +135,7 @@ export function startVoiceService() {
     },
     approvals,
     tools: (messageId, signal, activity, model, captureTiming) => new ToolSession({
-      imageToolResults: ['anthropic', 'openai', 'google'].includes(model?.provider),
+      imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
       definitions: [...createTools(apps, history, preferences.get()), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
         ...(preferences.get().whiteboard ? [explainOnWhiteboard(lesson => board.start(lesson))] : []),
         ...(preferences.get().computerUse && model?.supportsTools ? [doTask((task, scope) => agent.start(task, scope, model, secrets.getKey(model.provider), messageId), model.supportsVision)] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {

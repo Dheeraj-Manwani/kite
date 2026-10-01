@@ -6,7 +6,7 @@
 .task-progress { margin-left: auto; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
 .task-meter { height: 3px; margin: 8px 0; border-radius: var(--radius-pill); background: var(--surface-subtle); overflow: hidden; }
 .task-meter span { display: block; height: 100%; background: var(--ink); transition: width .3s; }
-.task-goal { margin: 0 0 6px; color: var(--text); font-size: var(--fs-body); }
+.task-goal { margin: 0 0 6px; color: var(--text); font-size: var(--fs-body); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
 .task-action { display: flex; gap: 6px; margin: 0 0 6px; color: var(--text); font-size: var(--fs-lead); }
 .task-action span { flex: 0 0 auto; align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: var(--radius-s); background: var(--surface-subtle); color: var(--text-muted); font-size: var(--fs-caption); }
 .task-message { margin: 0 0 6px; color: var(--text-muted); font-size: var(--fs-caption); }

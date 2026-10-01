@@ -1,6 +1,7 @@
 import { classifyBoardCommand, describeScene, layoutScene, markLabel, type BoardAction, type BoardView, type LessonInput } from '../../shared/board';
 import type { ToolResult } from '../tools/types';
 import { BoardSession, type BoardSessionDeps } from './session';
+import { routingHints } from '../ai/routing';
 export interface BoardServiceDeps extends Omit<BoardSessionDeps, 'emit'> {
   emit(view: BoardView | null): void;
   enabled(): boolean;
@@ -60,7 +61,7 @@ export class BoardService {
   context(): string | undefined {
     if (!this.deps.enabled()) return undefined;
     const session = this.active ? this.session : undefined;
-    if (!session) return 'To explain a concept, a process, a system, or how something works, prefer explain_on_whiteboard so Kite sketches it while it explains. Answer quick facts in speech.';
+    if (!session) return routingHints.board;
     const status = session.state === 'done' ? 'finished' : session.state;
     return `Kite's whiteboard is open with the lesson "${session.name}" (beat ${session.beat + 1} of ${session.count}, ${status}). Its elements, with ids you can reuse:
 ${describeScene(layoutScene(session.inputs()))}

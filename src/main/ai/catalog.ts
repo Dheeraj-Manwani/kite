@@ -1,5 +1,5 @@
 import type { ModelEntry, ModelSelection, ProviderId } from '../../shared/types';
-export const providerLabels: Record<ProviderId, string> = { openai: 'OpenAI', anthropic: 'Anthropic', google: 'Google Gemini', groq: 'Groq', moonshot: 'Moonshot' };
+export const providerLabels: Record<ProviderId, string> = { openai: 'OpenAI', anthropic: 'Anthropic', google: 'Google Gemini', groq: 'Groq', moonshot: 'Moonshot', deepseek: 'DeepSeek' };
 export const providerIds = Object.keys(providerLabels) as ProviderId[];
 // Verified against provider documentation on 2026-09-28. See docs/models.md.
 export const catalog: ModelEntry[] = [
@@ -20,7 +20,25 @@ export const catalog: ModelEntry[] = [
   { provider: 'moonshot', id: 'kimi-k3', label: 'Kimi K3', supportsVision: true, supportsTools: true, tier: 'flagship' },
   { provider: 'moonshot', id: 'kimi-k2.6', label: 'Kimi K2.6', supportsVision: true, supportsTools: true, tier: 'fast' },
   { provider: 'moonshot', id: 'kimi-k2.7-code-highspeed', label: 'Kimi K2.7 Code Highspeed', supportsVision: true, supportsTools: true, tier: 'fast' },
+  // Verified against DeepSeek's documentation and live API on 2026-10-01.
+  { provider: 'deepseek', id: 'deepseek-flash', label: 'DeepSeek Flash', supportsVision: true, supportsTools: true, tier: 'fast' },
+  { provider: 'deepseek', id: 'deepseek-v4-pro', label: 'DeepSeek V4 Pro', supportsVision: false, supportsTools: true, tier: 'flagship' },
 ];
+/** What each provider's API accepts, so call sites ask the catalog instead of naming providers. */
+export interface ProviderTraits {
+  /** Accepts `toolChoice: 'required'`. Moonshot's OpenAI-compatible API does not. */
+  requiredToolChoice: boolean;
+  /** Takes images inside tool results; otherwise images follow as a user message. */
+  imageToolResults: boolean;
+}
+export const providerTraits: Record<ProviderId, ProviderTraits> = {
+  openai: { requiredToolChoice: true, imageToolResults: true },
+  anthropic: { requiredToolChoice: true, imageToolResults: true },
+  google: { requiredToolChoice: true, imageToolResults: true },
+  groq: { requiredToolChoice: true, imageToolResults: false },
+  moonshot: { requiredToolChoice: false, imageToolResults: false },
+  deepseek: { requiredToolChoice: true, imageToolResults: false },
+};
 export function describeModel(model: ModelSelection, models = catalog): ModelEntry {
   return models.find(m => m.provider === model.provider && m.id === model.id)
     ?? { ...model, label: model.id, supportsVision: false, supportsTools: false, tier: 'fast' };

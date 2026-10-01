@@ -8,7 +8,7 @@ app.setPath('userData', temporary);
 require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
-  models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,cartesia:true} };
+  models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,deepseek:true,cartesia:true} };
 Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose'});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
@@ -57,8 +57,8 @@ app.whenReady().then(async()=>{
     assert.equal(await sjs("getComputedStyle(document.querySelector('.sidebar-brand .sail-mark path')).fill"),'rgb(255, 66, 111)');
     snapshot.settings.kiteSkin='rose';
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Models & keys').click()");
-    for(let i=0;i<100 && await sjs("document.querySelectorAll('.provider-row').length")!==5;i++)await delay(30);
-    assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),5);
+    for(let i=0;i<100 && await sjs("document.querySelectorAll('.provider-row').length")!==6;i++)await delay(30);
+    assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),6);
     // Models are a listbox grouped by provider, each row with tier, Vision, and Actions badges; the backup is under Advanced (UX-55).
     assert.equal(await sjs("document.querySelectorAll('.model-picker').length"),3);
     assert.ok(await sjs("!document.querySelector('.advanced').open&&document.querySelector('.advanced').textContent.includes('Backup model')"));
@@ -68,7 +68,7 @@ app.whenReady().then(async()=>{
     await sjs("[...document.querySelectorAll('.overflow .menu button')].find(b=>b.textContent==='Check connection').click()");await delay(120);
     assert.match(await sjs("document.querySelector('.provider-state').textContent"),/Connected/);
     await sjs("document.querySelector('.model-picker-button').click()");await delay(60);
-    assert.equal(await sjs("document.querySelectorAll('[role=listbox] .model-group').length"),5);
+    assert.equal(await sjs("document.querySelectorAll('[role=listbox] .model-group').length"),6);
     const sonnet="[...document.querySelectorAll('[role=option]')].find(o=>o.querySelector('.model-name').textContent==='Claude Sonnet 5')";
     assert.deepEqual(await sjs(`[...${sonnet}.querySelectorAll('.badge')].map(b=>b.textContent)`),['Fast','Vision','Actions']);
     fs.writeFileSync(path.join(temporary,'model-picker.png'),(await settings.webContents.capturePage()).toPNG());
@@ -137,7 +137,7 @@ app.whenReady().then(async()=>{
     assert.ok(await tjs("[...document.querySelectorAll('.onboarding button')].some(b=>b.textContent==='Try again')"));
     // Keys: Groq, a choice of brain, and an optional voice, with nothing missing here (UX-61).
     await next();
-    assert.equal(await tjs("document.querySelectorAll('.brain-card').length"),4);
+    assert.equal(await tjs("document.querySelectorAll('.brain-card').length"),5);
     assert.equal(await tjs("document.querySelectorAll('.brain-card.chosen').length"),1);
     assert.equal(await tjs("document.querySelector('.step-missing')"),null);
     // The shortcut shows as big keycaps and gets a check once it lands (UX-63).

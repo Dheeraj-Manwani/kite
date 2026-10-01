@@ -6,6 +6,7 @@ import { classifyGuideCommand, type GuideAction, type GuidePlan, type GuideStep,
 import { captureDisplay, prepareImages } from '../vision/service';
 import { getModel } from '../ai/providers';
 import { providerOptionsFor } from '../ai/ask';
+import { routingHints } from '../ai/routing';
 import type { ToolResult } from '../tools/types';
 import { alreadyDone, matchTarget, neighbours, snapToElement, visionAllowed } from './grounding';
 import { GuideSession, type Located } from './session';
@@ -139,7 +140,7 @@ export class GuideService {
   context(): string | undefined {
     if (!this.deps.enabled()) return undefined;
     const session = this.session;
-    if (!session) return 'For "how do I…" or "show me how…" questions about an app on this computer, prefer show_me_how so Kite can point at each control.';
+    if (!session) return routingHints.guide;
     const v = session.view();
     return `A show_me_how guide is ${v.status === 'paused' ? 'paused' : 'running'}: "${v.goal}" in ${v.app}, step ${v.index + 1} of ${v.total}: ${v.instruction} Kite itself handles "wait", "continue", "next", "back", "repeat" and "stop". Calling show_me_how again replaces this guide.`;
   }

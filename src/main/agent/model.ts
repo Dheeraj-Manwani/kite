@@ -69,10 +69,15 @@ export function toAction(name: string, input: unknown): Decision {
   if (!parsed.success) return { type: 'invalid', reason: parsed.error.issues[0]?.message ?? 'invalid arguments' };
   return { type: name, ...parsed.data } as AgentAction;
 }
-export async function decideStep(options: { model: LanguageModel; prompt: StepPrompt; signal: AbortSignal; toolChoice?: 'required' | 'auto'; providerOptions?: Parameters<typeof generateText>[0]['providerOptions'] }): Promise<Decision> {
+/**
+ * One decision may take this long. A busy provider (DeepSeek) can hold the request open with keep-alives for
+ * minutes; past this, the step fails like any other provider error and the session retries it once.
+ */
+export const decisionTimeoutMs = 60_000;
+export async function decideStep(options: { model: LanguageModel; prompt: StepPrompt; signal: AbortSignal; toolChoice?: 'required' | 'auto'; providerOptions?: Parameters<typeof generateText>[0]['providerOptions']; timeoutMs?: number }): Promise<Decision> {
   const result = await generateText({ model: options.model, system: agentSystem(options.prompt), messages: [{ role: 'user', content: agentPrompt(options.prompt) }],
     tools: agentTools(options.prompt.vision), toolChoice: options.toolChoice ?? 'required', maxRetries: 1, maxOutputTokens: 1500,
-    abortSignal: options.signal, providerOptions: options.providerOptions });
+    abortSignal: AbortSignal.any([options.signal, AbortSignal.timeout(options.timeoutMs ?? decisionTimeoutMs)]), providerOptions: options.providerOptions });
   const call = result.toolCalls[0];
   if (!call) return { type: 'invalid', reason: 'no action was chosen; call exactly one tool' };
   return toAction(call.toolName, call.input);

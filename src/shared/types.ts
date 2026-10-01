@@ -3,7 +3,7 @@ export interface CursorPoint { x: number; y: number }
 export interface ScreenBounds extends CursorPoint { width: number; height: number }
 export interface CursorGeometry { origin: CursorPoint; display: ScreenBounds }
 export type KiteMood = 'idle' | 'listening' | 'thinking' | 'talking';
-export type ProviderId = 'openai' | 'anthropic' | 'google' | 'groq' | 'moonshot';
+export type ProviderId = 'openai' | 'anthropic' | 'google' | 'groq' | 'moonshot' | 'deepseek';
 export type SecretId = ProviderId | 'cartesia';
 export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }

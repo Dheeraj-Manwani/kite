@@ -15,6 +15,7 @@ import { previewEarcons } from '../voice/earcons';
 const providers: { id: ProviderId; label: string; badge?: string }[] = [
   { id: 'groq', label: 'Groq', badge: 'Required for voice' }, { id: 'openai', label: 'OpenAI' }, { id: 'anthropic', label: 'Anthropic' },
   { id: 'google', label: 'Google Gemini' }, { id: 'moonshot', label: 'Moonshot / Kimi' },
+  { id: 'deepseek', label: 'DeepSeek' },
 ];
 // People reason about what Kite will do, not about tool ids (UX-54).
 const toolLabels: Record<ConfigurableTool, string> = { open_app: 'Open an app', web_search: 'Search the web', get_datetime: 'Check the date and time', list_reminders: 'Read your reminders' };

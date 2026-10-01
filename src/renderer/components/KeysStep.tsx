@@ -5,6 +5,7 @@ import { ProviderRow } from './ProviderRow';
 const brains: { id: ProviderId; label: string; family: string }[] = [
   { id: 'anthropic', label: 'Anthropic', family: 'Claude' }, { id: 'openai', label: 'OpenAI', family: 'GPT' },
   { id: 'google', label: 'Google Gemini', family: 'Gemini' }, { id: 'moonshot', label: 'Moonshot / Kimi', family: 'Kimi' },
+  { id: 'deepseek', label: 'DeepSeek', family: 'DeepSeek Flash' },
 ];
 
 /** What setup still needs, in the words the Continue row uses (UX-61). */

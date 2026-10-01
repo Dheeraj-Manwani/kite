@@ -5,6 +5,7 @@ import type { CursorPoint, ModelEntry, ScreenBounds } from '../../shared/types';
 import type { ToolResult } from '../tools/types';
 import type { Decision, StepPrompt } from './model';
 import { TaskSession } from './session';
+import { routingHints } from '../ai/routing';
 import { ActClient } from './sidecar';
 export interface TaskServiceDeps {
   directory: string;
@@ -83,7 +84,7 @@ export class TaskService {
   context(): string | undefined {
     if (!this.deps.enabled()) return undefined;
     const s = this.active ? this.session : undefined;
-    if (!s) return 'When the user asks you to do something in an app on this computer for them (not how to do it), use do_task so Kite operates the app itself. For "how do I…" questions, show them instead.';
+    if (!s) return routingHints.task;
     return `Kite is doing a task in ${s.app}: "${s.goal}" (step ${s.steps} of ${s.budget}, ${s.state}).${s.question ? ` It asked the user: "${s.question}"` : ''} Kite itself handles "stop", "pause", "continue", and yes or no for its confirmations. Calling do_task again replaces this task.`;
   }
   pause() { if (this.active) this.session?.pause('Paused. Say “continue” when you’re ready.'); }
