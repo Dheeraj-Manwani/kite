@@ -47,7 +47,8 @@ import { TaskService } from '../agent/service';
 import { decideStep } from '../agent/model';
 import { planJob } from '../agent/planner';
 import { doTask } from '../tools/impl/do_task';
-import { taskActions, type TaskAction } from '../../shared/agent';
+import { jobsModel, taskActions, taskScopes, type TaskAction, type TaskScope } from '../../shared/agent';
+import { remember } from '../../shared/permissions';
 const validProvider = (value: unknown): value is SecretId => [...providerIds, 'cartesia'].includes(value as SecretId);
 export function startVoiceService() {
   const secrets = openSecrets();
@@ -116,7 +117,14 @@ export function startVoiceService() {
       toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
     planner: (model, key) => (goal, app, signal) => planJob({ model: getModel(model.provider, model.id, { getKey: () => key }), goal, app, signal,
       toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
+    permissions: () => preferences.get().permissions,
+    remember: (category, permission, place) => {
+      try { preferences.update({ permissions: remember(preferences.get().permissions, category, permission, place) }); }
+      catch { logEvent('permissions:remember', { ok: false }); }
+    },
   });
+  /** The model that runs tasks (agent.ts `jobsModel`), which may differ from the one answering this turn. */
+  const taskModel = () => { const { settings, models } = preferences.snapshot(); return jobsModel(settings, models, id => secrets.hasKey(id)); };
   /** Local commands and context for whatever is running: a task first, then the whiteboard, then the guide. */
   const sessions = {
     command: (text: string) => agent.command(text) ?? board.command(text) ?? guide.command(text),
@@ -141,7 +149,7 @@ export function startVoiceService() {
       imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
       definitions: [...createTools(apps, history, preferences.get()), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
         ...(preferences.get().whiteboard ? [explainOnWhiteboard(lesson => board.start(lesson))] : []),
-        ...(preferences.get().computerUse && model?.supportsTools ? [doTask((task, scope) => agent.start(task, scope, model, secrets.getKey(model.provider), messageId), model.supportsVision)] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
+        ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions)] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
         captureSignal.throwIfAborted(); const captured = await captureUnderCursor(captureSignal); captureSignal.throwIfAborted();
         captureTiming?.(captured.captureMs);
         const images = await prepareImages(captured, [], captureSignal);
@@ -181,7 +189,7 @@ export function startVoiceService() {
   if (!preferences.get().onboardingComplete && !process.env.KITE_TEST_MODE) createSettingsWindow('onboarding');
   // Wait until the overlay can receive restored overdue reminders.
   getOverlayWindow()?.webContents.once('did-finish-load', () => reminders.refresh());
-  const decisionSchema = z.object({ id: z.string().uuid(), approved: z.boolean(), scope: z.enum(['task', 'once']).optional() }).strict();
+  const decisionSchema = z.object({ id: z.string().uuid(), approved: z.boolean(), scope: z.enum(taskScopes as [TaskScope, ...TaskScope[]]).optional() }).strict();
   ipcMain.handle('tools:approve', (event, input: unknown): OperationResult => {
     const parsed = decisionSchema.safeParse(input);
     if (!trusted(event, 'overlay') || !parsed.success) return { ok: false, error: 'Invalid approval.' };

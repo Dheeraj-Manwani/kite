@@ -122,7 +122,25 @@ export function cartSentence(cart: CartSummary): string {
   return `${list ? `It’s in your cart: ${list}.` : 'Your cart is ready.'}${cart.total ? ` The subtotal is ${cart.total}.` : ''}`;
 }
 
-export const addToCart = /^(add to (cart|bag|basket|trolley)|buy now|add)$/i;
+const totalLabel: [RegExp, number][] = [[/\b(grand total|order total|total amount|amount payable|total payable|you pay|to pay|amount)\b/i, 3], [/^total\b|\btotal:/i, 2], [/sub-?total/i, 1]];
+/**
+ * The amount the page says will be paid, in rupees, read by code for the spend limit (ADR 014): the order or grand total
+ * first, then a plain total, then the subtotal. Null when no labelled total shows; a price alone is never taken as one.
+ */
+export function pageTotal(snapshot: AgentSnapshot): number | null {
+  const page = pageElements(snapshot), named = (e: AgentElement) => (e.name || e.value || '').replace(/\s+/g, ' ').trim();
+  let rank = 0, value: number | null = null;
+  for (let i = 0; i < page.length; i++) {
+    const text = named(page[i]), found = totalLabel.find(([pattern]) => pattern.test(text))?.[1] ?? 0;
+    if (found <= rank) continue;
+    // The price in the label itself ("Order total: ₹2,169"), else in one of the next few controls.
+    const price = priceOf(text.replace(/^.*?(total|payable|pay|amount)\b/i, '')) ?? page.slice(i + 1, i + 4).map(n => priceOf(named(n))).find(Boolean);
+    if (price) { rank = found; value = amount(price); }
+  }
+  return value;
+}
+
+export const addToCart =/^(add to (cart|bag|basket|trolley)|buy now|add)$/i;
 const tokens = (text: string) => text.toLowerCase().split(/[^a-z0-9]+/).filter(t => t.length > 1 || /\d/.test(t)).map(t => t.replace(/(?<=[a-z]{3})s$/, ''));
 /**
  * Before something goes in the cart: a group of options on the page (pack size, flavour, colour as radio buttons) whose

@@ -7,9 +7,10 @@ const temporary = fs.mkdtempSync(path.join(os.tmpdir(), 'kite-renderer-test-'));
 app.setPath('userData', temporary);
 require('./register.cjs');
 const { catalog } = require('../src/main/ai/catalog.ts');
+const { defaultPermissions } = require('../src/shared/permissions.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,deepseek:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose'});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose',permissions:structuredClone(defaultPermissions),jobsModel:null});
 const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
@@ -60,7 +61,7 @@ app.whenReady().then(async()=>{
     for(let i=0;i<100 && await sjs("document.querySelectorAll('.provider-row').length")!==6;i++)await delay(30);
     assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),6);
     // Models are a listbox grouped by provider, each row with tier, Vision, and Actions badges; the backup is under Advanced (UX-55).
-    assert.equal(await sjs("document.querySelectorAll('.model-picker').length"),3);
+    assert.equal(await sjs("document.querySelectorAll('.model-picker').length"),4,'main, vision, jobs, backup');
     assert.ok(await sjs("!document.querySelector('.advanced').open&&document.querySelector('.advanced').textContent.includes('Backup model')"));
     // A connected provider shows its state; rarer actions wait in a menu (UX-51).
     assert.match(await sjs("document.querySelector('.provider-state').textContent"),/Connected · \d+ models/);
@@ -108,6 +109,30 @@ app.whenReady().then(async()=>{
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Actions & trust').click()");await delay(120);
     assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Ask before I….*Open an app.*Search the web/);
     assert.equal(await sjs("document.querySelector('.settings-view').textContent.includes('open_app')"),false);
+    // Permissions (ADR 014): the mode first, Hands-off only after a confirmation, the table behind Customise, the limit, the rules.
+    await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Permissions').click()");await delay(150);
+    assert.deepEqual(await sjs("[...document.querySelectorAll('.mode-row .row-label')].map(l=>l.textContent)"),['BalancedRecommended','Ask every time','Hands-off']);
+    assert.equal(await sjs("document.querySelector('.mode-row input:checked').closest('.mode-row').querySelector('.row-label').textContent"),'BalancedRecommended');
+    await sjs("[...document.querySelectorAll('.mode-row')].find(r=>r.textContent.startsWith('Hands-off')).querySelector('input').click()");await delay(80);
+    assert.match(await sjs("document.querySelector('.hands-off-confirm').textContent"),/submit, send, delete and pay without asking/);
+    assert.equal(snapshot.settings.permissions.mode,'balanced','nothing changes until confirmed');
+    fs.writeFileSync(path.join(temporary,'permissions.png'),(await settings.webContents.capturePage()).toPNG());
+    await sjs("[...document.querySelectorAll('.hands-off-confirm button')].find(b=>b.textContent==='Turn on Hands-off').click()");await delay(120);
+    assert.equal(snapshot.settings.permissions.mode,'handsOff');
+    await sjs("(()=>{const s=document.querySelector('select[aria-label=\"Send as you\"]');s.value='never';s.dispatchEvent(new Event('change',{bubbles:true}));})()");await delay(120);
+    assert.deepEqual([snapshot.settings.permissions.mode,snapshot.settings.permissions.custom.send,snapshot.settings.permissions.custom.submit],['custom','never','allow'],'a changed row is Custom, from Hands-off');
+    await sjs("(()=>{const i=document.querySelector('.money-field input');i.focus();const set=Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set;set.call(i,'1,500');i.dispatchEvent(new Event('input',{bubbles:true}));})()");await delay(60);
+    await sjs("document.querySelector('.money-field input').dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true}))");await delay(120);
+    assert.equal(snapshot.settings.permissions.spendLimit,1500);
+    snapshot.settings.permissions={...snapshot.settings.permissions,rules:[{place:'shop.example.in',category:'money',permission:'never'}]};settings.webContents.send('settings:changed',snapshot);await delay(100);
+    assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Spend money on shop\.example\.inDon’t allow/);
+    await sjs("[...document.querySelectorAll('.settings-view button')].find(b=>b.textContent==='Remove').click()");await delay(100);
+    assert.deepEqual(snapshot.settings.permissions.rules,[]);
+    snapshot.settings.permissions=structuredClone(defaultPermissions);settings.webContents.send('settings:changed',snapshot);await delay(60);
+    // The jobs model: automatic picks DeepSeek Flash when its key is saved.
+    await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Models & keys').click()");await delay(150);
+    assert.match(await sjs("document.querySelector('.settings-view').textContent"),/Jobs model.*Automatic: DeepSeek Flash when its key is saved/);
+    assert.match(await sjs("document.querySelector('[aria-label^=\"Jobs model:\"]').getAttribute('aria-label')"),/DeepSeek Flash/);
     // High Contrast keeps the current section visible with a Highlight outline (UX-90).
     settings.webContents.debugger.attach('1.3');
     await settings.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[{name:'forced-colors',value:'active'}]});await delay(60);
@@ -445,7 +470,8 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('test:voice',{id:300,type:'model:changed',text:'Preview'});await delay(50);
     const taskCard={approvalId:'task-approval',toolName:'do_task',summary:'Let me do this in Notepad: "Write a haiku"? I\'ll click and type in Notepad only, never move your mouse, ask before anything that sends, deletes, buys, or submits, and stop after 15 steps.',input:{goal:'Write a haiku',app:'Notepad'},expiresAt:Date.now()+30000,dryRun:false};
     overlay.webContents.send('test:voice',{id:300,type:'tool:approvalRequired',approval:taskCard});await delay(100);
-    assert.deepEqual(await js("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['Allow this task','Step by step','Not now']);
+    assert.deepEqual(await js("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['Start','Hands-off for this job','Step by step','Not now']);
+    assert.match(await js("document.querySelector('.approval-card').textContent"),/“Start” follows your Balanced permissions/);
     await js("[...document.querySelectorAll('.approval-buttons button')].find(b=>b.textContent==='Step by step').click()");await delay(100);
     assert.deepEqual(decisions.at(-1),{id:'task-approval',approved:true,scope:'once'});
     overlay.webContents.send('test:voice',{id:300,type:'tool:decision',approval:taskCard,decision:'approved'});overlay.webContents.send('test:voice',{id:300,type:'voice:aborted'});await delay(100);
@@ -461,11 +487,29 @@ app.whenReady().then(async()=>{
     assert.ok(taskBounds.some(b=>b&&b.width>200),'task card bounds reported for hit testing');
     fs.writeFileSync(path.join(temporary,'task.png'),(await overlay.webContents.capturePage()).toPNG());
     await js("[...document.querySelectorAll('.task-approval button')].find(b=>b.textContent==='Allow the rest').click()");
-    await js("[...document.querySelectorAll('.task-approval button')].find(b=>b.textContent==='Skip').click()");
+    await js("[...document.querySelectorAll('.task-approval button')].find(b=>b.textContent==='No').click()");
     await js("document.querySelector('.task-stop').click()");
     assert.deepEqual(taskActions,['allowAll','skip','stop']);
-    overlay.webContents.send('task:state',{...taskView,status:'approval',scope:'task',risk:'“Delete” button may send, delete, buy, or change something that can’t be undone.',message:'“Delete” button may send, delete, buy, or change something that can’t be undone.',action:'Click “Delete” button'});await delay(100);
-    assert.deepEqual(await js("[...document.querySelectorAll('.task-approval button')].map(b=>b.textContent)"),['Allow','Skip'],'risky steps offer no blanket approval');
+    overlay.webContents.send('task:state',{...taskView,status:'approval',scope:'task',risk:'“Delete” button may delete or overwrite something that can’t be undone.',message:'“Delete” button may delete or overwrite something that can’t be undone.',action:'Click “Delete” button',
+      ask:{category:'delete',label:'Delete or overwrite',place:'notepad',always:true}});await delay(100);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-approval button')].map(b=>b.textContent)"),['Yes','No'],'risky steps offer no blanket approval');
+    // Always and Never remember the answer here (the app or site) or everywhere (ADR 014).
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-remember button')].map(b=>b.textContent)"),['Always','Never']);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-remember option')].map(o=>o.textContent)"),['on notepad','everywhere']);
+    fs.writeFileSync(path.join(temporary,'task-remember.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("[...document.querySelectorAll('.task-remember button')].find(b=>b.textContent==='Always').click()");
+    await js("(()=>{const s=document.querySelector('.task-remember select');s.value='everywhere';s.dispatchEvent(new Event('change',{bubbles:true}));})()");await delay(50);
+    await js("[...document.querySelectorAll('.task-remember button')].find(b=>b.textContent==='Never').click()");await delay(50);
+    assert.deepEqual(taskActions.slice(-2),['always','neverEverywhere']);
+    overlay.webContents.send('task:state',{...taskView,status:'approval',scope:'task',risk:'This may spend money: the total here is ₹2,169.',message:'This may spend money: the total here is ₹2,169.',action:'Click “Place order” button',
+      ask:{category:'money',label:'Spend money',place:null,always:false}});await delay(100);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-remember button')].map(b=>b.textContent)"),['Never'],'the floor offers no Always');
+    assert.equal(await js("document.querySelector('.task-remember select')"),null,'no place, no choice of where');
+    // Hands-off for this job: a tag on the card, and the kite wears its ring.
+    overlay.webContents.send('task:state',{...taskView,status:'thinking',scope:'handsOff',action:null,target:null,message:'Looking…'});await delay(150);
+    assert.equal(await js("document.querySelector('.task-handsoff').textContent"),'Hands-off');
+    assert.equal(await js("document.querySelector('.kite-handsoff').getAttribute('opacity')"),'1');
+    assert.match(await js("document.querySelector('.kite-canvas').getAttribute('aria-label')"),/hands-off$/);
     overlay.webContents.send('task:state',{...taskView,status:'done',action:null,target:null,message:'I wrote the haiku and saved it as haiku.txt.'});await delay(100);
     assert.match(await js("document.querySelector('.task-card').textContent"),/Done · Notepad.*saved it as haiku\.txt/);
     assert.equal(await js("document.querySelector('.task-stop')"),null,'no Stop button once finished');

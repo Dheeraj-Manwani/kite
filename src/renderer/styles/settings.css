@@ -104,3 +104,14 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
   .range-tick::before { background: GrayText; }
   .provider-state, .provider-state.problem, .field-error { color: CanvasText; }
 }
+/* Permissions (ADR 014): the mode as a radio list, one line each; the Hands-off confirmation; the rupee field. */
+.mode-row { justify-content: flex-start; align-items: flex-start; cursor: pointer; }
+.mode-row input[type='radio'] { flex: none; width: auto; margin: 3px 0 0; padding: 0; accent-color: var(--ink); }
+.mode-row .row-text { flex: 1; }
+.mode-row .row-label { display: flex; align-items: center; gap: 8px; }
+.mode-list > * + * { border-top: 1px solid var(--border); }
+.hands-off-confirm { border-top: 1px solid var(--border); background: var(--surface-subtle); }
+.hands-off-confirm p { margin: 0 0 10px; font-size: var(--fs-caption); color: var(--text); }
+.money-field { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); }
+.money-field input { width: 120px; box-sizing: border-box; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font-variant-numeric: tabular-nums; }
+.row-control:has(> .money-field) { flex: none; }

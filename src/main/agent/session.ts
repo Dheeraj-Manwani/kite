@@ -1,6 +1,7 @@
-import { assessRisk, classifyTaskCommand, describeAction, formatSnapshot, maxTaskSteps, modifierVk, parseKeys, type AgentAction, type AgentElement, type AgentSnapshot, type AgentWindow, type TaskAction, type TaskLogEntry, type TaskScope, type TaskStatus, type TaskView } from '../../shared/agent';
+import { classifyStep, classifyTaskCommand, describeAction, formatSnapshot, maxTaskSteps, modifierVk, parseKeys, type AgentAction, type AgentElement, type AgentSnapshot, type AgentWindow, type TaskAction, type TaskLogEntry, type TaskScope, type TaskStatus, type TaskView } from '../../shared/agent';
 import type { ScreenBounds } from '../../shared/types';
-import { addToCart, cartSentence, hostOf, inScope, jobLimits, matchChoice, pageUrl, readCart, unconfirmedVariant, type ChoiceOption, type JobPlan, type JobView } from '../../shared/job';
+import { addToCart, cartSentence, hostOf, inScope, jobLimits, matchChoice, pageTotal, pageUrl, readCart, unconfirmedVariant, type ChoiceOption, type JobPlan, type JobView } from '../../shared/job';
+import { categories, categoryInfo, defaultPermissions, jobCategories, permissionTable, placeLabel, placeOf, resolve, ruleFor, type Category, type Permission, type PermissionSettings, type Resolution, type StepClass } from '../../shared/permissions';
 import { labelScore } from '../guide/grounding';
 import type { Decision, StepPrompt } from './model';
 import type { ActResult, KeyItem, Target } from './sidecar';
@@ -30,7 +31,13 @@ export interface TaskDeps {
   openUrl?(url: string, window: AgentWindow, signal: AbortSignal): Promise<boolean>;
   /** Controls anywhere on the page whose names contain the words, including off-screen ones (a snapshot of matches). */
   find?(target: Target, text: string, signal: AbortSignal): Promise<AgentSnapshot>;
+  /** The user's permission settings, read for every step (ADR 014). Defaults to Balanced. */
+  permissions?(): PermissionSettings;
+  /** "Always" or "Never" on a question: save it for this place, or for every place when place is null. */
+  remember?(category: Category, permission: Permission, place: string | null): void;
 }
+type Answer = Exclude<TaskAction, 'pause' | 'resume'>;
+const yes = (answer: Answer) => answer === 'allow' || answer === 'allowAll' || answer === 'always' || answer === 'alwaysEverywhere';
 export interface TaskTiming { pointMs: number; settleMs: number; retryMs: number; launchMs: number; wallMs: number; lingerMs: number; rateRetries: number; rateMaxMs: number }
 export const taskTiming: TaskTiming = { pointMs: 380, settleMs: 450, retryMs: 700, launchMs: 15_000, wallMs: 8 * 60_000, lingerMs: 7000, rateRetries: 4, rateMaxMs: 25_000 };
 /**
@@ -93,7 +100,8 @@ export class TaskSession {
   private paused = false;
   private finished = false;
   private resumed?: () => void;
-  private approval?: (answer: 'allow' | 'allowAll' | 'skip' | 'stop') => void;
+  private approval?: (answer: Answer) => void;
+  private ask: TaskView['ask'] = null;
   private answer?: (value: string | number) => void;
   // A job (a browser errand with a plan): the phase being worked on, its steps, the page, and where Kite may go.
   private plan: JobPlan | null = null;
@@ -121,7 +129,7 @@ export class TaskSession {
   get question() { return this.status === 'asking' ? this.message : null; }
   view(): TaskView {
     return { id: this.id, goal: this.goal, app: this.app, status: this.status, step: this.step, budget: this.budget, scope: this.scope,
-      action: this.action, risk: this.risk, message: this.message, target: this.target, display: this.display, log: this.log.slice(-5), job: this.jobView() };
+      action: this.action, risk: this.risk, ask: this.status === 'approval' ? this.ask : null, message: this.message, target: this.target, display: this.display, log: this.log.slice(-5), job: this.jobView() };
   }
   private jobView(): JobView | null {
     const plan = this.plan; if (!plan) return null;
@@ -233,11 +241,11 @@ export class TaskSession {
   }
   /** Ask the user through the card's approval buttons; true to carry on. */
   private async confirm(action: string, risk: string, signal: AbortSignal) {
-    this.action = action; this.risk = risk; this.target = null;
+    this.action = action; this.risk = risk; this.target = null; this.ask = null;
     this.set('approval', risk); this.deps.say(risk);
-    const answer = await waitFor<'allow' | 'allowAll' | 'skip' | 'stop'>(signal, resolve => { this.approval = resolve; });
+    const answer = await waitFor<Answer>(signal, resolve => { this.approval = resolve; });
     this.approval = undefined; this.risk = null; this.action = null;
-    return answer === 'allow' || answer === 'allowAll';
+    return yes(answer);
   }
   private async turn(signal: AbortSignal) {
     const phase = this.plan?.phases[this.phase];
@@ -278,7 +286,7 @@ export class TaskSession {
     const image = this.lookNext && this.vision && this.deps.look ? await this.deps.look(this.window, signal).catch((error: unknown): null => { if (signal.aborted) throw error; return null; }) : null;
     this.lookNext = false;
     const decision = await this.decide({ goal: this.goal, app: this.app, step: this.step + 1, budget: this.budget, history: this.history.slice(-14),
-      snapshot, controls, image, vision: this.vision, url: this.plan ? this.url : undefined, job: this.plan ? { plan: this.plan, phase: this.phase, phaseStep: this.phaseSteps } : null }, signal);
+      snapshot, controls, image, vision: this.vision, forbidden: this.forbidden(), url: this.plan ? this.url : undefined, job: this.plan ? { plan: this.plan, phase: this.phase, phaseStep: this.phaseSteps } : null }, signal);
     signal.throwIfAborted();
     if (!decision) { this.end('failed', 'I couldn’t reach the model, so I stopped. Nothing else will be clicked or typed.'); return; }
     this.step++; this.phaseSteps++;
@@ -389,6 +397,18 @@ export class TaskSession {
         this.note(`${summary}: the user said no. Stay on ${this.plan?.site ?? 'the current site'}.`, false, `${summary} (you said no)`); return;
       }
       this.allowed.push(host); decision = 'approved';
+    } else {
+      // Inside the site, going somewhere is looking around: it asks only when the user's settings say so.
+      const resolution = this.resolve({ category: 'look', reason: '' }, null);
+      if (resolution.permission === 'never') { this.refuse('go_to', summary, resolution, false); return; }
+      if (resolution.permission === 'ask') {
+        this.action = summary; this.target = null;
+        const answer = await this.askStep(summary, resolution, signal);
+        if (answer === 'stop') { this.end('stopped', 'Okay, I stopped.'); return; }
+        if (!yes(answer)) { this.deps.audit('go_to', summary, 'denied', { ok: false, message: 'User declined.' }); this.note(`${summary}: the user said no.`, false, `${summary} (you said no)`); return; }
+        if (answer === 'allowAll') this.scope = 'task';
+        decision = 'approved';
+      }
     }
     this.set('acting', summary);
     let r = await this.deps.keys({ hwnd: this.window.hwnd, pid: this.window.pid }, 0, -1, [{ vk: 0x4c, mods: [modifierVk('ctrl')] }, { text: url }, { vk: 0x0d, mods: [] }], signal);
@@ -402,26 +422,59 @@ export class TaskSession {
     this.emit();
     await sleep(this.timing.settleMs * 2, signal);
   }
+  /** Where this step happens, for the user's per-site and per-app rules: the page's host, else the app. */
+  private get place() { return placeOf(hostOf(this.plan ? this.url : null), this.window?.process); }
+  /** The user's settings for one step (ADR 014): never, ask, or allow, with the job's start choice and the floor applied. */
+  private resolve(step: StepClass, snapshot: AgentSnapshot | null): Resolution {
+    return resolve(step, this.deps.permissions?.() ?? defaultPermissions, { place: this.place, amount: step.category === 'money' && snapshot ? pageTotal(snapshot) : null,
+      override: this.scope === 'handsOff' ? 'handsOff' : this.scope === 'once' ? 'stepByStep' : null, allowed: this.plan ? jobCategories[this.plan.kind] : null });
+  }
+  /** Things the user's settings never allow here, for the model's instructions, so it plans around them. */
+  private forbidden(): string[] {
+    const settings = this.deps.permissions?.() ?? defaultPermissions, table = permissionTable(settings), place = this.place;
+    return categories.filter(c => (ruleFor(settings, c, place)?.permission ?? table[c]) === 'never').map(c => categoryInfo[c].verb);
+  }
+  /** A step the settings don't allow: nothing runs, and the agent is told to hand over rather than try another way round. */
+  private refuse(type: string, summary: string, resolution: Resolution, secret: boolean) {
+    this.deps.audit(type, summary, 'denied', { ok: false, message: resolution.reason });
+    const next = secret ? 'Kite never types passwords, card numbers, one-time codes, CVVs or PINs: ask_user to have the user type it themselves, then continue.'
+      : 'Don’t look for another way to do it. If the task needs this step, call done now and say it is ready for the user to finish.';
+    this.note(`${summary}: not done. ${resolution.reason} ${next}`, false, `${summary} (not allowed)`);
+    this.action = null; this.target = null; this.emit();
+  }
+  /** Ask about one step on the card and out loud; "always" and "never" are saved for this place or everywhere. */
+  private async askStep(summary: string, resolution: Resolution, signal: AbortSignal): Promise<Answer> {
+    const place = this.place, category = resolution.category;
+    const always = !resolution.floor && resolution.base === 'ask';
+    this.ask = { category, label: categoryInfo[category].label, place: place ? placeLabel(place) : null, always };
+    this.risk = resolution.reason || null;
+    this.set('approval', resolution.reason || 'Okay to do this step?');
+    if (resolution.reason) this.deps.say(`Can I ${summary.charAt(0).toLowerCase()}${summary.slice(1)}? ${resolution.reason} Say yes or no.`);
+    const answer = await waitFor<Answer>(signal, resolve => { this.approval = resolve; });
+    this.approval = undefined; this.ask = null; this.risk = null;
+    if ((answer === 'always' || answer === 'alwaysEverywhere') && always) this.deps.remember?.(category, 'allow', answer === 'always' ? place : null);
+    if (answer === 'never' || answer === 'neverEverywhere') this.deps.remember?.(category, 'never', answer === 'never' ? place : null);
+    return answer;
+  }
   private async perform(action: Extract<AgentAction, { type: 'click' | 'type_text' | 'press_keys' | 'scroll' }>, element: AgentElement | undefined, snapshot: AgentSnapshot, signal: AbortSignal) {
     const summary = describeAction(action, element), focused = snapshot.elements.find(e => e.focused);
     const main = snapshot.layers.find(l => l.main)?.layer;
     const dialogText = snapshot.elements.filter(e => e.layer !== main && (e.role === 'Text' || e.role === 'Document')).map(e => e.name).join(' ');
-    const risk = assessRisk(action, { element, focused, process: this.window.process, title: this.window.title, dialogText });
-    this.action = summary; this.risk = risk;
+    const step = classifyStep(action, { element, focused, process: this.window.process, title: this.window.title, dialogText, url: this.plan ? this.url : null, phase: this.plan?.phases[this.phase]?.id });
+    const resolution = this.resolve(step, snapshot);
+    this.action = summary;
     this.target = element?.rect ?? (action.type !== 'click' && action.type !== 'scroll' ? focused?.rect ?? null : null);
+    if (resolution.permission === 'never') { this.refuse(action.type, summary, resolution, step.floor === 'secret'); return; }
     let decision: 'approved' | 'auto' = 'auto';
-    if (risk || this.scope === 'once') {
-      this.set('approval', risk ?? 'Okay to do this step?');
-      if (risk) this.deps.say(`Can I ${summary.charAt(0).toLowerCase()}${summary.slice(1)}? ${risk} Say yes or no.`);
-      const answer = await waitFor<'allow' | 'allowAll' | 'skip' | 'stop'>(signal, resolve => { this.approval = resolve; });
-      this.approval = undefined;
+    if (resolution.permission === 'ask') {
+      const answer = await this.askStep(summary, resolution, signal);
       if (answer === 'stop') { this.end('stopped', 'Okay, I stopped.'); return; }
-      if (answer === 'skip') {
+      if (!yes(answer)) {
         this.deps.audit(action.type, summary, 'denied', { ok: false, message: 'User declined.' });
-        this.note(`${summary}: the user said no. Find another way or finish.`, false, `${summary} (you said no)`); this.risk = null; return;
+        this.note(`${summary}: the user said no${answer === 'skip' ? '' : ` and not to ${categoryInfo[resolution.category].verb}${answer === 'never' && this.place ? ' here' : ''} again`}. Find another way or finish.`, false, `${summary} (you said no)`); return;
       }
       if (answer === 'allowAll') this.scope = 'task';
-      decision = 'approved'; this.risk = null;
+      decision = 'approved';
     }
     this.set('acting', summary);
     // Point first: the kite flies to the control so the user sees what is about to happen.
@@ -488,7 +541,7 @@ export class TaskSession {
   /** Card buttons and voice. Returns nothing; replies are chosen by command(). */
   control(action: TaskAction) {
     if (this.finished) return;
-    if (this.status === 'approval' && this.approval && ['allow', 'allowAll', 'skip', 'stop'].includes(action)) { this.approval(action as 'allow' | 'allowAll' | 'skip' | 'stop'); return; }
+    if (this.status === 'approval' && this.approval && action !== 'pause' && action !== 'resume') { this.approval(action); return; }
     if (action === 'stop') this.end('stopped', 'Okay, I stopped.');
     else if (action === 'pause') this.pause('Paused. Say “continue” or press Resume when you’re ready.');
     else if (action === 'resume') this.resume();
@@ -517,8 +570,14 @@ export class TaskSession {
     if (this.status === 'approval') {
       if (action === 'pause') { this.control('pause'); return 'Okay, I’ll wait.'; }
       if (action === 'new-request' || action === 'resume') return undefined;
+      const ask = this.ask, where = ask?.place ? ` on ${ask.place}` : '', what = ask ? categoryInfo[ask.category] : null;
       this.control(action);
-      return action === 'stop' ? 'Okay, I’ve stopped.' : action === 'skip' ? 'Okay, I won’t do that.' : action === 'allowAll' ? 'Okay. I’ll only ask again for risky steps.' : 'Okay.';
+      if (action === 'stop') return 'Okay, I’ve stopped.';
+      if (action === 'skip') return 'Okay, I won’t do that.';
+      if (action === 'allowAll') return 'Okay. From here I’ll follow your settings.';
+      if ((action === 'always' || action === 'alwaysEverywhere') && what) return ask.always ? `Okay. I won’t ask about “${what.label}” steps${action === 'always' ? where : ''} again.` : 'Okay, this once. I always ask about steps like this one.';
+      if ((action === 'never' || action === 'neverEverywhere') && what) return `Okay. I won’t ${what.verb}${action === 'never' ? where : ''}.`;
+      return action === 'never' || action === 'neverEverywhere' ? 'Okay, I won’t do that.' : 'Okay.';
     }
     if (this.status === 'asking' && this.answer) {
       if (action === 'stop') { this.control('stop'); return 'Okay, I’ve stopped.'; }

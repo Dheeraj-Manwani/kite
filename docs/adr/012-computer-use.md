@@ -1,6 +1,6 @@
 # Tasks act through UI Automation and the keyboard, never the mouse
 
-Status: Accepted for v1.3. Extends ADR 007 for explicitly approved tasks.
+Status: Accepted for v1.3. Extends ADR 007 for explicitly approved tasks. The risk check and approval scopes are replaced by permission categories and modes in [ADR 014](014-permissions.md).
 
 ## Context
 

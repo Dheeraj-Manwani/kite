@@ -5,11 +5,15 @@ Ask "write a shopping list in Notepad and save it as list.txt" or "turn on dark 
 ## Using it
 
 - **Start:** ask Kite to do something in an app with a tool-capable model. The approval card states the task and the app and offers:
-  - **Allow this task:** ordinary steps run without asking.
+  - **Start:** steps follow your permissions (Settings → Permissions).
+  - **Hands-off for this job:** routine and risky steps run without asking; the floor below still asks.
   - **Step by step:** every step asks first (you can switch to "Allow the rest" at any step).
-  - **Cancel.** Saying "yes" approves the task.
-- **Watch:** a card shows the goal, "Step N of 15", what Kite is doing now, and the last few steps. The kite flies to each control and rings it just before using it.
-- **Risky steps always ask,** even inside an approved task, and Kite asks out loud: anything that sends, deletes, buys, pays, submits, installs, or signs out; confirming a dialog about deleting or overwriting; typing in a terminal; typing into a password field or a card-like number; Enter in a messaging app; and shortcuts that close, print, or delete. Answer with the card buttons or by voice ("yes", "no", "stop").
+  - **Not now.** Saying "yes" starts the task with your settings.
+- **The jobs model** runs tasks (Settings → Models & keys): your choice, else DeepSeek Flash when its key is saved, else the main model.
+- **Watch:** a card shows the goal, "Step N of 15", what Kite is doing now, and the last few steps. The kite flies to each control and rings it just before using it. While Hands-off is on, the card says so and the kite wears a ring on its tail.
+- **Permissions** ([ADR 014](adr/014-permissions.md)). Code puts every step in a category: Look around, Fill in, Add or save, Use saved info, Submit, Send as you, Spend money, Delete or overwrite, Accounts and system. Settings → Permissions says Allow, Ask or Don't allow for each, through a mode: *Balanced* (the default) asks before submitting, sending, spending, deleting and account or system changes, out loud. *Ask every time* asks before every step. *Hands-off* doesn't ask. *Custom* is your own table. On the card, **Yes** / **No** answer once. **Always** / **Never** remember the answer for this site or app, or everywhere (say "always", "never", "always allow that everywhere").
+- **The floor asks in every mode:** spending above your spend limit (₹0 by default, so every payment asks) or when the total can't be read; anything outside the job's kind or site; typing in a terminal or pressing Run. **Never, in any mode:** passwords, card numbers, one-time codes, CVVs, PINs. Kite hands those to you.
+- **Don't allow** never asks: Kite stops before the step and leaves it to you ("It's ready for you to send").
 - **Stop anytime:** press **Stop**, say "stop", or press **Escape**. Clicking or typing anywhere outside Kite pauses the task ("You took over"); say "continue" or press Resume. "wait" pauses too.
 - **Questions:** if the task needs something you didn't say ("What should I name the file?"), Kite asks and waits. Just answer by voice.
 - **Limits:** 15 steps per task, 8 minutes, and three failed actions in a row. Kite then stops and says where it got to.
@@ -21,7 +25,7 @@ Ask "write a shopping list in Notepad and save it as list.txt" or "turn on dark 
 2. **Look.** A task sidecar (Windows PowerShell hosting C#, started only for approved tasks) lists the app's controls with UI Automation: names, roles, values, states, and what each supports. Only controls on screen are listed. Dialogs and menus come first. Vision-capable models may also ask to see a screenshot of that one window.
    In a browser, only the visible tab's page is listed. Edge and Chrome keep the page of every tab shown so far in the window's accessibility tree, oldest first; the sidecar drops a page whose name matches another tab in the tab strip, unless it is the page in the browser's render window. Frames inside the page and the browser's own popups stay. A page that loaded before anything asked for accessibility may have no tree yet: the sidecar asks the render window for it and looks again, waiting once at most 1.5 s.
 3. **Decide.** Your model gets the goal, the steps so far and their results, and the current controls, and must choose exactly one action: click, type, press keys, scroll, wait, look, ask you, done, or give up. Kite validates it and refuses controls from an older look.
-4. **Confirm and act.** Kite's code writes the step's description and decides whether it is risky. It points at the control, then acts through UI Automation (Invoke, Toggle, Select, Expand, set value, select text, scroll, focus) or the keyboard. Keys go only to the task's app: the sidecar brings it to the front, checks it is still in front before every key, and waits if you are holding a modifier.
+4. **Confirm and act.** Kite's code writes the step's description, classifies it, and resolves it against your permissions: allow, ask, or don't. It points at the control, then acts through UI Automation (Invoke, Toggle, Select, Expand, set value, select text, scroll, focus) or the keyboard. Keys go only to the task's app: the sidecar brings it to the front, checks it is still in front before every key, and waits if you are holding a modifier.
 5. **Repeat** until the model reports the task done (after checking the controls) or the budget runs out.
 
 [ADR 012](adr/012-computer-use.md).
@@ -46,9 +50,10 @@ A task in a browser ("buy me 60 sachets of protein") is a **job** ([end-to-end-j
 
 ## Verification
 
-- `npm test` (`tests/agent.test.cjs`): key parsing, the risk rules, commands, action descriptions, control listing (dialogs first, no password values), app matching, model output validation, and the task state machine (acting, setting and typing, approvals by scope, risky steps, strict budget, pause, takeover, questions, invalid and failed steps, a held modifier, screenshots), plus `do_task` approval scopes through the real broker.
+- `npm test` (`tests/permissions.test.cjs`): every category × mode, the floor, rules per site and app, validation, the checkout corpus (no money step allowed with the default limit), the page total, the jobs model, and hands-off, "always", "never" and Don't allow through the real session.
+- `npm test` (`tests/agent.test.cjs`): key parsing, the step classifier, commands, action descriptions, control listing (dialogs first, no password values), app matching, model output validation, and the task state machine (acting, setting and typing, approvals by scope, risky steps, strict budget, pause, takeover, questions, invalid and failed steps, a held modifier, screenshots), plus `do_task` approval scopes through the real broker.
 - `npm run test:agent`: a real WinForms window operated through the real task sidecar (set value, invoke, toggle, stale refs, Unicode typing, select-all replace, key chords, line-break refusal) and an end-to-end task with a scripted decider. It checks that the mouse pointer never moved.
-- `npm run test:renderer` (after a build): the approval choices, the task card, the ring, the kite pointing, and the card controls.
+- `npm run test:renderer` (after a build): the approval choices, the task card with Always and Never, the hands-off marker, Settings → Permissions, the ring, the kite pointing, and the card controls.
 - `npm test` (`tests/job.test.cjs`): plans, scope, the cart read back, choices, the variant floor, and whole jobs through the session with a scripted decider. `npm run test:job -- [runs] [provider:model] [--ambiguous]`: live jobs on Kite Test Mart with a real model (needs its key in `.env`).
 - `npm run measure:web`: opens Kite Test Mart (`tests/fixtures/shop`, a local fake store; `npm run shop` runs it alone) in Edge with a throwaway profile, and reads each page through the real sidecar and `formatSnapshot`. It reports element counts, snapshot time and what reaches the model, and checks that only the visible tab's page is listed. `npm run measure:web -- <url>` measures other pages, read-only. The shop's own flows are in `npm test` (`tests/shop.test.cjs`).
 

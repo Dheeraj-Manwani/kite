@@ -7,7 +7,7 @@ import { cursorInput } from '../kite/useKiteLoop';
 import { react } from '../voice/runtime';
 import { ringPaths } from '../guide/ring';
 import { taskRuntime } from './runtime';
-import { useKiteScale } from '../hooks/useSettings';
+import { useKiteScale, useSettings } from '../hooks/useSettings';
 const overlaps = (a: ScreenBounds, b: ScreenBounds) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 const ended = (view: TaskView) => ['done', 'failed', 'stopped'].includes(view.status);
 const heading: Partial<Record<TaskView['status'], string>> = { done: 'Done', failed: 'Couldn’t finish', stopped: 'Stopped', paused: 'Paused', approval: 'Your OK', asking: 'Question' };
@@ -20,6 +20,13 @@ export function TaskLayer() {
   const [view, setView] = useState<TaskView | null>(null);
   const [size, setSize] = useState({ width: 320, height: 220 });
   const card = useRef<HTMLElement>(null), previous = useRef<TaskView | null>(null);
+  // "Always" and "Never" apply here (the site or app) or everywhere; here first, when there is a place.
+  const [everywhere, setEverywhere] = useState(false);
+  const askKey = view?.status === 'approval' && view.ask ? `${view.id}:${view.step}:${view.ask.category}` : '';
+  useEffect(() => { setEverywhere(false); }, [askKey]);
+  // The hands-off marker on the kite (ADR 014): the mode itself, or a job started hands-off.
+  const handsOffMode = useSettings()?.settings.permissions?.mode === 'handsOff';
+  useEffect(() => { taskRuntime.handsOff = handsOffMode || (!!view && !ended(view) && view.scope === 'handsOff'); }, [handsOffMode, view]);
   useEffect(() => {
     const off = window.kite.onTaskEvent(next => {
       const before = previous.current; previous.current = next;
@@ -32,7 +39,7 @@ export function TaskLayer() {
       } else if (next && before?.id !== next.id) react('perk');
       setView(next);
     });
-    return () => { off(); taskRuntime.anchor = null; taskRuntime.aim = null; window.kite.setTaskBounds(null); };
+    return () => { off(); taskRuntime.anchor = null; taskRuntime.aim = null; taskRuntime.handsOff = false; window.kite.setTaskBounds(null); };
   }, []);
   const geometry = cursorInput.geometry, origin = geometry?.origin ?? { x: 0, y: 0 };
   const local = (r: ScreenBounds) => ({ ...r, x: r.x - origin.x, y: r.y - origin.y });
@@ -66,6 +73,7 @@ export function TaskLayer() {
     </svg>}
     <section ref={card} className={`task-card ${view.status}`} aria-label="Kite is doing a task" style={{ transform: `translate(${position.x}px, ${position.y}px)` }}>
       <header><SailMark /><strong>{heading[view.status] ?? 'Doing it'} · {view.app}</strong>
+        {view.scope === 'handsOff' && !finished && <span className="tag task-handsoff">Hands-off</span>}
         <span className="task-progress">Step {view.step} of {view.budget}</span></header>
       <div className="task-meter" aria-hidden="true"><span style={{ width: `${Math.min(100, view.step / view.budget * 100)}%` }} /></div>
       <p className="task-goal" title={view.goal}>{view.goal}</p>
@@ -80,9 +88,16 @@ export function TaskLayer() {
         <button className="choice-none" onClick={() => window.kite.taskChoose(-1)}>None of these</button>
       </div>}
       {view.status === 'approval' && <div className="task-approval">
-        <button className="primary" onClick={() => control('allow')}>{view.risk ? 'Allow' : 'Allow once'}</button>
+        <button className="primary" onClick={() => control('allow')}>Yes</button>
         {view.scope === 'once' && !view.risk && <button onClick={() => control('allowAll')}>Allow the rest</button>}
-        <button onClick={() => control('skip')}>Skip</button>
+        <button onClick={() => control('skip')}>No</button>
+      </div>}
+      {view.status === 'approval' && view.ask && <div className="task-remember" role="group" aria-label={`Remember for “${view.ask.label}” steps`}>
+        <span className="task-remember-label">{view.ask.label}</span>
+        {view.ask.place && <select aria-label="Where to remember it" value={everywhere ? 'everywhere' : 'here'} onChange={e => setEverywhere(e.target.value === 'everywhere')}>
+          <option value="here">on {view.ask.place}</option><option value="everywhere">everywhere</option></select>}
+        {view.ask.always && <button onClick={() => control(everywhere || !view.ask?.place ? 'alwaysEverywhere' : 'always')}>Always</button>}
+        <button onClick={() => control(everywhere || !view.ask?.place ? 'neverEverywhere' : 'never')}>Never</button>
       </div>}
       {view.log.length > 0 && <ol className="task-log">{view.log.map((entry, i) => <li key={i} className={entry.ok ? 'ok' : 'bad'}>{entry.text}</li>)}</ol>}
       {!finished && <div className="task-actions">

@@ -1,11 +1,27 @@
-import type { ScreenBounds } from './types';
+import type { ModelEntry, ModelSelection, ProviderId, ScreenBounds } from './types';
+import type { Category, StepClass } from './permissions';
 /**
  * "Do it for me" tasks: shared, pure pieces. Kite operates one app through UI Automation patterns and
  * keyboard input only; it never moves the pointer. Summaries and risk checks are deterministic (ADR 008),
  * so the model can never phrase its way past a confirmation.
  */
 export const maxTaskSteps = 15;
-export type TaskScope = 'task' | 'once';
+/** Fast, cheap, with vision and tools: the automatic choice for tasks and jobs when its key is saved (docs/end-to-end-jobs.md §3.6). */
+export const defaultJobsModel: ModelSelection = { provider: 'deepseek', id: 'deepseek-flash' };
+/**
+ * The model that runs tasks and jobs: the Jobs model setting when its key is saved; else DeepSeek Flash when a DeepSeek
+ * key is saved; else the main model. Shared, so the approval card names the model the main process will use.
+ */
+export function jobsModel(settings: { model: ModelSelection; jobsModel?: ModelSelection | null }, models: ModelEntry[], hasKey: (provider: ProviderId) => boolean): ModelEntry {
+  const entry = (m: ModelSelection): ModelEntry => models.find(x => x.provider === m.provider && x.id === m.id) ?? { ...m, label: m.id, supportsVision: false, supportsTools: false, tier: 'fast' };
+  if (settings.jobsModel && hasKey(settings.jobsModel.provider)) return entry(settings.jobsModel);
+  const flash = models.find(m => m.provider === defaultJobsModel.provider && m.id === defaultJobsModel.id);
+  if (flash?.supportsTools && hasKey(flash.provider)) return flash;
+  return entry(settings.model);
+}
+/** How far the approval to start reaches: the user's permission settings, hands-off for this job, or step by step. */
+export type TaskScope = 'task' | 'once' | 'handsOff';
+export const taskScopes: TaskScope[] = ['task', 'once', 'handsOff'];
 export type TaskStatus = 'starting' | 'thinking' | 'acting' | 'approval' | 'paused' | 'asking' | 'done' | 'failed' | 'stopped';
 export interface TaskLogEntry { text: string; ok: boolean }
 /** Everything the overlay needs to draw the task card and point at the control being used. Rectangles are global DIP. */
@@ -16,13 +32,16 @@ export interface TaskView {
   action: string | null;
   /** Why this step needs the user's OK, when it does. */
   risk: string | null;
+  /** The open question's category, and what the card may offer to remember: "Always" only when it would stop the question. */
+  ask?: { category: import('./permissions').Category; label: string; place: string | null; always: boolean } | null;
   message: string;
   target: ScreenBounds | null; display: ScreenBounds | null;
   log: TaskLogEntry[];
   /** Present for a job (an errand in a browser): its phases, the page URL, and the options of an open choice. */
   job?: import('./job').JobView | null;
 }
-export const taskActions = ['pause', 'resume', 'stop', 'allow', 'allowAll', 'skip'] as const;
+/** "always" and "never" remember the answer for this site or app; the "Everywhere" ones for every place (ADR 014). */
+export const taskActions = ['pause', 'resume', 'stop', 'allow', 'allowAll', 'skip', 'always', 'alwaysEverywhere', 'never', 'neverEverywhere'] as const;
 export type TaskAction = typeof taskActions[number];
 
 /** One control from the task sidecar's snapshot, in global DIP. `ref` indexes that snapshot only. */
@@ -106,42 +125,100 @@ export function describeAction(action: AgentAction, element?: AgentElement): str
   }
 }
 
-const riskyLabel = /\b(send|submit|delete|remove|erase|discard|trash|purchase|buy|pay|payment|checkout|check out|place order|order now|book now|confirm|uninstall|install|format|reset|restore defaults|sign out|log ?out|publish|post|share|transfer|withdraw|overwrite|replace all|empty|permanently|don'?t save|do not save|close without saving|unsubscribe|deactivate|revoke|accept|agree|restart|shut ?down|run|execute)\b/i;
-const riskyDialog = /\b(delete|deleted|permanently|overwrite|replace|remove|discard|lose|lost|cannot be undone|can'?t be undone|irreversible|erase|format|send|pay|purchase)\b/i;
+// Labels by what they do, checked in this order: the first match decides the category (ADR 014).
+const labelCategories: [Category, RegExp][] = [
+  ['system', /\b(sign out|log ?out|uninstall|install|deactivate|revoke|unsubscribe|restart|shut ?down|delete (my |your )?account|close (my |your )?account|change password)\b/i],
+  ['money', /\b(purchase|buy|pay|payment|checkout|check out|place (your |the )?order|order now|subscribe|top ?up|recharge|transfer|withdraw|proceed to (buy|pay))\b/i],
+  ['send', /\b(send|post|publish|share|reply|comment|tweet|forward|submit (a |your )?review)\b/i],
+  ['delete', /\b(delete|remove|erase|discard|trash|overwrite|replace all|empty|permanently|don'?t save|do not save|close without saving|format|reset|restore defaults)\b/i],
+  ['submit', /\b(submit|confirm|book( now)?|reserve|accept|agree|apply (coupon|code|promo|offer|voucher)|sign up|register|enrol|enroll)\b/i],
+  ['add', /\b(add to (cart|bag|basket|trolley|wishlist|list)|wishlist|save|add)\b/i],
+];
+const reasons: Partial<Record<Category, string>> = {
+  system: 'may change your account or your system.', money: 'may buy or pay for something.', send: 'may send or post something as you.',
+  delete: 'may delete or overwrite something that can’t be undone.', submit: 'may submit or confirm something.',
+};
+const commandLabel = /\b(run|execute)\b/i;
+const riskyDialog: [Category, RegExp][] = [
+  ['money', /\b(pay|payment|purchase|charge|order)\b/i], ['send', /\b(send|post|publish)\b/i],
+  ['delete', /\b(delete|deleted|permanently|overwrite|replace|remove|discard|lose|lost|cannot be undone|can'?t be undone|irreversible|erase|format)\b/i],
+];
 const confirmLabel = /^(ok|okay|yes|yes to all|continue|proceed|confirm|allow|go|do it)$/i;
 const terminals = /^(windowsterminal|wt|cmd|powershell|pwsh|conhost|openconsole|wsl|bash|mintty|alacritty|wezterm-gui|putty|git-bash)$/i;
 const messaging = /\b(message|messages|chat|reply|compose|comment|post|tweet|send|email|e-mail|mail|inbox|whatsapp|teams|slack|discord|telegram|signal|outlook)\b/i;
-const riskyChords = new Set(['alt+f4', 'ctrl+w', 'ctrl+f4', 'ctrl+shift+w', 'shift+delete', 'ctrl+shift+delete', 'ctrl+enter', 'ctrl+p', 'ctrl+shift+enter', 'alt+s', 'ctrl+d']);
-export interface RiskContext { element?: AgentElement; focused?: AgentElement; process: string; title: string; dialogText: string }
+const chordCategories: Record<string, Category> = { 'alt+f4': 'delete', 'ctrl+w': 'delete', 'ctrl+f4': 'delete', 'ctrl+shift+w': 'delete', 'shift+delete': 'delete',
+  'ctrl+shift+delete': 'delete', 'ctrl+d': 'delete', 'ctrl+enter': 'send', 'ctrl+shift+enter': 'send', 'alt+s': 'send', 'ctrl+p': 'submit' };
+const navigationKeys = new Set(['tab', 'up', 'down', 'left', 'right', 'home', 'end', 'pageup', 'pagedown', 'escape', 'esc']);
+const lookRoles = new Set(['Hyperlink', 'TabItem', 'MenuItem', 'TreeItem', 'Document', 'Text', 'Image', 'Group', 'Pane', 'Header', 'HeaderItem']);
+// On a checkout or payment page, "Continue" and "Next" are the dangerous buttons; these few only move around.
+const harmless = /^(back|go back|edit|change|close|cancel|help|details|view details|see (more|details)|show (more|less)|more|less)$/i;
+/** A page in checkout or payment, from its URL. */
+export const moneyPage = (url: string | null | undefined) => /\/(checkout|payment|payments|pay|billing|place-?order|buy)(?=[/?#._-]|$)/i.test(url ?? '');
+// "PIN" but not "PIN code" (an Indian postcode).
+const secretField = /\b(otp|one[- ]time (password|code)|verification code|security code|cvv|cvc|upi pin|m?pin)\b(?!\s*code)/i;
+export interface StepContext {
+  element?: AgentElement; focused?: AgentElement; process: string; title: string; dialogText: string;
+  /** The page's address, for browser tasks; a checkout or payment page makes confirming steps Spend money. */
+  url?: string | null;
+  /** The job's current phase id; "checkout" and "pay" count as a payment page. */
+  phase?: string | null;
+}
+const labelOf = (e: AgentElement) => `${e.name} ${e.help} ${e.automationId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')}`;
+/** A control's category from its label: what clicking it (or Enter on it) does. Null when the label says nothing. */
+function controlCategory(e: AgentElement, context: StepContext): StepClass | null {
+  // Icon-only buttons often carry only an automation id such as "PlaceOrderButton": its words count.
+  const label = labelOf(e);
+  if (commandLabel.test(e.name) && !lookRoles.has(e.role)) return { category: 'system', reason: `${describeElement(e)} may run a command or a program.`, floor: 'command' };
+  const paying = moneyPage(context.url) || context.phase === 'checkout' || context.phase === 'pay';
+  const pressable = e.role === 'Button' || (e.role === 'Hyperlink' && confirmLabel.test(e.name.trim()));
+  const byLabel = labelCategories.find(([, pattern]) => pattern.test(label))?.[0];
+  // In checkout, "Save and continue" or "Confirm" moves the payment on: Spend money, not Add or Submit.
+  if (byLabel && !(paying && pressable && (byLabel === 'add' || (byLabel === 'submit' && !/\bapply\b/i.test(label)))))
+    return { category: byLabel, reason: reasons[byLabel] ? `${describeElement(e)} ${reasons[byLabel]}` : '' };
+  if (confirmLabel.test(e.name.trim())) for (const [category, pattern] of riskyDialog) if (pattern.test(context.dialogText))
+    return { category, reason: `This confirms a dialog that mentions ${category === 'money' ? 'paying or ordering' : category === 'send' ? 'sending' : 'deleting or overwriting'}.` };
+  if (paying && pressable && !harmless.test(e.name.trim())) return { category: 'money', reason: `${describeElement(e)} continues a checkout or payment.` };
+  return null;
+}
 /**
- * Why an action needs the user's OK even inside an approved task, or null. Deterministic and deliberately
- * cautious: it reads labels and dialog text only as keywords, never as instructions.
+ * What a step does, as a permission category with a reason in code's words (ADR 014). Deterministic and deliberately
+ * cautious: labels, dialog text and the page URL are read only as keywords, never as instructions. When unsure it takes
+ * the safer category; a mistake costs one extra question, never an unapproved payment.
  */
-export function assessRisk(action: AgentAction, context: RiskContext): string | null {
+export function classifyStep(action: AgentAction, context: StepContext): StepClass {
   const keyboard = action.type === 'type_text' || action.type === 'press_keys';
-  if (keyboard && terminals.test(context.process)) return 'This is a terminal, where typing and Enter can run commands.';
+  if (keyboard && terminals.test(context.process)) return { category: 'system', reason: 'This is a terminal, where typing and Enter can run commands.', floor: 'command' };
   if (action.type === 'click' && context.element) {
-    // Icon-only buttons often carry only an automation id such as "PlaceOrderButton": split it into words.
-    const e = context.element, label = `${e.name} ${e.help} ${e.automationId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')}`;
-    if (riskyLabel.test(label)) return `${describeElement(e)} may send, delete, buy, or change something that can’t be undone.`;
-    if (confirmLabel.test(e.name.trim()) && riskyDialog.test(context.dialogText)) return 'This confirms a dialog that mentions deleting, overwriting, sending, or paying.';
+    const e = context.element;
+    return controlCategory(e, context) ?? { category: lookRoles.has(e.role) ? 'look' : 'fill', reason: '' };
   }
   if (action.type === 'type_text') {
     const target = action.ref !== undefined ? context.element : context.focused;
-    if (target?.password) return 'This types into a password field.';
-    if (/(?:\d[ -]?){13,19}/.test(action.text)) return 'This looks like a card or account number.';
-    if (action.submit && messaging.test(`${context.title} ${target?.name ?? ''} ${context.process}`)) return 'Pressing Enter here may send a message.';
+    if (target?.password) return { category: 'fill', reason: 'This types into a password field.', floor: 'secret' };
+    if (/(?:\d[ -]?){13,19}/.test(action.text)) return { category: 'fill', reason: 'This looks like a card or account number.', floor: 'secret' };
+    if (target && secretField.test(labelOf(target))) return { category: 'fill', reason: 'This field asks for a one-time code, a CVV or a PIN.', floor: 'secret' };
+    if (action.submit && messaging.test(`${context.title} ${target?.name ?? ''} ${context.process}`)) return { category: 'send', reason: 'Pressing Enter here may send a message.' };
+    if (action.submit && (moneyPage(context.url) || context.phase === 'checkout' || context.phase === 'pay')) return { category: 'money', reason: 'Pressing Enter here may continue a checkout or payment.' };
+    if (/\{\{[a-z0-9_.]+\}\}/i.test(action.text)) return { category: 'saved', reason: '' };
+    return { category: 'fill', reason: '' };
   }
   if (action.type === 'press_keys') {
-    const chord = parseKeys(action.keys); if (!chord) return null;
+    const chord = parseKeys(action.keys); if (!chord) return { category: 'fill', reason: '' };
     const combo = [...chord.modifiers, chord.key].join('+');
-    if (riskyChords.has(combo)) return `${chordLabel(chord)} can close, send, print, or delete.`;
+    if (chordCategories[combo]) return { category: chordCategories[combo], reason: `${chordLabel(chord)} can close, send, print, or delete.` };
     const focus = context.focused;
-    if (chord.key === 'enter' && !chord.modifiers.length && (messaging.test(`${context.title} ${focus?.name ?? ''} ${context.process}`) || (focus && riskyLabel.test(focus.name))))
-      return 'Pressing Enter here may send or submit something.';
-    if (chord.key === 'delete' && focus && ['ListItem', 'TreeItem', 'DataItem'].includes(focus.role)) return 'Delete on a selected item may remove it.';
+    if (chord.key === 'enter' && !chord.modifiers.length) {
+      if (messaging.test(`${context.title} ${focus?.name ?? ''} ${context.process}`)) return { category: 'send', reason: 'Pressing Enter here may send or submit something.' };
+      const pressed = focus && controlCategory(focus, context);
+      if (pressed?.reason) return { ...pressed, reason: `Pressing Enter here may ${pressed.category === 'money' ? 'buy or pay' : pressed.category === 'send' ? 'send' : pressed.category === 'delete' ? 'delete' : 'submit'} something.` };
+      if (moneyPage(context.url) || context.phase === 'checkout' || context.phase === 'pay') return { category: 'money', reason: 'Pressing Enter here may continue a checkout or payment.' };
+      return { category: 'fill', reason: '' };
+    }
+    if (chord.key === 'delete' && focus && ['ListItem', 'TreeItem', 'DataItem'].includes(focus.role)) return { category: 'delete', reason: 'Delete on a selected item may remove it.' };
+    if (combo === 'ctrl+s') return { category: 'add', reason: '' };
+    return { category: navigationKeys.has(chord.key) && !chord.modifiers.length ? 'look' : 'fill', reason: '' };
   }
-  return null;
+  return { category: 'look', reason: '' };
 }
 
 /** Deterministic task controls; anything else goes to the model (or answers the task's question). */
@@ -150,6 +227,10 @@ export function classifyTaskCommand(text: string): TaskAction | 'new-request' {
   if (/^(stop|stop it|stop the task|cancel|cancel (it|that|the task)|abort|quit|never ?mind|forget it|that's enough|stop doing that)$/.test(s)) return 'stop';
   if (/^(wait|hold on|hang on|pause|pause (it|the task)|one sec(ond)?|just a (sec|second|moment|minute))$/.test(s)) return 'pause';
   if (/^(continue|resume|go on|keep going|carry on|i'm done|i'm back|ready|go ahead and continue)$/.test(s)) return 'resume';
+  if (/^(always|yes always|always (allow|do) (it|that|this)|always allow)( here| on this site| in this app)?$/.test(s)) return 'always';
+  if (/^(always|always (allow|do) (it|that|this)|always allow) everywhere$/.test(s)) return 'alwaysEverywhere';
+  if (/^(never|no never|never (allow|do) (it|that|this)|never allow|don't ever do (it|that|this))( here| on this site| in this app)?$/.test(s)) return 'never';
+  if (/^(never|never (allow|do) (it|that|this)|never allow) everywhere$/.test(s)) return 'neverEverywhere';
   if (/^(allow all|allow the rest|yes to all|do the rest|allow everything|go ahead with the rest|don't ask again)$/.test(s)) return 'allowAll';
   if (/^(yes|yeah|yep|sure|do it|go ahead|okay|ok|allow|allow it|allow once|approve|approved)$/.test(s)) return 'allow';
   if (/^(no|nope|skip|skip (it|that)|don't|do not|not that|deny)$/.test(s)) return 'skip';

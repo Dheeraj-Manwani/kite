@@ -11,6 +11,7 @@ import { TaskSession } from './session';
 import { routingHints } from '../ai/routing';
 import { ActClient } from './sidecar';
 import { browserApp, type JobPlan } from '../../shared/job';
+import type { Category, Permission, PermissionSettings } from '../../shared/permissions';
 export interface TaskServiceDeps {
   directory: string;
   log(event: string, data?: Record<string, unknown>): void;
@@ -28,6 +29,9 @@ export interface TaskServiceDeps {
   decider(model: ModelEntry, key: string): (prompt: StepPrompt, signal: AbortSignal) => Promise<Decision>;
   /** Browser tasks are jobs: one model call plans them (agent/planner.ts). */
   planner?(model: ModelEntry, key: string): (goal: string, app: string, signal: AbortSignal) => Promise<JobPlan | null>;
+  /** The user's permission settings, and saving an "Always" or "Never" answer (ADR 014). */
+  permissions?(): PermissionSettings;
+  remember?(category: Category, permission: Permission, place: string | null): void;
 }
 // Browsers whose executable, given a URL, opens it as a new tab of the last active window. Nothing else is launched.
 const browsers: { app: RegExp; exe: string[] }[] = [
@@ -70,7 +74,8 @@ export class TaskService {
   start(task: { goal: string; app: string }, scope: TaskScope, model: ModelEntry, key: string | undefined, messageId: number | null): ToolResult {
     if (!this.deps.enabled()) return { ok: false, message: 'Doing tasks is turned off in Settings.' };
     if (process.platform !== 'win32' || !this.client.supported) return { ok: false, message: 'Doing tasks needs Windows UI Automation, which is not available here.' };
-    if (!key) return { ok: false, message: 'No key is saved for the current model.' };
+    if (!key) return { ok: false, message: 'No key is saved for the jobs model.' };
+    if (!model.supportsTools) return { ok: false, message: `${model.label} can’t do tasks. Choose a jobs model with Actions in Settings.` };
     this.session?.dispose();
     this.deps.starting?.();
     const decide = this.deps.decider(model, key), planner = browserApp.test(task.app) ? this.deps.planner?.(model, key) : undefined;
@@ -94,7 +99,7 @@ export class TaskService {
       say: text => { if (this.session === session) this.deps.say(text); },
       audit: (type, summary, decision, result) => this.deps.audit(messageId, `task:${type}`, summary, decision, result),
       finished: (message, status) => this.deps.finished(task.goal, task.app, message, status),
-      log: this.deps.log,
+      log: this.deps.log, permissions: this.deps.permissions, remember: this.deps.remember,
     }, model.supportsVision);
     this.session = session;
     this.deps.log('task:start', { ok: true });

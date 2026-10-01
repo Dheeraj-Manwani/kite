@@ -10,6 +10,9 @@ import { BusyDots, LockIcon, Working } from '../icons';
 import { ProviderRow } from './ProviderRow';
 import { ModelPicker } from './ModelPicker';
 import { previewEarcons } from '../voice/earcons';
+import { PermissionsSection } from './PermissionsSection';
+import { Group, Row, SwitchRow } from './SettingsParts';
+import { jobsModel } from '../../shared/agent';
 
 // Groq comes first: without it Kite can't hear you.
 const providers: { id: ProviderId; label: string; badge?: string }[] = [
@@ -28,18 +31,6 @@ const skinLabels: Record<KiteSkin, string> = { rose: 'Rose', teal: 'Teal', viole
 // The speed slider's range, and where 1.0× ("Normal") sits on it (UX-56).
 const SPEED = { min: .6, max: 1.5 };
 const speedAt = (value: number) => (value - SPEED.min) / (SPEED.max - SPEED.min);
-
-function Group({ title, hint, children }: { title?: string; hint?: ReactNode; children: ReactNode }) {
-  return <section className="settings-group">{title && <h2>{title}</h2>}{hint && <p className="group-hint">{hint}</p>}<div className="group-card">{children}</div></section>;
-}
-function Row({ label, description, children }: { label: string; description?: ReactNode; children: ReactNode }) {
-  return <div className="setting-row"><span className="row-text"><span className="row-label">{label}</span>{description && <small>{description}</small>}</span><span className="row-control">{children}</span></div>;
-}
-/** Settings that apply immediately are switches, and "on" is ink, not pink (UX-54). */
-function SwitchRow({ label, description, checked, disabled, change }: { label: string; description?: ReactNode; checked: boolean; disabled?: boolean; change(value: boolean): void }) {
-  return <label className="setting-row switch-row"><span className="row-text"><span className="row-label">{label}</span>{description && <small>{description}</small>}</span>
-    <input type="checkbox" role="switch" className="switch" checked={checked} disabled={disabled} onChange={e => change(e.target.checked)} /></label>;
-}
 
 /** An action that takes a moment shows the kite tail's three dots while it runs (UX-06). */
 function BusyButton({ run, disabled, children }: { run(): Promise<unknown>; disabled?: boolean; children: ReactNode }) {
@@ -110,6 +101,10 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
       <Group title="Models">
         <Row label="Main model" description="Answers every question.">{picker('Main model', s.model, model => update({ model }))}</Row>
         <Row label="Vision model" description="Looks at your screen when you circle something or approve a look.">{picker('Vision model', s.visionModel, visionModel => update({ visionModel }), { visionOnly: true })}</Row>
+        <Row label="Jobs model" description={<>Does tasks and errands for you, one step at a time. {s.jobsModel
+          ? <button type="button" className="link" onClick={() => update({ jobsModel: null })}>Choose automatically</button>
+          : 'Automatic: DeepSeek Flash when its key is saved, else the main model.'}</>}>
+          {picker('Jobs model', s.jobsModel ?? jobsModel(s, snapshot.models, p => !!snapshot.keys[p]), model => update({ jobsModel: model }))}</Row>
       </Group>
       {/* The backup model and custom IDs are for when the defaults don't fit (UX-55). */}
       <details className="advanced"><summary>Advanced</summary>
@@ -168,13 +163,14 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
         <SwitchRow label="Whiteboard" checked={s.whiteboard ?? true} change={v => update({ whiteboard: v })}
           description="Kite explains ideas with hand-drawn diagrams, one piece at a time, while it talks." />
         <SwitchRow label="Do it for me" checked={s.computerUse ?? true} change={v => update({ computerUse: v })}
-          description="After you approve a task, Kite clicks and types in one app. It never moves your pointer, asks again before anything that sends, deletes, buys, or submits, and stops after 15 steps." />
+          description="After you approve a task, Kite clicks and types in one app or website. It never moves your pointer, asks when your Permissions say so, and stops after 15 steps (45 for errands)." />
       </Group>
       <Group title="Ask before I…">
         {configurableTools.map(name => <SwitchRow key={name} label={toolLabels[name]} checked={s.toolApprovals?.[name] ?? askByDefault(name)} change={v => update({ toolApprovals: { [name]: v } })} />)}
         <div className="setting-row always-ask"><LockIcon /><span className="row-text"><span className="row-label">Always asks in this version</span><small>{alwaysAsks.join(' · ')}</small></span></div>
       </Group>
     </>);
+    case 'permissions': return shell(<PermissionsSection settings={s} update={update} />);
     case 'about': return shell(<>
       <Group>
         <Row label={`Kite ${about?.version ?? ''}`.trim()} description={about ? `Updates: ${about.updateStatus}` : undefined}>

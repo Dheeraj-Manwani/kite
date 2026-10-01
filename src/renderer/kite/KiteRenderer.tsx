@@ -29,5 +29,7 @@ export const KiteRenderer = memo(function KiteRenderer() {
       {/* Sail-native cues (design.md K-10): a gold shutter ring for a capture, a slash across the muted tail. */}
       <circle className="kite-shutter" r="18" opacity="0" />
       <g className="kite-mute-slash" opacity="0"><path className="halo" /><path /></g>
+      {/* Hands-off (ADR 014): a thin ring around the tail's last dot, for as long as Kite acts without asking. */}
+      <circle className="kite-handsoff" r="6" opacity="0" />
   </svg>;
 });

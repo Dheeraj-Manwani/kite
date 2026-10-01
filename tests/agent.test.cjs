@@ -1,7 +1,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { MockLanguageModelV3 } = require('ai/test');
-const { parseKeys, chordLabel, assessRisk, classifyTaskCommand, describeAction, formatSnapshot, maxTaskSteps } = require('../src/shared/agent.ts');
+const { parseKeys, chordLabel, classifyStep, classifyTaskCommand, describeAction, formatSnapshot, maxTaskSteps } = require('../src/shared/agent.ts');
 const { TaskSession, pickWindow, rateLimitWait } = require('../src/main/agent/session.ts');
 const { toAction, agentTools, agentPrompt, agentSystem, decideStep } = require('../src/main/agent/model.ts');
 const { actScript } = require('../src/main/agent/actScript.ts');
@@ -20,18 +20,19 @@ test('keys: an allowlist of chords, no Windows key, canonical labels', () => {
   assert.equal(chordLabel(parseKeys('ctrl+shift+s')), 'Ctrl+Shift+S'); assert.equal(chordLabel(parseKeys('alt+f4')), 'Alt+F4'); assert.equal(chordLabel(parseKeys('pagedown')), 'Page Down');
 });
 
-test('risk: sending, deleting, paying, terminals, passwords, card numbers and dangerous shortcuts always need an OK', () => {
+test('steps are classified by code: sending, deleting, paying, terminals and dangerous shortcuts carry a reason; secrets are never typed', () => {
   const ctx = (extra = {}) => ({ process: 'notepad', title: 'Untitled - Notepad', dialogText: '', ...extra });
+  // The reason a step needs an OK in Balanced (its category asks), or null for a routine step.
+  const assessRisk = (action, context) => classifyStep(action, context).reason || null;
+  const category = (action, context) => classifyStep(action, context).category;
   assert.match(assessRisk({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Delete', 'Button') })), /can’t be undone/);
   assert.match(assessRisk({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Send', 'Button') })), /may send/);
-  assert.match(assessRisk({ type: 'click', ref: 1 }, ctx({ element: el(1, '', 'Button', { automationId: 'PlaceOrderButton' }) })) ?? '', /can’t be undone/, 'automation ids count');
+  assert.match(assessRisk({ type: 'click', ref: 1 }, ctx({ element: el(1, '', 'Button', { automationId: 'PlaceOrderButton' }) })) ?? '', /buy or pay/, 'automation ids count');
   assert.match(assessRisk({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Yes', 'Button'), dialogText: 'Do you want to permanently delete this file?' })), /confirms a dialog/);
   assert.equal(assessRisk({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Yes', 'Button'), dialogText: 'Do you want to save changes?' })), null);
   for (const name of ['File', 'Bold', 'Insert', 'Save', 'OK', 'Font size']) assert.equal(assessRisk({ type: 'click', ref: 1 }, ctx({ element: el(1, name, 'Button') })), null, name);
   assert.match(assessRisk({ type: 'type_text', text: 'dir' }, ctx({ process: 'WindowsTerminal' })), /terminal/);
-  assert.match(assessRisk({ type: 'press_keys', keys: 'Enter' }, ctx({ process: 'powershell' })), /terminal/);
-  assert.match(assessRisk({ type: 'type_text', ref: 1, text: 'hunter2' }, ctx({ element: el(1, 'Password', 'Edit', { password: true }) })), /password/);
-  assert.match(assessRisk({ type: 'type_text', text: '4111 1111 1111 1111' }, ctx()), /card/);
+  assert.equal(classifyStep({ type: 'press_keys', keys: 'Enter' }, ctx({ process: 'powershell' })).floor, 'command', 'terminals always ask');
   assert.match(assessRisk({ type: 'type_text', text: 'hi', submit: true }, ctx({ process: 'ms-teams', title: 'Chat | Microsoft Teams' })), /send a message/);
   assert.equal(assessRisk({ type: 'type_text', text: 'hi', submit: true }, ctx({ title: 'Search - Microsoft Edge', process: 'msedge' })), null);
   for (const keys of ['Alt+F4', 'Ctrl+W', 'Shift+Delete', 'Ctrl+Enter', 'Ctrl+P']) assert.ok(assessRisk({ type: 'press_keys', keys }, ctx()), keys);
@@ -39,6 +40,29 @@ test('risk: sending, deleting, paying, terminals, passwords, card numbers and da
   assert.ok(assessRisk({ type: 'press_keys', keys: 'Enter' }, ctx({ title: 'Inbox - Outlook', focused: el(1, 'Message body', 'Document') })));
   assert.ok(assessRisk({ type: 'press_keys', keys: 'Delete' }, ctx({ focused: el(1, 'report.docx', 'ListItem') })));
   assert.equal(assessRisk({ type: 'press_keys', keys: 'Delete' }, ctx({ focused: el(1, 'Text editor', 'Document') })), null);
+  // Secrets: passwords, card numbers, one-time codes, CVVs and PINs are never typed, in any mode. A pincode is not a PIN.
+  assert.equal(classifyStep({ type: 'type_text', ref: 1, text: 'hunter2' }, ctx({ element: el(1, 'Password', 'Edit', { password: true }) })).floor, 'secret');
+  assert.equal(classifyStep({ type: 'type_text', text: '4111 1111 1111 1111' }, ctx()).floor, 'secret');
+  for (const name of ['Enter the 6-digit OTP sent to your phone', 'CVV', 'UPI PIN']) assert.equal(classifyStep({ type: 'type_text', ref: 1, text: '123456' }, ctx({ element: el(1, name, 'Edit') })).floor, 'secret', name);
+  for (const name of ['PIN code', 'Pincode', 'Enter delivery pincode']) assert.equal(classifyStep({ type: 'type_text', ref: 1, text: '411045' }, ctx({ element: el(1, name, 'Edit') })).floor, undefined, name);
+  // Categories: what a step does, not how.
+  assert.equal(category({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Add to cart', 'Button') })), 'add');
+  assert.equal(category({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Sign out', 'MenuItem') })), 'system');
+  assert.equal(category({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Book now', 'Button') })), 'submit');
+  assert.equal(category({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Apply filters', 'Button') })), 'fill', 'filters are not a submission');
+  assert.equal(category({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Results', 'Hyperlink') })), 'look');
+  assert.equal(category({ type: 'type_text', text: '{{home.pincode}}' }, ctx()), 'saved');
+  assert.equal(category({ type: 'scroll', ref: 1, direction: 'down' }, ctx()), 'look');
+  const run = classifyStep({ type: 'click', ref: 1 }, ctx({ element: el(1, 'Run', 'Button') }));
+  assert.deepEqual([run.category, run.floor], ['system', 'command']);
+  // On a checkout or payment page, the plain buttons spend money; leaving or editing doesn't.
+  const pay = ctx({ process: 'msedge', url: 'https://shop.example.in/checkout/payment' });
+  for (const name of ['Continue', 'Next', 'Save address and continue', 'Confirm', 'Deliver to this address']) assert.equal(category({ type: 'click', ref: 1 }, { ...pay, element: el(1, name, 'Button') }), 'money', name);
+  for (const name of ['Back', 'Change', 'Apply coupon']) assert.notEqual(category({ type: 'click', ref: 1 }, { ...pay, element: el(1, name, 'Button') }), 'money', name);
+  assert.equal(category({ type: 'click', ref: 1 }, { ...pay, element: el(1, 'UPI', 'RadioButton') }), 'fill', 'choosing a method is filling in');
+  assert.equal(category({ type: 'press_keys', keys: 'Enter' }, { ...pay, focused: el(1, 'Card number', 'Edit') }), 'money');
+  assert.equal(category({ type: 'click', ref: 1 }, ctx({ process: 'msedge', url: 'https://shop.example.in/search?q=whey', element: el(1, 'Continue', 'Button') })), 'fill');
+  assert.equal(category({ type: 'click', ref: 1 }, ctx({ process: 'msedge', url: 'https://shop.example.in/x', phase: 'pay', element: el(1, 'Continue', 'Button') })), 'money', 'the job phase counts too');
 });
 
 test('task commands are exact phrases', () => {
@@ -157,7 +181,7 @@ test('step by step asks before every action; "allow the rest" stops asking; "ski
   assert.equal(h.acts.length, 0); assert.equal(h.audits[0].decision, 'denied');
   h.session.control('allow'); await h.until(() => h.acts.length === 1, 'acts');
   await h.until(() => h.view?.status === 'approval' && h.view.step === 3, 'asks for the third');
-  assert.equal(h.session.command('allow the rest'), 'Okay. I’ll only ask again for risky steps.');
+  assert.equal(h.session.command('allow the rest'), 'Okay. From here I’ll follow your settings.');
   await h.until(() => h.ended.length, 'finishes without asking again');
   assert.equal(h.keys.length, 2); assert.deepEqual(h.audits.map(a => a.decision), ['denied', 'approved', 'approved', 'auto']);
 });

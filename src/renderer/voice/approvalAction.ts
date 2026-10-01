@@ -1,12 +1,13 @@
 import type { ApprovalCard, SettingsSnapshot } from '../../shared/types';
 import { routeVision } from '../../shared/vision';
+import { jobsModel } from '../../shared/agent';
 
 // The primary button names the action it approves (docs/design.md UX-20); the summary above it asks the question.
 const verbs: Record<string, string> = {
   type_text: 'Paste text', write_clipboard: 'Copy to clipboard', read_clipboard: 'Read clipboard', read_screen: 'Look at screen',
   create_note: 'Create note', set_reminder: 'Set reminder', set_timer: 'Start timer', cancel_reminder: 'Cancel reminder',
   web_search: 'Search', show_me_how: 'Start guide', explain_on_whiteboard: 'Draw it', get_datetime: 'Check the time',
-  list_reminders: 'Show reminders', do_task: 'Allow this task',
+  list_reminders: 'Show reminders', do_task: 'Start',
 };
 
 export function approvalAction({ toolName, summary }: Pick<ApprovalCard, 'toolName' | 'summary'>): string {
@@ -35,6 +36,8 @@ export function approvalRisk(card: Pick<ApprovalCard, 'toolName' | 'input'>, sna
     try { visionName = routeVision(main, snapshot.settings.visionModel, snapshot.models, provider => !!snapshot.keys[provider]).label; }
     catch { /* No vision model is configured yet; the main process will say so if it's needed. */ }
   }
+  // Tasks run on the jobs model, which may not be the model answering.
+  const jobs = snapshot ? jobsModel(snapshot.settings, snapshot.models, provider => !!snapshot.keys[provider]) : undefined;
   const named = (card.input as { app?: unknown } | null)?.app;
   const app = typeof named === 'string' && named.trim() ? named.trim() : 'the app';
   const flows: Record<string, string> = {
@@ -43,7 +46,7 @@ export function approvalRisk(card: Pick<ApprovalCard, 'toolName' | 'input'>, sna
     write_clipboard: 'Replaces what’s on your clipboard. Nothing leaves this PC.',
     type_text: 'Pastes into whichever app has focus. Nothing leaves this PC.',
     show_me_how: `Kite reads the controls in ${app} on this PC. If it can’t find one, it may send a screenshot of ${app} to ${visionName}.`,
-    do_task: `Each step sends ${app}’s controls and their text to ${mainName}${main?.supportsVision ? ', sometimes with a screenshot' : ''}.`,
+    do_task: `Each step sends ${app}’s controls and their text to ${jobs?.label ?? mainName}${(jobs ?? main)?.supportsVision ? ', sometimes with a screenshot' : ''}.`,
   };
   return { sensitive: true, flow: flows[card.toolName] };
 }

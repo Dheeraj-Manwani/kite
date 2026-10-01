@@ -40,8 +40,9 @@ export function useKiteLoop(refs: KiteElements) {
     const tailNode = refs.tail.current, eyesNode = refs.eyes.current;
     if (!svg || !bodyNode || !sailNode || !tailNode || !eyesNode) return;
     const shutter = svg.querySelector<SVGCircleElement>('.kite-shutter'), slash = svg.querySelector<SVGGElement>('.kite-mute-slash');
+    const handsOffRing = svg.querySelector<SVGCircleElement>('.kite-handsoff');
     const sheen = bodyNode.querySelector<SVGPathElement>('.kite-sheen'), sheenGradient = svg.querySelector<SVGLinearGradientElement>('#kite-sheen');
-    let glint = '', ringShown = false, muted = false, sheenShown = false;
+    let glint = '', ringShown = false, muted = false, sheenShown = false, handsOff = false;
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     let reduced = media.matches || runtime.reducedMotion;
     const preferenceChanged = () => { reduced = media.matches; };
@@ -151,10 +152,11 @@ export function useKiteLoop(refs: KiteElements) {
       const guiding = !ink && !!pointer.anchor && !!pointer.aim && !vr.drawing && !voiceRuntime.bubble && (mood === 'idle' || voiceRuntime.quiet);
       const pointing = guiding || !!ink;
       // A name that says what Kite is doing, for screen readers (docs/design.md K-16); written only when it changes.
-      const spoken = document.documentElement.classList.contains('kite-paused') ? 'Kite, paused'
+      let spoken = document.documentElement.classList.contains('kite-paused') ? 'Kite, paused'
         : voiceRuntime.toolPose === 'proposing' ? 'Kite, waiting for your OK' : voiceRuntime.toolPose === 'executing' ? 'Kite, working'
         : mood === 'listening' ? 'Kite, listening' : mood === 'thinking' ? 'Kite, thinking' : mood === 'talking' ? 'Kite, talking'
         : ink ? 'Kite, drawing' : guiding ? 'Kite, pointing' : 'Kite';
+      if (taskRuntime.handsOff) spoken += ', hands-off';
       if (spoken !== spokenName) { spokenName = spoken; svg.setAttribute('aria-label', spoken); }
       const steering = pointing || !!flying;
       if (wasGuiding && !steering) {
@@ -338,6 +340,11 @@ export function useKiteLoop(refs: KiteElements) {
         const d = `M${middle.x.value - reach} ${middle.y.value + reach}L${middle.x.value + reach} ${middle.y.value - reach}`;
         for (const path of Array.from(slash.children)) path.setAttribute('d', d);
       }
+      // Hands-off (ADR 014): the ring rides on the last tail dot while Kite may act without asking.
+      if (taskRuntime.handsOff !== handsOff) {
+        handsOff = taskRuntime.handsOff; handsOffRing?.setAttribute('opacity', handsOff ? '1' : '0');
+      }
+      if (handsOff && handsOffRing) { const tip = dots[dots.length - 1]; handsOffRing.setAttribute('transform', `translate(${tip.x.value} ${tip.y.value}) scale(${scale})`); }
       positionBubble(body.x.value, body.y.value, geometry, now, hold);
       if (time >= blinkAt) {
         blinkStart = time; blinkAt = time + config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin);

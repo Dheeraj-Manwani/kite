@@ -17,6 +17,12 @@
 .task-approval, .task-actions { display: flex; gap: 6px; margin-top: 8px; }
 .task-approval button, .task-actions button { flex: 1; padding: 6px 4px; font-size: var(--fs-caption); }
 .task-actions .task-stop { font-weight: 600; }
+/* Always and Never (ADR 014): quieter than Yes and No, with where they apply. */
+.task-remember { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: var(--fs-caption); color: var(--text-muted); }
+.task-remember-label { flex: 1 1 100%; }
+.task-remember select { flex: 1 1 auto; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font-size: var(--fs-caption); }
+.task-remember button { flex: 0 0 auto; padding: 4px 10px; font-size: var(--fs-caption); }
+.task-handsoff { margin-left: 4px; }
 .task-log { margin: 6px 0 0; padding-left: 18px; max-height: 110px; overflow: auto; font-size: var(--fs-caption); color: var(--text-muted); }
 .task-log li.ok::marker { content: '✓  '; color: var(--success); }
 .task-log li.bad::marker { content: '✗  '; color: var(--danger); }

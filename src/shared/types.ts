@@ -8,7 +8,11 @@ export type SecretId = ProviderId | 'cartesia';
 export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }
 export interface VoiceChoice { id: string; name: string }
-export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean; whiteboard: boolean; computerUse: boolean; kiteSize: import('./release').KiteSize; earcons: boolean; liveliness: import('./release').Liveliness; kiteSkin: import('./release').KiteSkin }
+export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean; whiteboard: boolean; computerUse: boolean; kiteSize: import('./release').KiteSize; earcons: boolean; liveliness: import('./release').Liveliness; kiteSkin: import('./release').KiteSkin;
+  /** What tasks and jobs may do without asking (ADR 014). */
+  permissions: import('./permissions').PermissionSettings;
+  /** The model that runs tasks and jobs; null picks one automatically (agent.ts `jobsModel`). */
+  jobsModel: ModelSelection | null }
 export interface AboutInfo { version: string; updateStatus: string; updateReady: boolean }
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';

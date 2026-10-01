@@ -29,6 +29,7 @@
 .kite-tail.muted rect { fill: var(--kite-muted); }
 .kite-mute-slash path { fill: none; stroke: var(--kite-muted); stroke-width: 1.6; stroke-linecap: round; }
 .kite-mute-slash .halo { stroke: var(--kite-halo); stroke-width: 3.2; }
+.kite-handsoff { fill: none; stroke: var(--kite-shade); stroke-width: 1.4; vector-effect: non-scaling-stroke; paint-order: stroke; filter: drop-shadow(0 0 1px var(--kite-halo)); }
 /* The colour ripple (design.md §K5.4, K-09): a soft white band that the loop slides across the sail. */
 .kite-sheen { fill: url(#kite-sheen); pointer-events: none; }
 .kite-sheen-edge { stop-color: #fff; stop-opacity: 0; }
@@ -55,6 +56,7 @@
   .kite-tail.muted rect, .kite-mute-slash path { fill: GrayText; stroke: GrayText; }
   .kite-mute-slash .halo { stroke: Canvas; }
   .kite-shutter { stroke: Highlight; }
+  .kite-handsoff { stroke: Highlight; filter: none; }
   .kite-sheen { display: none; }
   .sail-mark path, .sail-mark rect, .sail-mark.live path, .sail-mark.live rect { fill: CanvasText; }
   .kite-stage { background: Canvas; }

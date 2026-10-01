@@ -2,8 +2,10 @@ import { validateHotkey, configurableTools, kiteSizes, kiteSkins, livelinessLeve
 import Store from 'electron-store';
 import type { AppSettings, ModelEntry, SettingsSnapshot, SecretId, VoiceChoice, ModelSelection } from '../../shared/types';
 import { catalog, mergeCatalog, providerIds } from '../ai/catalog';
+import { defaultPermissions, validPermissions } from '../../shared/permissions';
 export const defaultSettings: AppSettings = { onboardingComplete: false, hotkey: ['Control','Meta'], launchOnStartup: false, reducedMotion: false, toolApprovals: { get_datetime: false, list_reminders: false, open_app: true, web_search: true }, visionModel: { provider: 'moonshot', id: 'kimi-k2.5' }, screenWithoutAsking: false, keepScreenshots: false, model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
-  fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google', guideMode: true, whiteboard: true, computerUse: true, kiteSize: 'standard', earcons: false, liveliness: 'lively', kiteSkin: 'rose' };
+  fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google', guideMode: true, whiteboard: true, computerUse: true, kiteSize: 'standard', earcons: false, liveliness: 'lively', kiteSkin: 'rose',
+  permissions: defaultPermissions, jobsModel: null };
 export function validModel(value: unknown): value is ModelSelection {
   if (!value || typeof value !== 'object') return false;
   const m = value as ModelSelection;
@@ -36,6 +38,12 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
         else if (key === 'kiteSize') { if (typeof value !== 'string' || !Object.hasOwn(kiteSizes, value)) throw new Error('Invalid kite size'); next.kiteSize = value as AppSettings['kiteSize']; }
         else if (key === 'liveliness') { if (!livelinessLevels.includes(value as AppSettings['liveliness'])) throw new Error('Invalid liveliness'); next.liveliness = value as AppSettings['liveliness']; }
         else if (key === 'kiteSkin') { if (!kiteSkins.includes(value as AppSettings['kiteSkin'])) throw new Error('Invalid kite color'); next.kiteSkin = value as AppSettings['kiteSkin']; }
+        else if (key === 'permissions') { const valid = validPermissions(value); if (!valid) throw new Error('Invalid permissions'); next.permissions = valid; }
+        else if (key === 'jobsModel') {
+          if (value === null) next.jobsModel = null;
+          else if (!validModel(value) || !hasKey(value.provider)) throw new Error('Save a key for this provider first.');
+          else next.jobsModel = { provider: value.provider, id: value.id };
+        }
         else if (key === 'voiceId') { if (typeof value !== 'string' || value.length > 200) throw new Error('Invalid voice'); next.voiceId = value; }
         else throw new Error('Unknown setting');
       }

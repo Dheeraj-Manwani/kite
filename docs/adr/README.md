@@ -15,3 +15,4 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [Guide mode grounds with UI Automation first](011-guide-mode.md)
 - [Tasks act through UI Automation and the keyboard, never the mouse](012-computer-use.md)
 - [Whiteboard lessons are scripts of beats, drawn by the kite](013-whiteboard.md)
+- [Permission categories and modes for tasks and jobs](014-permissions.md)
