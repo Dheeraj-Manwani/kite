@@ -15,25 +15,16 @@
 .sail-mark { flex: none; display: inline-block; vertical-align: -.2em; }
 .sail-mark path { fill: var(--kite-body); }
 .sail-mark rect { fill: var(--kite-shade); }
-/* The kite on the onboarding stage: always on deep ink, so it takes the light halo. */
-.kite-stage svg { display: block; width: 100%; height: 100%; }
-.kite-stage-string { fill: none; stroke: rgb(255 255 255 / .3); stroke-width: 1.2; stroke-dasharray: 1.5 6; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+/* The live kite on onboarding's stage (personality.md §5.7, K-07). It draws in one layer over the window so it can fly
+   down to the practice canvas. On the stage it is always on deep ink, so it takes the light halo; the stage loop
+   places everything, including the tail dots, which are the microphone step's level meter (UX-62). */
+.kite-stage-layer { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; visibility: hidden; }
+.kite-stage-string { fill: none; stroke: rgb(255 255 255 / .3); stroke-width: 1.2; stroke-dasharray: 1.5 6; stroke-linecap: round; transition: opacity .2s; }
 .kite-stage-sail { fill: url(#kite-stage-sail); stroke: rgb(255 255 255 / .35); stroke-width: 2; stroke-linejoin: round; paint-order: stroke; vector-effect: non-scaling-stroke; }
 .kite-stage-tail rect { fill: var(--kite-tail); }
-.kite-stage-flight { animation: kite-fly-in 1.2s ease-out; transform-box: fill-box; transform-origin: center; }
-@keyframes kite-fly-in { from { transform: translate(-100px, 30px) rotate(-20deg); opacity: 0; } to { transform: none; opacity: 1; } }
-/* On the microphone step the tail dots are the level meter; each dot follows --l1 to --l3 (UX-62). */
-.kite-stage-tail rect { transform-box: fill-box; transform-origin: center; transition: transform .06s linear; }
-.kite-stage-tail rect:nth-child(1) { transform: rotate(12deg) scale(calc(1 + var(--l1, 0) * 1.6)); }
-.kite-stage-tail rect:nth-child(2) { transform: rotate(12deg) scale(calc(1 + var(--l2, 0) * 1.6)); }
-.kite-stage-tail rect:nth-child(3) { transform: rotate(12deg) scale(calc(1 + var(--l3, 0) * 1.6)); }
-/* One-off cheers: a perk for each key of the shortcut, a hop when something works (UX-63). */
-.kite-stage-cheer { transform-box: fill-box; transform-origin: center; }
-.kite-stage-cheer.perk { animation: stage-perk .35s ease-out; }
-.kite-stage-cheer.happy { animation: stage-happy .8s cubic-bezier(.3,.7,.4,1); }
-@keyframes stage-perk { 30% { transform: scale(.9); } 65% { transform: scale(1.08); } }
-@keyframes stage-happy { 35% { transform: translateY(-10px) rotate(-8deg); } 70% { transform: translateY(2px) rotate(3deg); } }
-@media (prefers-reduced-motion: reduce) { .kite-stage-flight, .kite-stage-cheer { animation: none !important; } }
+/* Off the stage, over the practice canvas, it takes the overlay kite's halo, and the string fades. */
+.kite-stage-layer.off-stage .kite-stage-sail { stroke: var(--kite-halo); }
+.kite-stage-layer.off-stage .kite-stage-string { opacity: 0; }
 .kite-paused .kite-canvas { transition: transform .6s ease-in; transform: translateY(-120vh) rotate(-12deg); }
 /* The kite in High Contrast (docs/personality.md §5.8, K-16): the sail in CanvasText with a Highlight halo, the tail in CanvasText. */
 @media (forced-colors: active) {

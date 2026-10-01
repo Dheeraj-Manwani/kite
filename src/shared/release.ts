@@ -19,4 +19,7 @@ export interface ConversationSummary { id: string; started_at: number; preview: 
 export interface HistoryMessage { id: number; role: string; content: string; provider: string; model: string; created_at: number; total_ms: number; first_token_ms: number; voice_to_voice_ms: number | null; annotation_json: string | null }
 export interface HistoryDetail { messages: HistoryMessage[]; tools: import('./types').ToolAudit[] }
 export interface PerfSnapshot { mainMB: number; rendererMB: number; rendererFPS: number; frameMs: number; totalMB: number; cpu: number; processes: number; voiceMedianMs: number | null; voiceSamples: number }
-export type AppEvent = { type: 'paused'; until: number | null } | { type: 'resumed' | 'update:ready' | 'fault' | 'hotkey:detected' };
+/** Where onboarding's stage kite was when "Let's fly" closed the window: screen DIPs, and its scale. */
+export interface StageKite { x: number; y: number; scale: number }
+export type AppEvent = { type: 'paused'; until: number | null } | { type: 'resumed' | 'update:ready' | 'fault' | 'hotkey:detected' }
+  | { type: 'onboarding:done'; from: StageKite };

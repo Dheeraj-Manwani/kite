@@ -9,6 +9,8 @@ export const runtime = {
   fps: 0,
   behavior: 'content',
   panelOpen: false,
+  /** "Let's fly": onboarding's stage kite in screen DIPs, waiting for the loop to fly it home to the cursor. */
+  flight: null as import('../../shared/release').StageKite | null,
 };
 
 /** Future mic/TTS adapters can update these without rendering a React component. */

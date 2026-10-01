@@ -14,7 +14,7 @@ const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
-listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:()=>{},openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
+listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:()=>{},openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:()=>{},letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
@@ -24,12 +24,13 @@ onBoardEvent:cb=>subscribe('board:state',cb),boardControl:action=>ipcRenderer.se
 onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
-  const windows=[]; const errors=[], reports=[], decisions=[];
+  const windows=[]; const errors=[], reports=[], decisions=[], flights=[];
   try {
     session.defaultSession.setPermissionRequestHandler((_w,_p,cb)=>cb(false));
     ipcMain.handle('test:settings',()=>snapshot);
     ipcMain.handle('test:update',(_event,patch)=>{Object.assign(snapshot.settings,patch);for(const win of windows)win.webContents.send('settings:changed',snapshot);return {ok:true};});
     ipcMain.on('test:playback',(_event,id,event)=>reports.push({id,event}));
+    ipcMain.on('test:fly',(_event,from)=>flights.push(from));
     ipcMain.handle('test:approve',(_event,input)=>{decisions.push(input);return {ok:true};});
     const create = async view => {
       const win=new BrowserWindow({width:760,height:960,show:false,webPreferences:{preload,sandbox:true,contextIsolation:true,backgroundThrottling:false,offscreen:true,autoplayPolicy:'no-user-gesture-required'}});windows.push(win);
@@ -71,7 +72,12 @@ app.whenReady().then(async()=>{
     // Onboarding is a guided path: no nav, a labeled progress row, and the kite on its stage.
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.window-nav')"),null);
     assert.match(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding-progress').textContent"),/1 of 7 · Welcome/);
-    assert.ok(await tutorial.webContents.executeJavaScript("!!document.querySelector('.kite-stage .kite-stage-sail')"));
+    // The live kite (personality.md K-07) flies in up its string, settles over the stage's centre, and flutters hello.
+    const stageKite=()=>tutorial.webContents.executeJavaScript("(()=>{const layer=document.querySelector('.kite-stage-layer'),m=layer.querySelector(':scope > g:last-of-type').getAttribute('transform').match(/translate\\(([-\\d.e]+) ([-\\d.e]+)\\) rotate\\([-\\d.e]+\\) scale\\(([-\\d.e]+)\\)/),r=document.querySelector('.kite-stage').getBoundingClientRect();return {x:+m[1],y:+m[2],scale:+m[3],stage:{left:r.left,top:r.top,width:r.width,height:r.height},pose:layer.dataset.pose,away:layer.classList.contains('off-stage')};})()");
+    await delay(1500);
+    const home=await stageKite();
+    assert.ok(Math.abs(home.x-(home.stage.left+home.stage.width/2))<25&&home.y>home.stage.top&&home.y<home.stage.top+home.stage.height,'the kite is home on the stage: '+JSON.stringify(home));
+    assert.ok(Math.abs(home.scale-2.8)<.05,'largest on the welcome stage');
     assert.equal(await tutorial.webContents.executeJavaScript("[...document.querySelectorAll('.onboarding footer button')].some(b=>b.textContent==='Back')"),false,'Back is hidden on step 1');
     const next=async()=>{await tutorial.webContents.executeJavaScript("[...document.querySelectorAll('.onboarding footer button')].find(b=>b.textContent==='Continue').click()");await delay(100);};
     const tjs=code=>tutorial.webContents.executeJavaScript(code);
@@ -87,12 +93,47 @@ app.whenReady().then(async()=>{
     // The shortcut shows as big keycaps and gets a check once it lands (UX-63).
     await next();
     assert.deepEqual(await tjs("[...document.querySelectorAll('.big-key')].map(k=>k.textContent)"),['Ctrl','Win']);
+    // Each key that registers makes the stage kite perk: its nose turns up and the tail gathers (K-07).
+    await tjs("window.dispatchEvent(new KeyboardEvent('keydown',{key:'Control',ctrlKey:true}))");await delay(80);
+    assert.equal((await stageKite()).pose,'pressed');
+    await tjs("window.dispatchEvent(new KeyboardEvent('keyup',{key:'Control'}))");
     tutorial.webContents.send('app:event',{type:'hotkey:detected'});await delay(100);
     assert.ok(await tjs("!!document.querySelector('.big-check')"));
     assert.match(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding').textContent"),/Nice — I felt that/);
-    await next();await next();await next();
+    await next();await next();
+    // Circle to ask: the practice ink is the overlay's own pen ink, and the kite flies down to draw with its nose (UX-64, K-07).
+    assert.equal(await tjs("document.querySelector('.onboarding-body > .step-status').textContent"),'Circle the chart with your pointer.');
+    const pen=await tjs("(()=>{const r=document.querySelector('.tutorial-canvas').getBoundingClientRect();return {x:r.x+252*r.width/500,y:r.y+120*r.height/240,rx:150*r.width/500,ry:60*r.height/240};})()");
+    const around=i=>({x:pen.x+pen.rx*Math.cos(i/40*Math.PI*2),y:pen.y+pen.ry*Math.sin(i/40*Math.PI*2)});
+    const pointer=(type,p)=>tjs(`document.querySelector('.tutorial-canvas').dispatchEvent(new PointerEvent('${type}',{clientX:${p.x},clientY:${p.y},pointerId:7,button:0,bubbles:true}))`);
+    await pointer('pointerdown',around(0));
+    for(let i=1;i<=30;i++)await pointer('pointermove',around(i));
+    await delay(600);
+    const drawing=await stageKite(), nib=around(30);
+    assert.ok(drawing.away&&Math.hypot(drawing.x-nib.x,drawing.y-nib.y)<40,'the kite perches by the nib: '+JSON.stringify({drawing,nib}));
+    for(let i=31;i<=40;i++)await pointer('pointermove',around(i));
+    await pointer('pointerup',around(40));await delay(60);
+    assert.ok((await tjs("document.querySelector('.practice-ink').getAttribute('d')")).startsWith('M'));
+    assert.equal(await tjs("getComputedStyle(document.querySelector('.practice-ink')).fill"),'rgb(233, 164, 63)','gold, like the real ink');
+    assert.match(await tjs("document.querySelector('.onboarding-body > .step-status.heard').textContent"),/^That’s it\./);
+    await delay(1500);
+    assert.equal((await stageKite()).away,false,'the kite flies home after drawing');
+    // A mark that doesn't go round says what to do next.
+    await pointer('pointerdown',{x:pen.x-100,y:pen.y});await pointer('pointermove',{x:pen.x,y:pen.y});await pointer('pointermove',{x:pen.x+100,y:pen.y-40});await pointer('pointerup',{x:pen.x+100,y:pen.y-40});await delay(60);
+    assert.match(await tjs("document.querySelector('.onboarding-body > .step-status').textContent"),/^Almost\./);
+    await next();
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding h1').textContent"),'Make yourself at home');
+    // The finish is a cheat sheet that follows the user's shortcut, with one way out: Let's fly (UX-65).
+    assert.deepEqual(await tjs("[...document.querySelectorAll('.cheat-sheet dd')].map(d=>d.textContent)"),['Hold to talk. Let go to send.','Circle something on your screen, then ask about it.','Cancel','Ask, and I’ll show you the way one step at a time.']);
+    assert.equal(await tjs("document.querySelector('.cheat-sheet .keycaps').getAttribute('aria-label')"),'Ctrl + Win');
+    assert.equal(await tjs("[...document.querySelectorAll('.onboarding footer button')].map(b=>b.textContent).join()"),'Back,Let’s fly');
     fs.writeFileSync(path.join(temporary,'onboarding.png'),(await tutorial.webContents.capturePage()).toPNG());
+    // Let's fly hands the stage kite, where it is and how big, to the overlay (K-07).
+    await tjs("[...document.querySelectorAll('.onboarding footer button')].find(b=>b.textContent==='Let’s fly').click()");
+    for(let i=0;i<50&&!flights.length;i++)await delay(20);
+    const finale=await stageKite();
+    assert.equal(snapshot.settings.onboardingComplete,true);
+    assert.ok(flights.length===1&&Math.abs(flights[0].x-finale.x)<20&&Math.abs(flights[0].y-finale.y)<20&&Math.abs(flights[0].scale-finale.scale)<.15&&flights[0].scale>1.3,'flies from the stage kite: '+JSON.stringify({flights,finale}));
     tutorial.destroy();
     const history=await create('history');await delay(200);
     await history.webContents.executeJavaScript("document.querySelector('.history-item').click()");await delay(100);
@@ -106,6 +147,19 @@ app.whenReady().then(async()=>{
     fs.writeFileSync(path.join(temporary,'history.png'),(await history.webContents.capturePage()).toPNG());history.destroy();
     const overlay=await create('overlay');
     overlay.webContents.send('cursor:update',{x:350,y:250},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});
+    // "Let's fly": the overlay's kite takes off from where onboarding's was, at its size, loops once, and lands by the cursor at its own (K-07).
+    const kiteFrame=async()=>{const m=(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas > g').getAttribute('transform')")).match(/translate\(([-\d.e]+) ([-\d.e]+)\) rotate\(([-\d.e]+)\) scale\([-\d.e]+ [-\d.e]+\) rotate\(([-\d.e]+)\) scale\(([-\d.e]+)\)/);return {x:+m[1],y:+m[2],rotation:+m[3]+ +m[4],scale:+m[5]};};
+    await delay(200);
+    overlay.webContents.send('app:event',{type:'onboarding:done',from:{x:120,y:700,scale:2.8}});await delay(60);
+    const takeoff=await kiteFrame();
+    assert.ok(Math.hypot(takeoff.x-120,takeoff.y-700)<40&&takeoff.scale>2.4,'takes off from the window: '+JSON.stringify(takeoff));
+    let turned=0,previous=takeoff.rotation;
+    for(let i=0;i<40;i++){await delay(30);const {rotation}=await kiteFrame();turned+=((rotation-previous)%360+540)%360-180;previous=rotation;}
+    await delay(1000);
+    const landed=await kiteFrame();
+    assert.ok(Math.abs(turned)>300,'loops once on the way: '+turned);
+    assert.ok(Math.hypot(landed.x-382,landed.y-278)<15&&landed.scale===1,'lands by the cursor at its own size: '+JSON.stringify(landed));
+    assert.ok(Math.abs(((landed.rotation+35)%360+540)%360-180)<12,'and settles upright: '+landed.rotation);
     await overlay.webContents.executeJavaScript("window.audioContexts=[];const AC=window.AudioContext;window.AudioContext=class extends AC{constructor(o){super(o);window.audioContexts.push(this);}};window.framesRun=0;function frame(){window.framesRun++;requestAnimationFrame(frame)}requestAnimationFrame(frame);");
     const send=event=>overlay.webContents.send('test:voice',{id:1,...event});
     send({type:'model:changed',text:'Running on Test now!'});send({type:'tts:start'});send({type:'llm:delta',text:'Hello world.'});

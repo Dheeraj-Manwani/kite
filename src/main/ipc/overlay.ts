@@ -1,7 +1,8 @@
 import { app, ipcMain } from 'electron';
+import type { AppEvent, StageKite } from '../../shared/release';
 import type { CursorPoint, ScreenBounds } from '../../shared/types';
 import { focusOverlayControls, getOverlayWindow, releaseOverlayControls } from '../window/overlay';
-import { createSettingsWindow } from '../window/settings';
+import { createSettingsWindow, getSettingsWindow } from '../window/settings';
 import { trusted } from './trust';
 
 /** Overlay-local rectangles where Kite's own controls take the mouse; everywhere else clicks pass through. */
@@ -53,6 +54,17 @@ export function registerOverlayIPC() {
     }
   });
   ipcMain.on('view:open', (event, view) => { if (trusted(event, 'either') && ['settings','history','onboarding'].includes(view)) createSettingsWindow(view); });
+  // "Let's fly" (docs/personality.md §5.7): onboarding closes, and the overlay's kite takes off from where the stage kite was.
+  ipcMain.on('onboarding:fly', (event, from: StageKite | undefined) => {
+    const win = getSettingsWindow();
+    if (!win || !trusted(event, 'settings')) return;
+    const content = win.getContentBounds(), within = (n: number, max: number) => Math.min(max, Math.max(0, n));
+    const valid = !!from && [from.x, from.y, from.scale].every(Number.isFinite);
+    win.close();
+    if (!valid) return;
+    const done: AppEvent = { type: 'onboarding:done', from: { x: content.x + within(from.x, content.width), y: content.y + within(from.y, content.height), scale: Math.min(4, Math.max(1, from.scale)) } };
+    getOverlayWindow()?.webContents.send('app:event', done);
+  });
   ipcMain.on('overlay:focus', event => { if (trusted(event, 'overlay')) focusOverlayControls(); });
   ipcMain.on('overlay:release', event => { if (trusted(event, 'overlay')) releaseOverlayControls(); });
   ipcMain.on('settings:open', event => {

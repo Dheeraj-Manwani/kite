@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { getStroke } from 'perfect-freehand';
 import { analyzeStrokes, contains, type ScreenEvent, type Stroke } from '../../shared/vision';
 import { visionRuntime as vr } from './runtime';
+import { inkPath } from './ink';
 import { cursorInput } from '../kite/useKiteLoop';
 export function Annotation() {
   const [preparing, setPreparing] = useState(false);
@@ -69,10 +69,7 @@ export function Annotation() {
         const p = point(e); if (!contains(m.display.bounds, { x: p.x + m.origin.x, y: p.y + m.origin.y })) return;
         e.currentTarget.setPointerCapture(e.pointerId); active.current = e.pointerId; vr.strokes.push([p]); vr.pen = p; publish();
       }} onPointerMove={add} onPointerUp={e => { add(e); active.current = null; }} onPointerCancel={() => { active.current = null; }}>
-      {strokes.map((s, i) => {
-        const outline = getStroke(s.map(p => [p.x, p.y]), { size: 5, thinning: .45, smoothing: .6, simulatePressure: true });
-        return <path key={i} d={outline.length ? `M${outline.map(p => p.join(',')).join('L')}Z` : ''} />;
-      })}
+      {strokes.map((s, i) => <path key={i} d={inkPath(s)} />)}
     </svg>
   </>;
 }

@@ -142,3 +142,61 @@ test('a fast flight stretches the tail but never detaches it', () => {
   const stray = dots.map((d, i) => Math.hypot(d.x.value - anchors[i].x, d.y.value - anchors[i].y));
   assert.ok(stray[2] > 5 && stray[2] <= 9 + 1e-9 && stray[0] <= 3 + 1e-9, 'trails within reach: ' + stray.map(n => n.toFixed(1)));
 });
+
+const { poseFor } = require('../src/renderer/kite/poses.ts');
+test('each state has a pose you can read at a glance (K-04, K-05)', () => {
+  const at = (name, extra = {}) => poseFor({ name, t: 1, time: 0, levels: [0, 0, 0], beat: 1.2, stagger: .2, reduced: false, ...extra });
+  // Listening: the sail fills and the tail swells with the voice, later dots lagging behind.
+  const loud = at('listening', { levels: [1, .6, .3] });
+  assert.ok(loud.sail.billow > 1.2 && loud.turn < 0, 'inflated, nose toward the cursor');
+  assert.ok(loud.tail[0].scale > loud.tail[1].scale && loud.tail[1].scale > loud.tail[2].scale && loud.tail[2].scale > 1);
+  // Silence: the tail dims and settles; release tucks the dots into the sail.
+  assert.ok(at('silent').tail.every(d => d.opacity < .5));
+  const zipped = at('released', { t: 1 });
+  assert.ok(zipped.tail.every(d => d.scale <= .5 + 1e-9) && Math.abs(zipped.tail[2].offset.y + (21.3 - 10.3)) < 1e-9, 'the last dot reaches the notch');
+  // Thinking: a wave runs through the dots in turn; under reduced motion only the middle one is lit.
+  const early = at('thinking', { time: .18 }), later = at('thinking', { time: .38 });
+  assert.ok(early.tail[0].scale > early.tail[1].scale && later.tail[1].scale > later.tail[0].scale, 'the swell moves down the tail');
+  assert.deepEqual(at('thinking', { reduced: true }).tail.map(d => d.opacity), [.5, 1, .5]);
+  // Tangled crumples; declined deflates; lost pops a dot up like a question mark.
+  const tangled = at('tangled');
+  assert.ok(tangled.sail.billow < .6 && tangled.sail.slack > 1.5 && tangled.sail.spread < 1);
+  assert.ok(at('declined').sail.billow < 1 && at('declined').lift > 0);
+  assert.ok(at('lost').tail[2].offset.y < 0 && at('lost').turn > 0);
+  // Reduced motion keeps meaning without flutter.
+  assert.equal(at('listening', { levels: [1, 1, 1], reduced: true, time: .1 }).sail.flutter, 0);
+  // Talking: the nose dips as each word starts, then settles; no word timings, no nods; reduced motion, no nods.
+  assert.ok(at('talking', { word: .11 }).turn > 4 && at('talking', { word: .11 }).lift > 0);
+  assert.equal(at('talking', { word: .5 }).turn, 0);
+  assert.equal(at('talking').turn, 0);
+  assert.equal(at('talking', { word: .11, reduced: true }).turn, 0);
+});
+
+const { loopRoute, routeAt, easeInOut, noseAngle } = require('../src/renderer/kite/flight.ts');
+test('"Let\'s fly" starts at the window, loops once up the screen, and lands at the cursor (K-07)', () => {
+  for (const [from, to] of [[{ x: 200, y: 300 }, { x: 900, y: 500 }], [{ x: 900, y: 200 }, { x: 150, y: 260 }], [{ x: 400, y: 100 }, { x: 410, y: 700 }]]) {
+    const route = loopRoute(from, to), at = s => routeAt(route, s);
+    assert.ok(Math.hypot(at(0).point.x - from.x, at(0).point.y - from.y) < 1e-9);
+    assert.ok(Math.hypot(at(route.length).point.x - to.x, at(route.length).point.y - to.y) < 1e-6, 'lands on the target');
+    // The path never jumps, the nose turns one whole turn, and the loop rises a full circle off the line, toward the top of the screen.
+    let turned = 0, previous = noseAngle(at(0).heading), jump = 0, rise = 0;
+    for (let i = 1; i <= 400; i++) {
+      const a = at(route.length * (i - 1) / 400), b = at(route.length * i / 400), angle = noseAngle(b.heading);
+      jump = Math.max(jump, Math.hypot(b.point.x - a.point.x, b.point.y - a.point.y));
+      turned += ((angle - previous) % 360 + 540) % 360 - 180; previous = angle;
+      rise = Math.max(rise, (b.point.x - from.x) * route.up.x + (b.point.y - from.y) * route.up.y);
+    }
+    assert.ok(jump <= route.length / 400 + 1e-6, 'continuous');
+    assert.ok(Math.abs(Math.abs(turned) - 360) < 1, 'one whole turn: ' + turned);
+    assert.ok(Math.abs(rise - 2 * route.radius) < .5 && route.up.y <= 0, 'the loop climbs: ' + rise);
+  }
+  assert.equal(easeInOut(0), 0); assert.equal(easeInOut(1), 1); assert.ok(easeInOut(.1) < .1 && easeInOut(.9) > .9);
+});
+
+const { reactionShape } = require('../src/renderer/voice/frame.ts');
+test('flutter hello ripples the edge and flicks the tail, then is still', () => {
+  const early = [.05, .1, .2].map(t => reactionShape('flutter', t));
+  assert.ok(early.some(s => Math.abs(s.flutter) > .5) && early.every(s => s.tailY < 0 && s.y < 0));
+  const done = reactionShape('flutter', 1);
+  assert.equal(done.flutter, 0); assert.ok(Math.abs(done.tailY) < 1e-9 && Math.abs(done.y) < 1e-9);
+});

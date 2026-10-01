@@ -201,7 +201,8 @@ button:disabled { opacity: .45; cursor: default; }
 .annotation { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10000; overflow: visible; opacity: 1; transition: opacity .8s; }
 .annotation.preparing { pointer-events: auto; cursor: progress; touch-action: none; }
 .annotation.drawing { pointer-events: auto; cursor: crosshair; touch-action: none; }
-.annotation path { fill: var(--sun); filter: drop-shadow(0 0 4px var(--sun)); }
+/* Screen ink, and onboarding's practice ink, which must look exactly like it (UX-64). */
+.annotation path, .practice-ink { fill: var(--sun); filter: drop-shadow(0 0 4px var(--sun)); }
 .annotation.fading { opacity: 0; }
 .annotation.pulse path { animation: ink-pulse .45s ease-out; }
 @keyframes ink-pulse { 50% { filter: drop-shadow(0 0 10px #fff); } }
@@ -280,13 +281,20 @@ button:disabled { opacity: .45; cursor: default; }
 .big-check { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
 .big-check .icon { width: 20px; height: 20px; }
 .onboarding-body > .step-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--text-muted); }
-.step-status small { flex-basis: 100%; font-size: var(--fs-caption); color: var(--text-muted); }
+.step-status small { flex-basis: 100%; font-size: var(--fs-caption); font-weight: 400; color: var(--text-muted); }
 .onboarding-body > .step-status.heard { color: var(--success); font-weight: 600; }
 .onboarding-body > .step-status.blocked, .onboarding-body > .step-status.failed { color: var(--danger); }
 .onboarding-body > .step-missing { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--text-muted); }
 button.link { background: transparent; border-color: transparent; color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; padding-inline: 6px; }
 button.link:where(:hover:not(:disabled)) { background: transparent; color: var(--text); }
 .tutorial-canvas { width: 100%; touch-action: none; cursor: crosshair; }
+/* The finish (UX-65): what you'll need tomorrow, as a plain card in the window register. */
+.cheat-sheet { display: grid; grid-template-columns: max-content 1fr; margin: 4px 0 20px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+.cheat-sheet > div { display: contents; }
+.cheat-sheet dt, .cheat-sheet dd { margin: 0; padding: 10px 14px; border-top: 1px solid var(--border); }
+.cheat-sheet > div:first-child > * { border-top: 0; }
+.cheat-sheet dt { font-weight: 600; white-space: nowrap; }
+.cheat-sheet dd { color: var(--text-muted); }
 .onboarding blockquote { background: var(--surface-subtle); padding: 24px; border-left: 4px solid var(--border); min-height: 90px; }
 .hotkey-recorder small { display: block; margin: 10px 0; color: var(--text-muted); }
 .app-notice { position: fixed; right: 24px; bottom: 24px; padding: 12px 20px; background: var(--surface-overlay); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-overlay); border-radius: 14px; max-width: 350px; pointer-events: none; }
@@ -401,7 +409,7 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
   .big-key.lit, .brain-card.chosen { outline: 2px solid Highlight; }
   .big-key.lit { background: Highlight; color: HighlightText; }
   .guide-ring path, .board-ring path, .approval-countdown .countdown-arc { stroke: Highlight; filter: none; }
-  .annotation path { fill: Highlight; filter: none; }
+  .annotation path, .practice-ink { fill: Highlight; filter: none; }
   .screen-looking::before { background: Highlight; }
   .provider-state, .provider-state.problem, .field-error, .bubble-error strong, .step-status { color: CanvasText; }
   /* The whiteboard's drawing is content: keep its paper and ink as drawn. */

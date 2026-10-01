@@ -31,6 +31,8 @@ export interface KiteAPI {
   onViewChange(callback: (view: 'settings' | 'history' | 'onboarding') => void): () => void;
   onAppEvent(callback: (event: import('./release').AppEvent) => void): () => void;
   openView(view: 'settings' | 'history' | 'onboarding'): void;
+  /** "Let's fly": close onboarding and hand its kite (client px in this window) to the overlay. */
+  letsFly(from: import('./release').StageKite): void;
   listHistory(query?: string): Promise<import('./release').ConversationSummary[]>;
   historyDetail(id: string): Promise<import('./release').HistoryDetail>;
   deleteHistory(id: string | null): Promise<OperationResult>;

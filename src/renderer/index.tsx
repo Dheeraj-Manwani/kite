@@ -25,6 +25,7 @@ function Overlay() {
     void window.kite.getSettings().then(settings);const off=window.kite.onSettingsChanged(settings);
     let timer: ReturnType<typeof setTimeout>;
     const app=window.kite.onAppEvent(e=>{
+      if(e.type==='onboarding:done'){runtime.flight=e.from;return;}
       if(e.type==='paused'){document.documentElement.classList.add('kite-paused');setNotice('Paused — see you soon.');}
       if(e.type==='resumed'){document.documentElement.classList.remove('kite-paused');setNotice('Welcome back.');react('happy');}
       if(e.type==='update:ready'){setNotice('Update ready · Restart from the tray when you’re ready.');react('costume',.5);}

@@ -1,19 +1,13 @@
 import type { CursorGeometry } from '../../shared/types';
 import { clamp } from '../kite/physics/vector';
-import { voiceRuntime } from './runtime';
+import { voiceRuntime, type Reaction } from './runtime';
 
-export function reactionMotion(now: number, reduced: boolean) {
-  const reaction = voiceRuntime.reaction;
-  const result = { y: 0, tilt: 0, stretch: 1, tailY: 0, happy: false, spin: 0, flash: 0 };
-  if (reduced) return result;
-  if (now < voiceRuntime.alarmUntil) { result.y = -Math.abs(Math.sin(now / 90)) * 7; result.tilt = Math.sin(now / 55) * 9; result.tailY = Math.sin(now / 60) * 3; return result; }
-  if (voiceRuntime.toolPose === 'proposing') { result.tilt = (voiceRuntime.bubble?.dataset.side === 'left' ? -1 : 1) * (8 + Math.sin(now / 160) * 2); result.tailY = 0.2 * Math.sin(now / 150); return result; }
-  if (voiceRuntime.toolPose === 'executing' && reaction?.kind !== 'approved') { result.tilt = Math.sin(now / 45) * 4; result.stretch = 1 + Math.sin(now / 90) * .03; return result; }
-  if (!reaction) return result;
-  const t = (now - reaction.at) / 1000;
-  if (t > 1.2) { voiceRuntime.reaction = null; return result; }
+const still = () => ({ y: 0, tilt: 0, stretch: 1, tailY: 0, happy: false, spin: 0, flash: 0, flutter: 0 });
+/** One reaction `t` s after it began. The overlay and the onboarding stage share these, so a gesture means the same everywhere. */
+export function reactionShape(kind: Reaction, t: number) {
+  const result = still();
   const envelope = Math.max(0, 1 - t / 1.2);
-  switch (reaction.kind) {
+  switch (kind) {
     case 'proposing': result.tilt = 8 + Math.sin(t * 20) * 2 * envelope; break;
     case 'approved': result.y = -8 * Math.sin(Math.min(1, t / .4) * Math.PI); result.stretch = 1 + .16 * Math.sin(Math.min(1, t / .4) * Math.PI); break;
     case 'success': result.spin = 360 * Math.min(1, t / .65); result.y = -5 * Math.sin(Math.min(1, t / .65) * Math.PI); result.flash = Math.max(0, 1 - t); result.happy = true; break;
@@ -28,13 +22,39 @@ export function reactionMotion(now: number, reduced: boolean) {
     case 'costume': result.spin = 360 * (1 - Math.pow(1 - Math.min(1, t / 0.6), 3)); result.flash = Math.max(0, 1 - t / 0.5); break;
     case 'phew': result.tilt = Math.sin(t * 15) * 8 * envelope; break;
     case 'flinch': result.y = -2 * Math.sin(Math.min(1, t / 0.25) * Math.PI); break;
+    // Letting go of the shortcut: a small nod, "got it" (personality.md §5.2, beat 4).
+    case 'nod': result.tilt = 6 * Math.sin(Math.min(1, t / 0.35) * Math.PI); result.y = 1.5 * Math.sin(Math.min(1, t / 0.35) * Math.PI); break;
+    // Flutter hello (personality.md §5.4): one visible ripple of the trailing edge, a little lift, and a flick of the tail.
+    case 'flutter': {
+      const flick = Math.sin(Math.min(1, t / .5) * Math.PI);
+      result.flutter = 1.6 * Math.sin(t * 26) * Math.max(0, 1 - t / .9); result.y = -2 * flick; result.tailY = -2.5 * flick; break;
+    }
   }
+  return result;
+}
+
+export function reactionMotion(now: number, reduced: boolean) {
+  const reaction = voiceRuntime.reaction;
+  const result = still();
+  if (reduced) return result;
+  if (now < voiceRuntime.alarmUntil) { result.y = -Math.abs(Math.sin(now / 90)) * 7; result.tilt = Math.sin(now / 55) * 9; result.tailY = Math.sin(now / 60) * 3; return result; }
+  if (voiceRuntime.toolPose === 'proposing') {
+    // One soft nudge toward the card as the countdown enters its last 5 s (personality.md §5.3, "Waiting for approval").
+    const left = voiceRuntime.approvalEndsAt - Date.now(), nudge = left < 5000 && left > 4400 ? Math.sin((5000 - left) / 600 * Math.PI) : 0;
+    result.tilt = (voiceRuntime.bubble?.dataset.side === 'left' ? -1 : 1) * (8 + Math.sin(now / 160) * 2 + 7 * nudge); result.y = -2.5 * nudge;
+    result.tailY = 0.2 * Math.sin(now / 150); return result;
+  }
+  if (voiceRuntime.toolPose === 'executing' && reaction?.kind !== 'approved') { result.tilt = Math.sin(now / 45) * 4; result.stretch = 1 + Math.sin(now / 90) * .03; return result; }
+  if (!reaction) return result;
+  const t = (now - reaction.at) / 1000;
+  if (t > 1.2) { voiceRuntime.reaction = null; return result; }
+  const shaped = reactionShape(reaction.kind, t);
   const amount = reaction.intensity ?? 1;
-  result.y *= amount; result.tilt *= amount; result.tailY *= amount;
+  shaped.y *= amount; shaped.tilt *= amount; shaped.tailY *= amount; shaped.flutter *= amount;
   // A spin always completes a whole turn: scaling the angle would hold the kite upside down until the
   // reaction expires and then snap it upright (docs/personality.md K-00). Intensity softens the flash instead.
-  result.flash *= amount; result.stretch = 1 + (result.stretch - 1) * amount;
-  return result;
+  shaped.flash *= amount; shaped.stretch = 1 + (shaped.stretch - 1) * amount;
+  return shaped;
 }
 let lastReport = 0;
 let reportedElement: HTMLElement | null = null;

@@ -6,6 +6,7 @@ const api: KiteAPI = {
   onViewChange(callback) { const listener = (_e: IpcRendererEvent, view: 'settings' | 'history' | 'onboarding') => callback(view); ipcRenderer.on('view:change', listener); return () => ipcRenderer.removeListener('view:change', listener); },
   onAppEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/release').AppEvent) => callback(event); ipcRenderer.on('app:event', listener); return () => ipcRenderer.removeListener('app:event', listener); },
   openView: view => ipcRenderer.send('view:open', view),
+  letsFly: from => ipcRenderer.send('onboarding:fly', from),
   listHistory: query => ipcRenderer.invoke('history:list', query),
   historyDetail: id => ipcRenderer.invoke('history:detail', id),
   deleteHistory: id => ipcRenderer.invoke('history:delete', id),

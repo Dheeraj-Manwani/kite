@@ -80,7 +80,7 @@ export function SpeechBubble() {
       if (speaking && words.length && !state.current.approval) {
         const elapsed = player.elapsed;
         let reveal = state.current.revealed === Infinity ? 0 : state.current.revealed;
-        while (wordIndex < starts.length && starts[wordIndex] <= elapsed) { reveal = Math.max(reveal, (offsets[wordIndex] ?? 0) + textBase); wordIndex++; }
+        while (wordIndex < starts.length && starts[wordIndex] <= elapsed) { reveal = Math.max(reveal, (offsets[wordIndex] ?? 0) + textBase); wordIndex++; voiceRuntime.wordAt = performance.now(); }
         if (reveal !== state.current.revealed) update({ ...state.current, revealed: reveal });
       } else if (speaking && !noTimestamps && firstAudioAt && performance.now() - firstAudioAt > 300) {
         noTimestamps = true; update({ ...state.current, revealed: Infinity });
@@ -110,12 +110,14 @@ export function SpeechBubble() {
       }
       if (event.type === 'approval:resume') {
         recorder.cancel(); reset(event.id); update({ ...(suspendedBubble.current ?? empty), id: event.id, visible: true, status: undefined, text: event.text ?? '', revealed: Infinity });
+        // The card is back, so the kite leans toward it again.
+        if (state.current.approval) voiceRuntime.toolPose = 'proposing';
         suspendedBubble.current = undefined; return;
       }
       if (event.id !== latest.current) return;
       if (event.timing) { voiceRuntime.timing = event.timing; if (event.timing.voiceAverageMs !== undefined) voiceRuntime.voiceAverageMs = event.timing.voiceAverageMs; }
       switch (event.type) {
-        case 'ptt:stop': recorder.stop(event.id); voiceRuntime.waitingSince = performance.now(); useKiteStore.getState().setMood('thinking'); update({ ...state.current, status: 'thinking' }); break;
+        case 'ptt:stop': recorder.stop(event.id); voiceRuntime.waitingSince = performance.now(); useKiteStore.getState().setMood('thinking'); react('nod'); update({ ...state.current, status: 'thinking' }); break;
         case 'voice:thinking': voiceRuntime.waitingSince ||= performance.now(); useKiteStore.getState().setMood('thinking'); break;
         case 'voice:transcript': update({ ...state.current, visible: true, transcript: event.text ?? '', text: '', streaming: true }); break;
         case 'tts:start': player.begin(); words = []; starts = []; offsets = []; wordIndex = 0; textBase = state.current.text.length; firstAudioAt = 0; noTimestamps = false; speaking = true; playbackDone = false; update({ ...state.current, revealed: state.current.approval ? Infinity : textBase }); break;
@@ -131,7 +133,7 @@ export function SpeechBubble() {
         case 'voice:muted': voiceRuntime.mutedUntil = performance.now() + 1500; break;
         case 'voice:metrics': break;
         case 'tool:approvalRequired':
-          expires.current = Infinity; remaining.current = Infinity; voiceRuntime.toolPose = 'proposing';
+          expires.current = Infinity; remaining.current = Infinity; voiceRuntime.toolPose = 'proposing'; voiceRuntime.approvalEndsAt = event.approval?.expiresAt ?? 0;
           update({ ...state.current, visible: true, approval: event.approval, revealed: Infinity, toolStatus: '' }); react('proposing'); break;
         case 'tool:decision':
           voiceRuntime.toolPose = null; update({ ...state.current, approval: undefined, revealed: Infinity,
