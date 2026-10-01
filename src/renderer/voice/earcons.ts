@@ -1,5 +1,5 @@
 /**
- * Earcons (docs/personality.md §4, "Sound", K-13): short tones made with WebAudio oscillators, so there are no audio files
+ * Earcons (docs/design.md §K4, "Sound", K-13): short tones made with WebAudio oscillators, so there are no audio files
  * or licences. They confirm push-to-talk without looking: a rising chirp when Kite starts listening, a soft falling note on
  * release, and a gentle chime when an approval needs you. Off by default, quiet when on (Settings → Voice).
  */

@@ -27,9 +27,9 @@ export default function Onboarding() {
   useEffect(() => { void window.kite.getSettings().then(setSnapshot); const a=window.kite.onSettingsChanged(setSnapshot), b=window.kite.onAppEvent(e => { if(e.type==='hotkey:detected') setHeard(true); });
     const c=window.kite.onVoiceEvent(e => { if(e.type==='ptt:start')setAnswer('');if(e.type==='llm:delta')setAnswer(s=>s+(e.text??'')); });
     return () => { a();b();c();micGeneration.current++;cleanup.current(); }; }, []);
-  // Welcome: once the kite has flown in up its string, it flutters hello (personality.md §5.7).
+  // Welcome: once the kite has flown in up its string, it flutters hello (design.md §K5.7).
   useEffect(() => { if (step !== 0) return; const timer = setTimeout(() => cheerNow('flutter'), 1100); return () => clearTimeout(timer); }, [step]);
-  // The microphone check starts by itself, and the stage kite listens: its tail is the level meter (UX-62, personality.md §5.2).
+  // The microphone check starts by itself, and the stage kite listens: its tail is the level meter (UX-62, design.md §K5.2).
   const checkMic = async () => {
     cleanup.current();
     const generation = ++micGeneration.current;
@@ -70,7 +70,7 @@ export default function Onboarding() {
   useEffect(() => { if (held.length > heldBefore.current) cheerNow('perk'); heldBefore.current = held.length; }, [held]);
   useEffect(() => { if (chord) setHeard(true); }, [chord]);
   useEffect(() => { if (heard) cheerNow('flutter'); }, [heard]);
-  // The first question: the stage kite listens, nods, thinks, and talks along with the real thing (personality.md §5.7).
+  // The first question: the stage kite listens, nods, thinks, and talks along with the real thing (design.md §K5.7).
   useEffect(() => {
     if (step !== 4) return;
     const off = window.kite.onVoiceEvent(e => {

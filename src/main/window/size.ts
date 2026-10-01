@@ -1,4 +1,4 @@
-/** The Settings window's size (docs/ui-ux-improvements.md UX-57). No Electron imports, so it can be tested on its own. */
+/** The Settings window's size (docs/design.md UX-57). No Electron imports, so it can be tested on its own. */
 export interface WindowSize { width: number; height: number; maximized: boolean }
 // The minimum keeps the sidebar beside the content (UX-50); the default fits a two-column History.
 export const MIN_SIZE = { width: 480, height: 560 }, DEFAULT_SIZE = { width: 820, height: 860 };

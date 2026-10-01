@@ -1,4 +1,4 @@
-/* The UI's styles, one file per component (docs/ui-ux-improvements.md UX-08). The order is part of the cascade:
+/* The UI's styles, one file per component (docs/design.md UX-08). The order is part of the cascade:
    base first, then the overlay's surfaces, then the windows. tokens.css and kite.css load before this. */
 @import './base.css';
 @import './dev-panel.css';

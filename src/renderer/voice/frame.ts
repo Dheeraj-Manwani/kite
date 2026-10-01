@@ -7,7 +7,7 @@ const still = () => ({ x: 0, y: 0, tilt: 0, stretch: 1, tailY: 0, flutter: 0 });
 /**
  * One reaction `t` s after it began. The overlay and the onboarding stage share these, so a gesture means the same everywhere.
  * The big moves are not here: *success* is the loop-de-loop and *costume* the colour ripple, both played by the kite loop
- * (personality.md §5.4, K-09). Nothing spins the kite in place or flashes it any more.
+ * (design.md §K5.4, K-09). Nothing spins the kite in place or flashes it any more.
  */
 export function reactionShape(kind: Reaction, t: number) {
   const result = still();
@@ -26,9 +26,9 @@ export function reactionShape(kind: Reaction, t: number) {
     case 'costume': break;
     case 'phew': result.tilt = Math.sin(t * 15) * 8 * envelope; break;
     case 'flinch': result.y = -2 * Math.sin(Math.min(1, t / 0.25) * Math.PI); break;
-    // Letting go of the shortcut: a small nod, "got it" (personality.md §5.2, beat 4).
+    // Letting go of the shortcut: a small nod, "got it" (design.md §K5.2, beat 4).
     case 'nod': result.tilt = 6 * Math.sin(Math.min(1, t / 0.35) * Math.PI); result.y = 1.5 * Math.sin(Math.min(1, t / 0.35) * Math.PI); break;
-    // Flutter hello (personality.md §5.4): one visible ripple of the trailing edge, a little lift, and a flick of the tail.
+    // Flutter hello (design.md §K5.4): one visible ripple of the trailing edge, a little lift, and a flick of the tail.
     case 'flutter': {
       const flick = Math.sin(Math.min(1, t / .5) * Math.PI);
       result.flutter = 1.6 * Math.sin(t * 26) * Math.max(0, 1 - t / .9); result.y = -2 * flick; result.tailY = -2.5 * flick; break;
@@ -42,13 +42,13 @@ export function reactionMotion(now: number, reduced: boolean) {
   const result = still();
   if (reduced) return result;
   if (now < voiceRuntime.alarmUntil) {
-    // The reminder tug (personality.md §5.4): short pulls toward the bubble, like a kite pulling on its string, easing off at the end.
+    // The reminder tug (design.md §K5.4): short pulls toward the bubble, like a kite pulling on its string, easing off at the end.
     const side = voiceRuntime.bubble?.dataset.side === 'left' ? -1 : 1, left = (voiceRuntime.alarmUntil - now) / 1000;
     const pull = Math.max(0, Math.sin(now / 1000 * Math.PI * 2 * 1.3)) ** 2 * Math.min(1, left / .8);
     result.x = side * 5 * pull; result.tilt = side * 12 * pull; result.tailY = -1.5 * pull; return result;
   }
   if (voiceRuntime.toolPose === 'proposing') {
-    // One soft nudge toward the card as the countdown enters its last 5 s (personality.md §5.3, "Waiting for approval").
+    // One soft nudge toward the card as the countdown enters its last 5 s (design.md §K5.3, "Waiting for approval").
     const left = voiceRuntime.approvalEndsAt - Date.now(), nudge = left < 5000 && left > 4400 ? Math.sin((5000 - left) / 600 * Math.PI) : 0;
     result.tilt = (voiceRuntime.bubble?.dataset.side === 'left' ? -1 : 1) * (8 + Math.sin(now / 160) * 2 + 7 * nudge); result.y = -2.5 * nudge;
     result.tailY = 0.2 * Math.sin(now / 150); return result;
@@ -81,7 +81,7 @@ export function positionBubble(x: number, y: number, geometry: CursorGeometry, n
     bubble.style.maxWidth = Math.max(80, right - left - 24) + 'px';
     bubble.style.maxHeight = Math.max(60, bottom - top - 24) + 'px';
     const width = bubble.offsetWidth, height = bubble.offsetHeight;
-    // The gap clears the kite's wings at every size setting: 24 px at Standard (personality.md K-14).
+    // The gap clears the kite's wings at every size setting: 24 px at Standard (design.md K-14).
     const gap = 11 + 13 * config.scale;
     const fitsRight = x + gap + width <= right - 12;
     const bubbleX = clamp(fitsRight ? x + gap : x - gap - width, left + 12, Math.max(left + 12, right - width - 12));

@@ -13,7 +13,7 @@ const keyPages: Record<SecretId, string> = {
   cartesia: 'https://play.cartesia.ai/keys',
 };
 
-/** Settings → About and the provider rows' "Get a key" links (docs/ui-ux-improvements.md UX-50, UX-51). */
+/** Settings → About and the provider rows' "Get a key" links (docs/design.md UX-50, UX-51). */
 export function registerAboutIPC() {
   ipcMain.handle('about:get', (event): AboutInfo | null => trusted(event, 'settings')
     ? { version: app.getVersion(), updateStatus: appRuntime.updateStatus, updateReady: appRuntime.updateReady } : null);

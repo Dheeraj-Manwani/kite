@@ -13,13 +13,13 @@ const sliders = [
   { key: 'wagAmplitude', label: 'Wag amplitude', min: 0, max: 6, step: 0.1 },
   { key: 'wagFrequency', label: 'Wag frequency', min: 0.2, max: 8, step: 0.1 },
 ] as const;
-// How much of each kind of motion shows (docs/personality.md §5.5).
+// How much of each kind of motion shows (docs/design.md §K5.5).
 const motionSliders = [
   { key: 'follow', label: 'Follow (moods change the follow)', min: 0, max: 1, step: 0.05 },
   { key: 'expression', label: 'Expression (poses)', min: 0, max: 1, step: 0.05 },
   { key: 'ambient', label: 'Ambient (breathing, tail)', min: 0, max: 1, step: 0.05 },
 ] as const;
-// The sail's shape dials (docs/personality.md §5.1); 1 is the rest pose.
+// The sail's shape dials (docs/design.md §K5.1); 1 is the rest pose.
 const sailSliders = [
   { key: 'nose', label: 'Sail nose', min: 0.7, max: 1.4, step: 0.01 },
   { key: 'spread', label: 'Sail spread', min: 0.7, max: 1.3, step: 0.01 },

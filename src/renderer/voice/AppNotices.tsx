@@ -5,7 +5,7 @@ import { react, voiceRuntime } from './runtime';
 interface Notice { text: string; ms: number; at: number; action?: { label: string; run(): void } }
 
 /**
- * App notices as small bubbles from the kite (docs/ui-ux-improvements.md UX-18): pause, resume, an update, a fault.
+ * App notices as small bubbles from the kite (docs/design.md UX-18): pause, resume, an update, a fault.
  * They take the answer bubble's place, tail, and hit-test, wait while an answer is showing, and hold under the pointer.
  * The overlay's app events all land here, so what the kite does and what it says stay in step.
  */
@@ -24,7 +24,7 @@ export function AppNotices() {
     const off = window.kite.onAppEvent(e => {
       if (e.type === 'paused') {
         document.documentElement.classList.add('kite-paused'); clearTimeout(welcome); clearTimeout(leave);
-        // It says goodbye, then reels out of sight (personality.md §5.3).
+        // It says goodbye, then reels out of sight (design.md §K5.3).
         say('Paused — see you soon.', 1300); leave = setTimeout(() => { runtime.away = 'leave'; }, 1300);
       } else if (e.type === 'resumed') {
         document.documentElement.classList.remove('kite-paused'); clearTimeout(leave); clearTimeout(welcome);

@@ -3,7 +3,7 @@ import type { SailShape } from './sail';
 import type { Vec2 } from './physics/vector';
 
 /**
- * Every state the kite can be read in from the corner of an eye (docs/personality.md §5.2, §5.3, K-04, K-05).
+ * Every state the kite can be read in from the corner of an eye (docs/design.md §K5.2, §5.3, K-04, K-05).
  * pressed, listening, silent, and released are the four beats of push-to-talk.
  */
 export type PoseName = 'rest' | 'dozing' | 'pressed' | 'listening' | 'silent' | 'released' | 'thinking' | 'working' | 'talking'

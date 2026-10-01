@@ -39,7 +39,7 @@ const sizeFor = (height: number) => height >= 160 ? 2.8 : height >= 120 ? 2.1 : 
 // The resting kite with its whole tail is centred about (3.8, 3.9) px from the sail's origin at scale 1, and the string
 // ties on at local (0, 2). While practising, the kite perches up and to the right of the nib, nose on the ink.
 const CENTRE = { x: 3.8, y: 3.9 }, BRIDLE = { x: 0, y: 2 }, NOSE = 11.1, PERCH = { x: .55, y: -.83 }, DRAWING_SIZE = 1.5;
-// Some cheers hold a pose while they play: a perk gathers the tail, a nod zips it up (personality.md §5.2, §5.3).
+// Some cheers hold a pose while they play: a perk gathers the tail, a nod zips it up (design.md §K5.2, §5.3).
 const cheerPoses: Partial<Record<StageCheer['kind'], { pose: PoseName; seconds: number }>> = {
   perk: { pose: 'pressed', seconds: .35 }, nod: { pose: 'released', seconds: .45 }, puzzled: { pose: 'lost', seconds: 1.2 }, tangled: { pose: 'tangled', seconds: 1.2 },
 };
@@ -48,7 +48,7 @@ const wrap = (degrees: number) => ((degrees % 360) + 540) % 360 - 180;
 const r = (n: number) => Math.round(n * 10) / 10;
 
 /**
- * The live kite on onboarding's stage (docs/personality.md §5.7, K-07). The overlay's loop follows the cursor; this one
+ * The live kite on onboarding's stage (docs/design.md §K5.7, K-07). The overlay's loop follows the cursor; this one
  * has no cursor. It drives the same sail, tail, poses, and reactions with springs, flies home to the stage, and leaves it
  * only to draw on the practice canvas. Under reduced motion every step still shows its pose, without flight.
  */

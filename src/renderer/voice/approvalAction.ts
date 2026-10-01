@@ -1,7 +1,7 @@
 import type { ApprovalCard, SettingsSnapshot } from '../../shared/types';
 import { routeVision } from '../../shared/vision';
 
-// The primary button names the action it approves (docs/ui-ux-improvements.md UX-20); the summary above it asks the question.
+// The primary button names the action it approves (docs/design.md UX-20); the summary above it asks the question.
 const verbs: Record<string, string> = {
   type_text: 'Paste text', write_clipboard: 'Copy to clipboard', read_clipboard: 'Read clipboard', read_screen: 'Look at screen',
   create_note: 'Create note', set_reminder: 'Set reminder', set_timer: 'Start timer', cancel_reminder: 'Cancel reminder',

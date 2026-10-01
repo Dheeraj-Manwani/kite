@@ -19,7 +19,7 @@ export function toScreen(p: Vec2, f: BodyFrame): Vec2 {
 
 export interface TailDot { x: Spring; y: Spring }
 export const tailAt = (anchors: Vec2[]): TailDot[] => anchors.map(a => ({ x: spring(a.x), y: spring(a.y) }));
-// Each dot hangs on its own spring, looser the further it is from the sail, so the tail trails and swings (docs/personality.md K-03).
+// Each dot hangs on its own spring, looser the further it is from the sail, so the tail trails and swings (docs/design.md K-03).
 // Like a real tail, each dot can only stray so far (px at scale 1): fast flights stretch the tail, never detach it.
 const stiffness = [900, 480, 280], reach = [3, 6, 9];
 /** Step each dot toward its anchor. Under reduced motion the dots sit exactly on their anchors. */

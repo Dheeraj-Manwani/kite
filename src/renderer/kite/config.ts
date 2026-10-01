@@ -16,7 +16,7 @@ export const config = {
   // Three dots hanging from the trailing notch, in the sail's local frame.
   tailDots: [{ x: 0.4, y: 13.6, size: 2.4 }, { x: 1.5, y: 17.6, size: 2 }, { x: 2.9, y: 21.3, size: 1.6 }],
   tailWagLimit: 3,
-  // How much of each kind of motion shows (docs/personality.md §5.5, K-06): follow is how moods change the follow,
+  // How much of each kind of motion shows (docs/design.md §K5.5, K-06): follow is how moods change the follow,
   // expression is mood and idle-behaviour poses, ambient is breathing, the tail's swing, and the dozing dim.
   // Tuned so nothing moves less than about a pixel; a Liveliness setting can scale these later (K-15).
   motion: { follow: 0.5, expression: 0.45, ambient: 0.5 } as { follow: number; expression: number; ambient: number },
@@ -29,7 +29,7 @@ export const config = {
 };
 
 /**
- * The Liveliness setting's motion amounts (docs/personality.md §5.5, K-15). Lively is the tuning above. Calm halves the
+ * The Liveliness setting's motion amounts (docs/design.md §K5.5, K-15). Lively is the tuning above. Calm halves the
  * idle breathing and sway (still about a pixel, the floor in §5.5) and quietens the moods; every pose and gesture still reads.
  */
 export const livelinessMotion: Record<Liveliness, { follow: number; expression: number; ambient: number }> = {

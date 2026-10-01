@@ -7,14 +7,14 @@ export const modifiers: Modifier[] = ['Control', 'Meta', 'Alt', 'Shift'];
 export function validateHotkey(value: unknown): value is Modifier[] {
   return Array.isArray(value) && value.length >= 2 && value.length <= 4 && new Set(value).size === value.length && value.every(key => modifiers.includes(key));
 }
-/** Kite sizes (docs/personality.md §2, K-14): Large and Extra large help on 4K displays and for low vision. */
+/** Kite sizes (docs/design.md §K2, K-14): Large and Extra large help on 4K displays and for low vision. */
 export const kiteSizes = { standard: 1, large: 1.3, extraLarge: 1.6 } as const;
 export type KiteSize = keyof typeof kiteSizes;
-/** Kite colors (docs/personality.md §2, K-15). Each clears 3:1 on every surface the kite flies over, and keeps clear of the
+/** Kite colors (docs/design.md §K2, K-15). Each clears 3:1 on every surface the kite flies over, and keeps clear of the
    error red, the gold "look here" color, and success green. The logo and icons stay rose. */
 export const kiteSkins = ['rose', 'teal', 'violet', 'sky'] as const;
 export type KiteSkin = typeof kiteSkins[number];
-/** How much the kite moves on its own (personality.md §5.5, K-15): Lively is the tuned default, Calm keeps it nearly still. */
+/** How much the kite moves on its own (design.md §K5.5, K-15): Lively is the tuned default, Calm keeps it nearly still. */
 export const livelinessLevels = ['calm', 'lively'] as const;
 export type Liveliness = typeof livelinessLevels[number];
 export const hotkeyLabel = (keys: readonly string[]) => keys.map(k => k === 'Meta' ? 'Win' : k === 'Control' ? 'Ctrl' : k).join(' + ');

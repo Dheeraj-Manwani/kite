@@ -1,4 +1,4 @@
-/* UI tokens (docs/ui-ux-improvements.md UX-01, UX-02). The kite's own colors live in kite.css.
+/* UI tokens (docs/design.md UX-01, UX-02). The kite's own colors live in kite.css.
    Pink (--accent) appears only on the focus ring, the selected-item pill, and the current progress step. */
 :root {
   --bg: #f4f5f7;
@@ -31,7 +31,7 @@
   --radius-m: 8px;
   --radius-l: 12px;
   --radius-pill: 999px;
-  /* The kite tail's three-dot rhythm, shared by every loading and progress motif (UX-06, personality.md K-03). */
+  /* The kite tail's three-dot rhythm, shared by every loading and progress motif (UX-06, design.md K-03). */
   --rhythm-beat: 1.2s;
   --rhythm-stagger: .2s;
 }

@@ -7,8 +7,8 @@ import { useStageLoop, type StageCheer, type StageScene } from './stageLoop';
 export type { StageCheer } from './stageLoop';
 
 /**
- * Onboarding's stage (docs/ui-ux-improvements.md UX-60): a deep-ink panel where the live kite flies on a dotted string
- * (docs/personality.md §5.7, K-07). The kite draws in one layer over the whole window, so it can leave the stage to draw
+ * Onboarding's stage (docs/design.md UX-60): a deep-ink panel where the live kite flies on a dotted string
+ * (docs/design.md §K5.7, K-07). The kite draws in one layer over the whole window, so it can leave the stage to draw
  * on the practice canvas; React owns the structure once and the stage loop owns every animated attribute.
  */
 export function KiteStage({ height, pose, cheer, meter = false, reduced = false }:

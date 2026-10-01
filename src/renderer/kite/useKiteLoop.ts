@@ -31,7 +31,7 @@ export const cursorInput: { point: CursorPoint; geometry: CursorGeometry | null 
   point: { x: 0, y: 0 }, geometry: null,
 };
 
-// A brief reaction takes over the pose for a moment; then tools, then the mood decide it (docs/personality.md K-05).
+// A brief reaction takes over the pose for a moment; then tools, then the mood decide it (docs/design.md K-05).
 const reactionPoses: Partial<Record<Reaction, PoseName>> = { approved: 'approved', denied: 'declined', puzzled: 'lost', tangled: 'tangled' };
 
 export function useKiteLoop(refs: KiteElements) {
@@ -61,7 +61,7 @@ export function useKiteLoop(refs: KiteElements) {
     let blinkAt = config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin), blinkStart = -10;
     let fpsTime = 0, fpsFrames = 0;
     let drawnPath = sailNode.getAttribute('d') ?? '', spokenName = '';
-    // Poses (docs/personality.md K-04, K-05): the sail's dials, the nose turn, and the lift ease toward the current pose.
+    // Poses (docs/design.md K-04, K-05): the sail's dials, the nose turn, and the lift ease toward the current pose.
     // The tail's "…" wave keeps the same rhythm as the UI's dots (--rhythm-beat, --rhythm-stagger in tokens.css).
     const rhythm = getComputedStyle(document.documentElement);
     const beat = parseFloat(rhythm.getPropertyValue('--rhythm-beat')) || 1.2, stagger = parseFloat(rhythm.getPropertyValue('--rhythm-stagger')) || .2;
@@ -70,7 +70,7 @@ export function useKiteLoop(refs: KiteElements) {
     const levels = [0, 0, 0];
     let listenStart = 0, heardAt = 0, nudged = false;
     let dots: TailDot[] | null = null;
-    // Signature moves (docs/personality.md §5.4, K-09) fly a path: the loop-de-loop, the dive and swoop, and reeling out.
+    // Signature moves (docs/design.md §K5.4, K-09) fly a path: the loop-de-loop, the dive and swoop, and reeling out.
     // `scale` is the size the kite starts the flight at; `hold` keeps the bubble still beside a trick; `gone` ends off screen.
     let flight: { path: Path; start: number; scale: number; hold: boolean; gone?: boolean } | null = null;
     let celebrated = 0, rippled = 0, rippleAt = -Infinity, rippleStrength = 1, guideAnchor: Vec2 | null = null;
@@ -106,7 +106,7 @@ export function useKiteLoop(refs: KiteElements) {
         body = bodySpring({ x: cursor.x + config.offsetX * config.scale, y: cursor.y + config.offsetY * config.scale }); dots = null; flight = null;
         previousCursor = cursor; previousOrigin = geometry.origin; initialized = true;
       }
-      // "Let's fly" (personality.md §5.7, K-07): onboarding hands over its stage kite, which loops from where the window
+      // "Let's fly" (design.md §K5.7, K-07): onboarding hands over its stage kite, which loops from where the window
       // was over to the cursor, shrinking to its everyday size on the way. Under reduced motion it is simply here.
       const home = { x: cursor.x + config.offsetX * config.scale, y: cursor.y + config.offsetY * config.scale };
       if (runtime.flight) {
@@ -114,7 +114,7 @@ export function useKiteLoop(refs: KiteElements) {
         if (!reduced) { flight = { path: loopFlight(from, home), start: time, scale: runtime.flight.scale, hold: true }; body = bodySpring(from); dots = null; }
         runtime.flight = null;
       }
-      // Paused (personality.md §5.3, K-09): the kite reels out, up and off the screen, and on resume it drifts back down
+      // Paused (design.md §K5.3, K-09): the kite reels out, up and off the screen, and on resume it drifts back down
       // from above to the cursor, then flutters hello. Under reduced motion it fades out and in instead.
       if (runtime.away) {
         const command = runtime.away; runtime.away = null;
@@ -150,7 +150,7 @@ export function useKiteLoop(refs: KiteElements) {
       const pointer = taskRuntime.anchor && taskRuntime.aim ? taskRuntime : gr;
       const guiding = !ink && !!pointer.anchor && !!pointer.aim && !vr.drawing && !voiceRuntime.bubble && (mood === 'idle' || voiceRuntime.quiet);
       const pointing = guiding || !!ink;
-      // A name that says what Kite is doing, for screen readers (docs/personality.md K-16); written only when it changes.
+      // A name that says what Kite is doing, for screen readers (docs/design.md K-16); written only when it changes.
       const spoken = document.documentElement.classList.contains('kite-paused') ? 'Kite, paused'
         : voiceRuntime.toolPose === 'proposing' ? 'Kite, waiting for your OK' : voiceRuntime.toolPose === 'executing' ? 'Kite, working'
         : mood === 'listening' ? 'Kite, listening' : mood === 'thinking' ? 'Kite, thinking' : mood === 'talking' ? 'Kite, talking'
@@ -219,7 +219,7 @@ export function useKiteLoop(refs: KiteElements) {
       turn = reduced ? spring(pose.turn) : stepSpring(turn, pose.turn, 160, 24, dt);
       lift = reduced ? spring(pose.lift) : stepSpring(lift, pose.lift, 160, 24, dt);
       const { follow, expression, ambient } = config.motion;
-      // Calm while you read: with an answer on screen, idle drifting and swaying stop and only breathing remains (personality.md §4).
+      // Calm while you read: with an answer on screen, idle drifting and swaying stop and only breathing remains (design.md §K4).
       const expressive = mood === 'idle' && voiceRuntime.bubble ? 0 : expression;
       const bob = Math.sin(bobPhase) * motion.bob * (mood === 'idle' ? ambient : expression) * (reduced ? 0.25 : 1) * (mood === 'talking' ? 0.5 + speech : 1);
       const target = {
@@ -273,7 +273,7 @@ export function useKiteLoop(refs: KiteElements) {
       stretch = stepSpring(stretch, desiredStretch, wake ? 1000 : 240, wake ? 42 : 26, dt);
       const along = reduced ? 1 : clamp(stretch.value * reaction.stretch, 0.75, Math.max(config.maxStretch, 1.1));
       const direction = wake ? Math.PI / 2 : Math.atan2(body.y.velocity, body.x.velocity);
-      // A capture is a shutter blink (personality.md §5.3, K-10): a quick squash and a blink of the tail, and one thin gold
+      // A capture is a shutter blink (design.md §K5.3, K-10): a quick squash and a blink of the tail, and one thin gold
       // ring that opens around the kite and fades. Under reduced motion only the ring shows. No filters touch the kite.
       const shot = (now - vr.blinkAt) / 1000, captureBlink = !reduced && shot < .18, ring = shot < .4;
       if (shutter && (ring || ringShown)) {
@@ -295,7 +295,7 @@ export function useKiteLoop(refs: KiteElements) {
       const shine = reduced && rippling ? (rippleStrength * Math.sin(rippleT * Math.PI)).toFixed(2) : '';
       if (shine !== glint) { glint = shine; svg.style.setProperty('--kite-glint', shine || '0'); }
       svg.style.visibility = gone && fade <= 0 ? 'hidden' : 'visible';
-      // Pointing over a neighbouring control's label, the kite lets the label show through (personality.md §5.6, K-08).
+      // Pointing over a neighbouring control's label, the kite lets the label show through (design.md §K5.6, K-08).
       const see = guiding && pointer === gr && gr.dim ? .85 : 1;
       svg.style.opacity = String((1 + (motion.opacity - 1) * ambient) * fade * see);
       const squash = captureBlink ? .65 : vr.drawing ? .88 : look && mood === 'thinking' ? .78 : 1;
@@ -308,7 +308,7 @@ export function useKiteLoop(refs: KiteElements) {
       if (path !== drawnPath) { drawnPath = path; sailNode.setAttribute('d', path); if (sheenShown) sheen?.setAttribute('d', path); }
       else if (sheenShown && sheen && sheen.getAttribute('d') !== path) sheen.setAttribute('d', path);
       // The tail dots hang on their own springs behind the sail, so they trail during movement and swing with a small
-      // delay down the tail; at rest they settle on their anchors, clear of the sail (personality.md K-03).
+      // delay down the tail; at rest they settle on their anchors, clear of the sail (design.md K-03).
       // The tail swings only while resting, dozing, or talking; every other pose shapes it (K-05).
       const swinging = name === 'rest' || name === 'dozing' || name === 'talking';
       const alarm = now < voiceRuntime.alarmUntil;

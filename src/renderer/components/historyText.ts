@@ -1,6 +1,6 @@
 import type { ToolAudit } from '../../shared/types';
 
-/** "Today", "Yesterday", a weekday within the last week, then a date (docs/ui-ux-improvements.md UX-71). */
+/** "Today", "Yesterday", a weekday within the last week, then a date (docs/design.md UX-71). */
 export function dayLabel(time: number, now = Date.now()): string {
   const midnight = (t: number) => { const d = new Date(t); d.setHours(0, 0, 0, 0); return d.getTime(); };
   const days = Math.round((midnight(now) - midnight(time)) / 86_400_000);

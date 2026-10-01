@@ -18,7 +18,7 @@ function Screenshot({ messageId }: { messageId: number }) {
     onClick={() => setLarge(v => !v)}><img src={src} alt="The screen you marked" /></button>;
 }
 
-/** History as a readable chat: the content first, details on request (docs/ui-ux-improvements.md UX-70 to UX-73). */
+/** History as a readable chat: the content first, details on request (docs/design.md UX-70 to UX-73). */
 export default function HistoryView() {
   const settings = useSettings();
   const [query, setQuery] = useState(''), [rows, setRows] = useState<ConversationSummary[] | null>(null), [selected, setSelected] = useState<string | null>(null);

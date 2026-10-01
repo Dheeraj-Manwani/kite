@@ -66,7 +66,7 @@ export function SpeechBubble() {
       if (!llmDone || !playbackDone) return;
       update({ ...state.current, streaming: false, revealed: Infinity });
       if (state.current.quiet) { voiceRuntime.quiet = false; idle(300); return; }
-      // A quiet "here's your answer": one flutter of the trailing edge (personality.md §5.4), unless a bigger move is playing.
+      // A quiet "here's your answer": one flutter of the trailing edge (design.md §K5.4), unless a bigger move is playing.
       if (!['costume', 'success', 'denied', 'alarm'].includes(voiceRuntime.reaction?.kind)) react('flutter'); idle(300); life(4000 + state.current.text.trim().split(/\s+/).length * 60);
     };
     const player = new VoicePlayback(type => {
@@ -141,7 +141,7 @@ export function SpeechBubble() {
           react(event.decision === 'approved' ? 'approved' : 'denied'); window.kite.setOverlayInteractive(false); break;
         case 'tool:executing': voiceRuntime.toolPose = 'executing'; update({ ...state.current, toolStatus: 'Working…' }); break;
         case 'tool:result': voiceRuntime.toolPose = null; update({ ...state.current, toolStatus: event.text ?? '' }); react(event.success ? 'success' : 'tangled'); break;
-        // The reminder tug lasts a few seconds, then the kite settles; the bubble keeps the reminder (personality.md §5.3).
+        // The reminder tug lasts a few seconds, then the kite settles; the bubble keeps the reminder (design.md §K5.3).
         case 'reminder:fired': voiceRuntime.alarmUntil = performance.now() + 3500; update({ ...state.current, alarm: true }); react('alarm'); break;
         case 'vision:routed': react('costume', .5); update({ ...state.current, vision: event.text }); break;
         case 'model:fallback': react('phew'); update({ ...state.current, fallback: event.text ?? '' }); break;

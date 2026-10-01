@@ -13,7 +13,7 @@ export const KiteRenderer = memo(function KiteRenderer() {
       <linearGradient id="kite-sail" x1="0" y1="0" x2="1" y2="1">
         <stop className="kite-glint-body" /><stop className="kite-glint-shade" offset="1" />
       </linearGradient>
-      {/* The colour ripple's band (personality.md §5.4); the loop slides it across the sail. */}
+      {/* The colour ripple's band (design.md §K5.4); the loop slides it across the sail. */}
       <linearGradient id="kite-sheen" x1="-.6" y1="-.6" x2="0" y2="0">
         <stop className="kite-sheen-edge" /><stop className="kite-sheen-band" offset=".5" /><stop className="kite-sheen-edge" offset="1" />
       </linearGradient>
@@ -26,7 +26,7 @@ export const KiteRenderer = memo(function KiteRenderer() {
       {/* The tail lives outside the body so each dot can trail on its own spring; the loop places them (K-03). */}
       <g ref={tail} className="kite-tail">{config.tailDots.map(({ x, y, size }) =>
         <rect key={`${x} ${y}`} x={-size / 2} y={-size / 2} width={size} height={size} rx={size * .2} />)}</g>
-      {/* Sail-native cues (personality.md K-10): a gold shutter ring for a capture, a slash across the muted tail. */}
+      {/* Sail-native cues (design.md K-10): a gold shutter ring for a capture, a slash across the muted tail. */}
       <circle className="kite-shutter" r="18" opacity="0" />
       <g className="kite-mute-slash" opacity="0"><path className="halo" /><path /></g>
   </svg>;

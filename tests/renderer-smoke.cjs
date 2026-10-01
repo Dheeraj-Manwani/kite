@@ -44,7 +44,7 @@ app.whenReady().then(async()=>{
     assert.equal(await sjs("document.title"),'Kite · General');
     assert.equal(await sjs("document.querySelector('.side-item[aria-current]').textContent"),'General');
     assert.match(await sjs("document.querySelector('.hotkey-current').textContent"),/Push to talk\s*Ctrl\s*Win/);
-    // Kite size (personality.md K-14): Standard, Large, and Extra large.
+    // Kite size (design.md K-14): Standard, Large, and Extra large.
     assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Kite size\"]').options].map(o=>o.textContent)"),['Standard','Large','Extra large']);
     await sjs("const k=document.querySelector('select[aria-label=\"Kite size\"]');k.value='large';k.dispatchEvent(new Event('change',{bubbles:true}));");await delay(80);
     assert.equal(snapshot.settings.kiteSize,'large');snapshot.settings.kiteSize='standard';
@@ -122,7 +122,7 @@ app.whenReady().then(async()=>{
     // Onboarding is a guided path: no nav, a labeled progress row, and the kite on its stage.
     assert.equal(await tutorial.webContents.executeJavaScript("document.querySelector('.window-nav')"),null);
     assert.match(await tutorial.webContents.executeJavaScript("document.querySelector('.onboarding-progress').textContent"),/1 of 7 · Welcome/);
-    // The live kite (personality.md K-07) flies in up its string, settles over the stage's centre, and flutters hello.
+    // The live kite (design.md K-07) flies in up its string, settles over the stage's centre, and flutters hello.
     const stageKite=()=>tutorial.webContents.executeJavaScript("(()=>{const layer=document.querySelector('.kite-stage-layer'),m=layer.querySelector(':scope > g:last-of-type').getAttribute('transform').match(/translate\\(([-\\d.e]+) ([-\\d.e]+)\\) rotate\\([-\\d.e]+\\) scale\\(([-\\d.e]+)\\)/),r=document.querySelector('.kite-stage').getBoundingClientRect();return {x:+m[1],y:+m[2],scale:+m[3],stage:{left:r.left,top:r.top,width:r.width,height:r.height},pose:layer.dataset.pose,away:layer.classList.contains('off-stage')};})()");
     await delay(1500);
     const home=await stageKite();
@@ -237,7 +237,7 @@ app.whenReady().then(async()=>{
     assert.ok(!reports.some(r=>r.event==='failed'));
     // A tap that is too short gets a one-line pill that says what to do, not a clipped "?" card.
     overlay.webContents.send('test:voice',{id:50,type:'ptt:start'});await delay(50);
-    // The kite's accessible name follows its state (personality.md K-16).
+    // The kite's accessible name follows its state (design.md K-16).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas').getAttribute('aria-label')"),'Kite, listening');
     // Listening is a compact pill with a level meter and the release/cancel hint, not a full card (UX-12).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-status').textContent"),'Release to send · Esc to cancel');
@@ -303,7 +303,7 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.kite-canvas')).opacity"),'0');
     overlay.webContents.send('screen:event',{type:'looking',active:true,hidden:false});await delay(60);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.screen-looking').textContent"),'Kite is looking');
-    // A capture is a shutter blink: one thin gold ring opens around the kite, and nothing filters it (personality.md K-10).
+    // A capture is a shutter blink: one thin gold ring opens around the kite, and nothing filters it (design.md K-10).
     assert.ok(+(await overlay.webContents.executeJavaScript("document.querySelector('.kite-shutter').getAttribute('opacity')"))>.3,'the shutter ring shows');
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas > g').style.filter"),'');
     assert.notEqual(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.kite-glint-body')).stopColor"),'rgb(0, 0, 0)','the sail gradient resolves');
@@ -471,7 +471,7 @@ app.whenReady().then(async()=>{
     assert.equal(await js("document.querySelector('.task-stop')"),null,'no Stop button once finished');
     overlay.webContents.send('task:state',null);await delay(100);
     assert.equal(await js("document.querySelector('.task-card')"),null); assert.equal(taskBounds.at(-1),null);
-    // Overlay delight (UX-16 to UX-18, personality.md K-09).
+    // Overlay delight (UX-16 to UX-18, design.md K-09).
     overlay.webContents.send('cursor:update',{x:350,y:250},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});await delay(300);
     const voice=(id,event)=>overlay.webContents.send('test:voice',{id,...event});
     voice(400,{type:'ptt:start'});await delay(40);voice(400,{type:'ptt:stop'});await delay(40);
@@ -514,7 +514,7 @@ app.whenReady().then(async()=>{
     await js("[...document.querySelectorAll('.speech-bubble.notice button')].find(b=>b.textContent==='Restart').click()");await delay(250);
     assert.deepEqual(abouts,['restart']);
     assert.equal(await js("document.querySelector('.speech-bubble.notice.visible')"),null,'the notice closes once used');
-    // Paused: the kite says goodbye, reels out of sight, then drifts back down on resume and says hello (personality.md §5.3).
+    // Paused: the kite says goodbye, reels out of sight, then drifts back down on resume and says hello (design.md §K5.3).
     overlay.webContents.send('app:event',{type:'paused',until:null});await delay(300);
     assert.equal(await js("document.querySelector('.speech-bubble.notice.visible [role=status]').textContent"),'Paused — see you soon.');
     await delay(2600);

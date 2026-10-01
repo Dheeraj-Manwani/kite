@@ -94,7 +94,7 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
       <Row label="Kite size" description="Larger is easier to see on high-resolution screens.">
         <select aria-label="Kite size" value={s.kiteSize ?? 'standard'} onChange={e => update({ kiteSize: e.target.value as KiteSize })}>
           {(Object.keys(kiteSizeLabels) as KiteSize[]).map(size => <option key={size} value={size}>{kiteSizeLabels[size]}</option>)}</select></Row>
-      {/* The kite's character, within its rules (docs/personality.md K-15): how much it moves, and what it wears. */}
+      {/* The kite's character, within its rules (docs/design.md K-15): how much it moves, and what it wears. */}
       <Row label="Liveliness" description="How much the kite moves on its own. Calm halves its idle motion; it still shows what it's doing.">
         <select aria-label="Liveliness" value={s.liveliness ?? 'lively'} onChange={e => update({ liveliness: e.target.value as Liveliness })}>
           {[...livelinessLevels].reverse().map(level => <option key={level} value={level}>{livelinessLabels[level]}</option>)}</select></Row>

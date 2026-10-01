@@ -139,7 +139,7 @@ test('layout keeps ring, card, and kite on the display without covering the targ
     assert.equal(intersects(cardBox, target), false, 'card covers target ' + JSON.stringify(target));
     assert.ok(l.anchor.x >= display.x && l.anchor.x <= display.x + display.width && l.anchor.y >= display.y && l.anchor.y <= display.y + display.height);
     assert.equal(intersects({ x: l.anchor.x - 12, y: l.anchor.y - 12, width: 24, height: 24 }, target), false, 'kite body covers target');
-    // A Large or Extra large kite (personality.md K-14) is placed further out, so it stays off the target too.
+    // A Large or Extra large kite (design.md K-14) is placed further out, so it stays off the target too.
     for (const scale of [1.3, 1.6]) {
       const big = layoutGuide(target, display, card, scale), half = 12 * scale;
       assert.equal(intersects({ x: big.anchor.x - half, y: big.anchor.y - half, width: half * 2, height: half * 2 }, target), false, `a ${scale}x kite covers target ` + JSON.stringify(target));

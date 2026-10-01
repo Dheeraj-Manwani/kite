@@ -54,7 +54,7 @@ export function registerOverlayIPC() {
     }
   });
   ipcMain.on('view:open', (event, view) => { if (trusted(event, 'either') && ['settings','history','onboarding'].includes(view)) createSettingsWindow(view); });
-  // "Let's fly" (docs/personality.md §5.7): onboarding closes, and the overlay's kite takes off from where the stage kite was.
+  // "Let's fly" (docs/design.md §K5.7): onboarding closes, and the overlay's kite takes off from where the stage kite was.
   ipcMain.on('onboarding:fly', (event, from: StageKite | undefined) => {
     const win = getSettingsWindow();
     if (!win || !trusted(event, 'settings')) return;

@@ -12,7 +12,7 @@ function Badges({ model }: { model: ModelEntry }) {
 }
 
 /**
- * A model listbox (docs/ui-ux-improvements.md UX-55): grouped by provider, each row with its name, a tier badge, and
+ * A model listbox (docs/design.md UX-55): grouped by provider, each row with its name, a tier badge, and
  * Vision and Actions badges, so the trade-offs scan at a glance. Keyboard: arrows, Home and End, Enter or Space to choose,
  * Esc to close. `missing` names a choice that isn't listed, such as a custom ID or a provider without a key.
  */

@@ -5,7 +5,7 @@ export class MissingKeyError extends Error {
   constructor(public provider: SecretId) { super('Missing provider key'); }
 }
 /**
- * An error as Kite says it (docs/ui-ux-improvements.md UX-15): what happened as a one-line title, then what to do.
+ * An error as Kite says it (docs/design.md UX-15): what happened as a one-line title, then what to do.
  * `settings` offers Open settings as the one action; `setup` marks something to configure rather than a failure.
  */
 export interface FriendlyError { title: string; text: string; settings?: boolean; setup?: boolean }

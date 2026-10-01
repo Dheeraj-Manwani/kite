@@ -3,7 +3,7 @@ import { analyzeStrokes, contains, type ScreenEvent, type Stroke } from '../../s
 import { visionRuntime as vr } from './runtime';
 import { inkPath } from './ink';
 import { cursorInput } from '../kite/useKiteLoop';
-// First-run hints for marking (docs/ui-ux-improvements.md UX-41): shown for the first three marking sessions on this computer.
+// First-run hints for marking (docs/design.md UX-41): shown for the first three marking sessions on this computer.
 const HINT_KEY = 'kite.markHints', HINTS = 3, MARKS = 5;
 const nearCursor = () => {
   const g = cursorInput.geometry; if (!g) return null;

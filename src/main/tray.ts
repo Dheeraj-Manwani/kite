@@ -19,7 +19,7 @@ export function createKiteTray(preferences: ReturnType<typeof openPreferences>) 
     const configured = models.filter(m => keys[m.provider]);
     if (keys[settings.model.provider] && !configured.some(m => m.provider === settings.model.provider && m.id === settings.model.id))
       configured.push({ ...settings.model, label: settings.model.id, tier: 'fast', supportsVision: false, supportsTools: false });
-    // Grouped for scanning (docs/ui-ux-improvements.md UX-80): who and how, the everyday switches, the windows, help, then Quit.
+    // Grouped for scanning (docs/design.md UX-80): who and how, the everyday switches, the windows, help, then Quit.
     const muted = !settings.ttsEnabled, paused = !!appRuntime.pausedUntil;
     menu = Menu.buildFromTemplate([
       { label: `Kite · ${hotkeyLabel(settings.hotkey)} to talk`, enabled: false },

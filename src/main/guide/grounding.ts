@@ -108,7 +108,7 @@ const contains = (r: ScreenBounds, p: { x: number; y: number }) => p.x >= r.x &&
 export function insideTarget(rect: ScreenBounds, point: { x: number; y: number }, slack = 8) {
   return contains({ x: rect.x - slack, y: rect.y - slack, width: rect.width + slack * 2, height: rect.height + slack * 2 }, point);
 }
-// Controls with labels a user reads: the kite shouldn't sit on them while it points at a neighbour (personality.md §5.6, K-08).
+// Controls with labels a user reads: the kite shouldn't sit on them while it points at a neighbour (design.md §K5.6, K-08).
 const labelled = new Set(['Button', 'SplitButton', 'MenuItem', 'Hyperlink', 'ListItem', 'TabItem', 'CheckBox', 'RadioButton', 'ComboBox', 'Edit',
   'Text', 'TreeItem', 'DataItem', 'Slider', 'Spinner', 'HeaderItem']);
 const encloses = (outer: ScreenBounds, inner: ScreenBounds) => inner.x >= outer.x - 1 && inner.y >= outer.y - 1

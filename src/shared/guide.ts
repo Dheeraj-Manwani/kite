@@ -13,7 +13,7 @@ export interface GuideView {
   instruction: string; target: string; status: GuideStatus;
   rect: ScreenBounds | null; display: ScreenBounds | null;
   source: 'uia' | 'vision' | null; verified: boolean;
-  /** Named controls around the target (personality.md K-08), so the kite can sit clear of what the user checks next. */
+  /** Named controls around the target (design.md K-08), so the kite can sit clear of what the user checks next. */
   nearby?: ScreenBounds[];
 }
 export const guideActions = ['back', 'next', 'pause', 'resume', 'stop', 'repeat'] as const;
@@ -45,14 +45,14 @@ export function ringBounds(rect: ScreenBounds): ScreenBounds {
 }
 /**
  * Pure placement in one coordinate space: the card never covers the target and the kite never covers either.
- * The kite goes first (personality.md §5.6, K-08): beside a wide, short target such as a ribbon tab the neighbours sit
+ * The kite goes first (design.md §K5.6, K-08): beside a wide, short target such as a ribbon tab the neighbours sit
  * left and right, so it tries below, then above; beside a tall, narrow one it tries the sides. It prefers a spot clear of
  * the neighbouring controls, then the card takes the first place that clears the ring and the kite.
  */
 export function layoutGuide(target: ScreenBounds, display: ScreenBounds, card: { width: number; height: number }, scale = 1, nearby: ScreenBounds[] = []): GuideLayout {
   // Distance from the ring to the kite's centre; its half-extent for a comfortable fit, then its body alone.
   // Sized for the sail: its nose is 11 px from the centre, so the tip stops about 9 px short of the ring.
-  // All three grow with the kite's size setting (personality.md K-14).
+  // All three grow with the kite's size setting (design.md K-14).
   const kiteReach = 20 * scale, wholeReach = 20 * scale, bodyReach = 14 * scale;
   const ring = ringBounds(target), margin = 12;
   const cx = target.x + target.width / 2, cy = target.y + target.height / 2;

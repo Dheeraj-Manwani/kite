@@ -1,7 +1,7 @@
 import type { Vec2 } from './physics/vector';
 
 /**
- * The loop-de-loop (docs/personality.md §5.4): a route from A to B with one whole loop on the way. It is a line to
+ * The loop-de-loop (docs/design.md §K5.4): a route from A to B with one whole loop on the way. It is a line to
  * just short of halfway, a circle that climbs up the screen first, then a line to the end. Its direction never jumps,
  * so the nose can simply follow it round. "Let's fly" (§5.7) and "something finished well" use it.
  */

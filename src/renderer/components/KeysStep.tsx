@@ -13,7 +13,7 @@ export function missingKeys(snapshot: SettingsSnapshot | undefined): string[] {
   return [!snapshot.keys.groq && 'a Groq key to use voice', !brains.some(b => snapshot.keys[b.id]) && 'a model provider for answers'].filter((x): x is string => !!x);
 }
 
-/** The keys step, scoped to what's needed now: Groq, one brain, and an optional voice (docs/ui-ux-improvements.md UX-61). */
+/** The keys step, scoped to what's needed now: Groq, one brain, and an optional voice (docs/design.md UX-61). */
 export function KeysStep({ snapshot }: { snapshot: SettingsSnapshot }) {
   const [choice, setChoice] = useState<ProviderId>(() => (brains.find(b => snapshot.keys[b.id]) ?? brains.find(b => b.id === snapshot.settings.model.provider) ?? brains[0]).id);
   const [toast, setToast] = useState('');

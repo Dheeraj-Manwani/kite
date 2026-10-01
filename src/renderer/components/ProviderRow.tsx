@@ -11,7 +11,7 @@ const checkMessages: Record<string, string> = {
 const CHECKING = 'Checking…';
 
 /**
- * One provider key, driven by its state (docs/ui-ux-improvements.md UX-51): a key field and one Connect button that saves,
+ * One provider key, driven by its state (docs/design.md UX-51): a key field and one Connect button that saves,
  * tests, and loads the model list; once connected, a status line with rarer actions in a menu. Used by Settings and onboarding.
  */
 export function ProviderRow({ id, label, badge, snapshot, toast, onConnected }: {

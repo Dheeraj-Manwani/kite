@@ -1,5 +1,5 @@
 /**
- * A tiny allowlist Markdown reader for answers (docs/ui-ux-improvements.md UX-17). It knows fenced code, headings,
+ * A tiny allowlist Markdown reader for answers (docs/design.md UX-17). It knows fenced code, headings,
  * bullet and numbered lists, bold, italics, inline code, and links; everything else stays text. Nothing here becomes HTML:
  * the bubble builds React elements from these blocks, and links are never followed (navigation is denied), only copied.
  */

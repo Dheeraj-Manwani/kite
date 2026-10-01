@@ -18,7 +18,7 @@ const subscribe = (listener: () => void) => { connect(); listeners.add(listener)
 /** The current settings snapshot, or null until it has loaded. */
 export const useSettings = () => useSyncExternalStore(subscribe, () => current);
 
-/** The kite's size setting as a scale: 1, 1.3, or 1.6 (docs/personality.md K-14). */
+/** The kite's size setting as a scale: 1, 1.3, or 1.6 (docs/design.md K-14). */
 export const useKiteScale = () => kiteSizes[useSettings()?.settings.kiteSize ?? 'standard'] ?? 1;
 
 /** The main model's display name, such as "Claude Sonnet 5". */

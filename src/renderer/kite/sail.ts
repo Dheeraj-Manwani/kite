@@ -1,5 +1,5 @@
 /**
- * The sail as a handful of shape dials (docs/personality.md §5.1). Every dial is 1 at rest except
+ * The sail as a handful of shape dials (docs/design.md §K5.1). Every dial is 1 at rest except
  * flutter, which is a displacement in px applied in opposite directions to the two trailing scallops.
  * nose: how far the tip extends. spread: wingtip span. billow: outward curve of the leading edges.
  * slack: depth of the scalloped trailing edge.
