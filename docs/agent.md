@@ -18,12 +18,24 @@ Ask "write a shopping list in Notepad and save it as list.txt" or "turn on dark 
 ## How it works
 
 1. **Find the app.** Kite picks the open window whose app name or title matches, or opens the app from your Start menu.
-2. **Look.** A task sidecar (Windows PowerShell hosting C#, started only for approved tasks) lists the app's controls with UI Automation: names, roles, values, states, and what each supports. Dialogs and menus come first. Vision-capable models may also ask to see a screenshot of that one window.
+2. **Look.** A task sidecar (Windows PowerShell hosting C#, started only for approved tasks) lists the app's controls with UI Automation: names, roles, values, states, and what each supports. Only controls on screen are listed. Dialogs and menus come first. Vision-capable models may also ask to see a screenshot of that one window.
+   In a browser, only the visible tab's page is listed. Edge and Chrome keep the page of every tab shown so far in the window's accessibility tree, oldest first; the sidecar drops a page whose name matches another tab in the tab strip, unless it is the page in the browser's render window. Frames inside the page and the browser's own popups stay. A page that loaded before anything asked for accessibility may have no tree yet: the sidecar asks the render window for it and looks again, waiting once at most 1.5 s.
 3. **Decide.** Your model gets the goal, the steps so far and their results, and the current controls, and must choose exactly one action: click, type, press keys, scroll, wait, look, ask you, done, or give up. Kite validates it and refuses controls from an older look.
 4. **Confirm and act.** Kite's code writes the step's description and decides whether it is risky. It points at the control, then acts through UI Automation (Invoke, Toggle, Select, Expand, set value, select text, scroll, focus) or the keyboard. Keys go only to the task's app: the sidecar brings it to the front, checks it is still in front before every key, and waits if you are holding a modifier.
 5. **Repeat** until the model reports the task done (after checking the controls) or the budget runs out.
 
 [ADR 012](adr/012-computer-use.md).
+
+## Jobs (errands in a browser)
+
+A task in a browser ("buy me 60 sachets of protein") is a **job** ([end-to-end-jobs.md](end-to-end-jobs.md)):
+
+- **Plan.** One model call names the kind (store or form), the site and what to search for; code builds the phases: *Find it → Choose → Add to cart*, then *Check out* and *Pay*, which are yours. The card shows them as a checklist.
+- **Stay on the site.** The site is the job's scope. A page anywhere else, or a `go_to` to anywhere else, asks you first.
+- **Ask, don't guess.** Kite asks when the request leaves a choice open: the agent with a choice card (tap an option, or say "the first one", "the cheaper one", "neither"), and code itself before "Add to cart" when a pack size or flavour on the page was pre-selected rather than named by you.
+- **Hand over at the cart.** A store job ends only when code can read the cart back from the page: "It's in your cart: …, ₹2,149. Check out whenever you're ready." Kite never checks out, pays, or types passwords, card numbers or OTPs.
+- **In the background.** The site opens in a new tab, leaving your tab alone. Fields are filled and buttons clicked through UI Automation, which works while you use another app; only Enter and shortcuts need the browser in front.
+- **Budgets.** About 12 steps to find, 6 to choose, 6 for the cart; past a phase's budget Kite asks "keep going?". At most 45 steps and 20 minutes.
 
 ## Privacy and safety
 
@@ -37,5 +49,7 @@ Ask "write a shopping list in Notepad and save it as list.txt" or "turn on dark 
 - `npm test` (`tests/agent.test.cjs`): key parsing, the risk rules, commands, action descriptions, control listing (dialogs first, no password values), app matching, model output validation, and the task state machine (acting, setting and typing, approvals by scope, risky steps, strict budget, pause, takeover, questions, invalid and failed steps, a held modifier, screenshots), plus `do_task` approval scopes through the real broker.
 - `npm run test:agent`: a real WinForms window operated through the real task sidecar (set value, invoke, toggle, stale refs, Unicode typing, select-all replace, key chords, line-break refusal) and an end-to-end task with a scripted decider. It checks that the mouse pointer never moved.
 - `npm run test:renderer` (after a build): the approval choices, the task card, the ring, the kite pointing, and the card controls.
+- `npm test` (`tests/job.test.cjs`): plans, scope, the cart read back, choices, the variant floor, and whole jobs through the session with a scripted decider. `npm run test:job -- [runs] [provider:model] [--ambiguous]`: live jobs on Kite Test Mart with a real model (needs its key in `.env`).
+- `npm run measure:web`: opens Kite Test Mart (`tests/fixtures/shop`, a local fake store; `npm run shop` runs it alone) in Edge with a throwaway profile, and reads each page through the real sidecar and `formatSnapshot`. It reports element counts, snapshot time and what reaches the model, and checks that only the visible tab's page is listed. `npm run measure:web -- <url>` measures other pages, read-only. The shop's own flows are in `npm test` (`tests/shop.test.cjs`).
 
 Still verify by hand with live models: Office, Chromium apps, and UWP apps; 125% and 150% scaling; elevated (administrator) windows, which Windows protects from other apps' input.

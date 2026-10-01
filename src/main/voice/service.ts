@@ -45,6 +45,7 @@ import { explainOnWhiteboard } from '../tools/impl/explain_on_whiteboard';
 import { safeFilename } from '../tools/impl/create_note';
 import { TaskService } from '../agent/service';
 import { decideStep } from '../agent/model';
+import { planJob } from '../agent/planner';
 import { doTask } from '../tools/impl/do_task';
 import { taskActions, type TaskAction } from '../../shared/agent';
 const validProvider = (value: unknown): value is SecretId => [...providerIds, 'cartesia'].includes(value as SecretId);
@@ -112,6 +113,8 @@ export function startVoiceService() {
     },
     finished: (goal, name, message, status) => conversation.add({ role: 'assistant', content: `[Task in ${name}: "${goal}". Result: ${status}. ${message}]` }, Date.now()),
     decider: (model, key) => (prompt, signal) => decideStep({ model: getModel(model.provider, model.id, { getKey: () => key }), prompt, signal,
+      toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
+    planner: (model, key) => (goal, app, signal) => planJob({ model: getModel(model.provider, model.id, { getKey: () => key }), goal, app, signal,
       toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
   });
   /** Local commands and context for whatever is running: a task first, then the whiteboard, then the guide. */
@@ -201,6 +204,7 @@ export function startVoiceService() {
   });
   ipcMain.on('guide:control', (event, action: unknown) => { if (trusted(event, 'overlay') && guideActions.includes(action as GuideAction)) guide.control(action as GuideAction); });
   ipcMain.on('task:control', (event, action: unknown) => { if (trusted(event, 'overlay') && taskActions.includes(action as TaskAction)) agent.control(action as TaskAction); });
+  ipcMain.on('task:choose', (event, index: unknown) => { if (trusted(event, 'overlay') && Number.isInteger(index)) agent.choose(index as number); });
   ipcMain.on('board:control', (event, action: unknown) => { if (trusted(event, 'overlay') && boardActions.includes(action as BoardAction)) board.control(action as BoardAction); });
   ipcMain.on('board:drawn', (event, id: unknown, key: unknown) => { if (trusted(event, 'overlay') && Number.isSafeInteger(id) && Number.isSafeInteger(key)) board.drawn(id as number, key as number); });
   ipcMain.handle('dev:boardDemo', (event): OperationResult => {

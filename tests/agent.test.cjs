@@ -213,7 +213,7 @@ test('a held modifier is retried once; wrong window is reported, not typed into'
   const h = harness({ decisions: [{ type: 'press_keys', keys: 'Tab' }, { type: 'type_text', text: 'x' }], overrides: {
     keys: async () => (++tries === 1 ? { ok: false, code: 'EBUSY' } : tries === 2 ? { ok: true } : { ok: false, code: 'EFOREGROUND' }) } });
   h.session.start(); await h.until(() => h.ended.length, 'finishes');
-  assert.equal(tries, 3); assert.match(h.prompts[2].history.at(-1), /Notepad wasn’t in front, so I didn’t type anything/);
+  assert.equal(tries, 3); assert.match(h.prompts[2].history.at(-1), /Notepad isn’t in front, so no keys were sent\. Keep going without the keyboard/);
 });
 test('rate limits are waited out visibly; other model errors retry once, then stop plainly', async () => {
   const limit = Object.assign(new Error('Failed after 2 attempts.'), { name: 'AI_RetryError', lastError: Object.assign(new Error('request reached organization max RPM: 3, please try again after 1 seconds'), { statusCode: 429 }) });

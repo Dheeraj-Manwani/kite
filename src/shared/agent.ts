@@ -19,6 +19,8 @@ export interface TaskView {
   message: string;
   target: ScreenBounds | null; display: ScreenBounds | null;
   log: TaskLogEntry[];
+  /** Present for a job (an errand in a browser): its phases, the page URL, and the options of an open choice. */
+  job?: import('./job').JobView | null;
 }
 export const taskActions = ['pause', 'resume', 'stop', 'allow', 'allowAll', 'skip'] as const;
 export type TaskAction = typeof taskActions[number];
@@ -41,6 +43,10 @@ export type AgentAction =
   | { type: 'wait'; seconds: number }
   | { type: 'look' }
   | { type: 'ask_user'; question: string }
+  | { type: 'go_to'; url: string }
+  | { type: 'find'; text: string }
+  | { type: 'ask_choice'; question: string; options: { label: string; detail?: string; ref?: number }[] }
+  | { type: 'next_phase'; summary: string }
   | { type: 'done'; summary: string }
   | { type: 'fail'; reason: string };
 
@@ -91,6 +97,10 @@ export function describeAction(action: AgentAction, element?: AgentElement): str
     case 'wait': return `Wait ${action.seconds} s`;
     case 'look': return 'Look at the window';
     case 'ask_user': return 'Ask you a question';
+    case 'go_to': { let shown = action.url; try { const u = new URL(action.url); shown = u.hostname.replace(/^www\./, '') + (u.pathname === '/' ? '' : u.pathname); } catch { /* shown as given */ } return `Go to ${clip(shown, 70)}`; }
+    case 'find': return `Look for “${clip(action.text, 40)}” on the page`;
+    case 'ask_choice': return 'Ask you to choose';
+    case 'next_phase': return 'Move to the next part of the job';
     case 'done': return 'Finish';
     case 'fail': return 'Give up';
   }
@@ -151,8 +161,19 @@ export function formatSnapshot(snapshot: AgentSnapshot, limit = 220, budget = 14
   const lines: string[] = [];
   const layerTitle = new Map(snapshot.layers.map(l => [l.layer, l.title]));
   const mainLayer = snapshot.layers.find(l => l.main)?.layer ?? Math.max(...snapshot.layers.map(l => l.layer), 0);
+  // Web pages repeat themselves: a product is a list item, two links and a text with the same name. Keep the first link
+  // and drop nearby repeats of it; text and list items that only repeat a nearby link or button go too. Buttons always
+  // stay (each tile's "Add to cart" is a different product), as do short link names and the focused control.
+  const key = (e: AgentElement) => `${e.layer}|${clip(e.name, 80).toLowerCase()}`;
+  const anchors = new Map<string, number[]>();
+  for (const e of snapshot.elements) if ((e.role === 'Hyperlink' || e.role === 'Button') && e.name.trim()) anchors.set(key(e), [...anchors.get(key(e)) ?? [], e.ref]);
+  const repeat = (e: AgentElement) => {
+    const near = (anchors.get(key(e)) ?? []).filter(r => r !== e.ref && Math.abs(r - e.ref) <= 6);
+    if (e.focused || !near.length || e.role === 'Button') return false;
+    return e.role === 'Hyperlink' ? e.name.trim().length >= 15 && near.some(r => r < e.ref) : ['Text', 'ListItem', 'DataItem'].includes(e.role);
+  };
   const ordered = [...snapshot.elements].sort((a, b) => a.layer - b.layer || Number(!!b.focused) - Number(!!a.focused) || a.ref - b.ref)
-    .filter(e => e.name.trim() || e.focused || e.value || e.patterns.length);
+    .filter(e => (e.name.trim() || e.focused || e.value || e.patterns.length) && !repeat(e));
   let current = -1, used = 0, shown = 0;
   for (const e of ordered) {
     if (shown >= limit) break;
@@ -160,9 +181,11 @@ export function formatSnapshot(snapshot: AgentSnapshot, limit = 220, budget = 14
       current = e.layer;
       lines.push(`${e.layer === mainLayer ? 'Main window' : 'Popup or dialog'} “${clip(layerTitle.get(e.layer) || snapshot.window.title, 80)}”:`);
     }
+    // A link's or page's value is its URL: long, often tracking, and not something to act on. The page URL is given once.
+    const linkish = e.role === 'Hyperlink' || e.role === 'Document';
     const state = [e.focused && 'focused', e.selected && 'selected', e.toggled === true && 'checked', e.toggled === false && e.role === 'CheckBox' && 'unchecked',
-      e.expanded === true && 'expanded', e.expanded === false && 'collapsed', !e.enabled && 'disabled', e.readOnly && 'read-only', e.password && 'password'].filter(Boolean);
-    const value = e.password ? '' : e.value ? ` = “${clip(e.value, 120)}”` : '';
+      e.expanded === true && 'expanded', e.expanded === false && 'collapsed', !e.enabled && 'disabled', e.readOnly && !linkish && 'read-only', e.password && 'password'].filter(Boolean);
+    const value = e.password || (linkish && /^[a-z][a-z0-9+.-]*:/i.test(e.value ?? '')) ? '' : e.value ? ` = “${clip(e.value, 120)}”` : '';
     const line = `[${e.ref}] ${e.role} “${clip(e.name, 80)}”${value}${state.length ? ` (${state.join(', ')})` : ''}`;
     if (used + line.length > budget) break;
     lines.push(line); used += line.length + 1; shown++;

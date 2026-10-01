@@ -20,11 +20,14 @@ export class ActClient {
     return raw.windows.filter(w => !w.minimized || w.foreground).map(w => ({ ...w, rect: this.uia.dip(w.rect) }));
   }
   /** Controls of the target app's front window and its popups. Rejects with a SidecarError code (ENOWINDOW, EOTHERAPP, EKITE…). */
-  async snapshot(target: Target, signal?: AbortSignal): Promise<AgentSnapshot> {
-    const raw = await this.uia.request<RawSnapshot>({ op: 'snapshot', hwnd: target.hwnd, pid: target.pid, excludePid: this.options.excludePid, limit: 400 }, 12000, signal);
+  async snapshot(target: Target, signal?: AbortSignal, query?: string): Promise<AgentSnapshot> {
+    const raw = await this.uia.request<RawSnapshot>({ op: 'snapshot', hwnd: target.hwnd, pid: target.pid, excludePid: this.options.excludePid,
+      limit: query ? 30 : 400, ...(query ? { query } : {}) }, 15000, signal);
     return { seq: raw.seq, layers: raw.layers, window: { ...raw.window, rect: this.uia.dip(raw.window.rect) },
       elements: raw.elements.map(e => ({ ...e, name: e.name ?? '', automationId: e.automationId ?? '', help: e.help ?? '', patterns: e.patterns ?? [], rect: this.uia.dip(e.rect) })) };
   }
+  /** The find action: controls anywhere on the page, including off-screen ones, whose names contain every word. */
+  find(target: Target, text: string, signal?: AbortSignal) { return this.snapshot(target, signal, text); }
   private async result(payload: Record<string, unknown>, timeoutMs: number, signal?: AbortSignal): Promise<ActResult> {
     try {
       const reply = await this.uia.request<Omit<ActResult, 'ok'>>(payload, timeoutMs, signal), result: ActResult = { ok: true };

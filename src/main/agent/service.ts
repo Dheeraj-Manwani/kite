@@ -1,4 +1,7 @@
 import { screen } from 'electron';
+import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import path from 'node:path';
 import { uIOhook, UiohookKey, type UiohookKeyboardEvent, type UiohookMouseEvent } from 'uiohook-napi';
 import type { AgentWindow, TaskAction, TaskScope, TaskView } from '../../shared/agent';
 import type { CursorPoint, ModelEntry, ScreenBounds } from '../../shared/types';
@@ -7,6 +10,7 @@ import type { Decision, StepPrompt } from './model';
 import { TaskSession } from './session';
 import { routingHints } from '../ai/routing';
 import { ActClient } from './sidecar';
+import { browserApp, type JobPlan } from '../../shared/job';
 export interface TaskServiceDeps {
   directory: string;
   log(event: string, data?: Record<string, unknown>): void;
@@ -22,6 +26,21 @@ export interface TaskServiceDeps {
   /** A task is starting: anything else that moves the kite yields. */
   starting?(): void;
   decider(model: ModelEntry, key: string): (prompt: StepPrompt, signal: AbortSignal) => Promise<Decision>;
+  /** Browser tasks are jobs: one model call plans them (agent/planner.ts). */
+  planner?(model: ModelEntry, key: string): (goal: string, app: string, signal: AbortSignal) => Promise<JobPlan | null>;
+}
+// Browsers whose executable, given a URL, opens it as a new tab of the last active window. Nothing else is launched.
+const browsers: { app: RegExp; exe: string[] }[] = [
+  { app: /\bedge\b/i, exe: ['ProgramFiles(x86)', 'ProgramFiles'].map(root => path.join(process.env[root] ?? '', 'Microsoft', 'Edge', 'Application', 'msedge.exe')) },
+  { app: /\bchrome\b/i, exe: ['ProgramFiles', 'ProgramFiles(x86)', 'LOCALAPPDATA'].map(root => path.join(process.env[root] ?? '', 'Google', 'Chrome', 'Application', 'chrome.exe')) },
+];
+/** A job's page in a new tab without the keyboard (Windows won't bring the browser forward while the user types elsewhere). */
+function openInBrowser(app: string, url: string): boolean {
+  try { if (!/^https?:$/.test(new URL(url).protocol)) return false; } catch { return false; }
+  const exe = browsers.find(b => b.app.test(app))?.exe.find(file => file && existsSync(file));
+  if (!exe) return false;
+  spawn(exe, [url], { detached: true, stdio: 'ignore' }).unref();
+  return true;
 }
 const modifiers = new Set<number>([UiohookKey.Ctrl, UiohookKey.CtrlRight, UiohookKey.Shift, UiohookKey.ShiftRight, UiohookKey.Alt, UiohookKey.AltRight, UiohookKey.Meta, UiohookKey.MetaRight]);
 /** Owns the one running task, its sidecar, and the "you took over" detector. */
@@ -54,11 +73,14 @@ export class TaskService {
     if (!key) return { ok: false, message: 'No key is saved for the current model.' };
     this.session?.dispose();
     this.deps.starting?.();
-    const decide = this.deps.decider(model, key);
+    const decide = this.deps.decider(model, key), planner = browserApp.test(task.app) ? this.deps.planner?.(model, key) : undefined;
     const display = (rect: ScreenBounds) => screen.getDisplayMatching({ x: Math.round(rect.x), y: Math.round(rect.y), width: Math.max(1, Math.round(rect.width)), height: Math.max(1, Math.round(rect.height)) }).bounds;
     const session: TaskSession = new TaskSession(++this.sequence, task.goal, task.app, scope, {
       windows: signal => this.client.windows(signal),
       snapshot: (target, signal) => this.client.snapshot(target, signal),
+      find: (target, text, signal) => this.client.find(target, text, signal),
+      openUrl: async url => openInBrowser(task.app, url),
+      plan: planner ? signal => planner(task.goal, task.app, signal) : undefined,
       act: (seq, ref, action, extra, signal) => this.client.act(seq, ref, action, extra, signal),
       keys: async (target, seq, focus, items, signal) => {
         this.injecting++;
@@ -81,6 +103,7 @@ export class TaskService {
   }
   command(text: string) { return this.active ? this.session?.command(text) : undefined; }
   control(action: TaskAction) { if (this.active) this.session?.control(action); }
+  choose(index: number) { if (this.active) this.session?.choose(index); }
   context(): string | undefined {
     if (!this.deps.enabled()) return undefined;
     const s = this.active ? this.session : undefined;

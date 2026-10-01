@@ -37,6 +37,7 @@ namespace KiteAgent {
     [DllImport("user32.dll")] static extern bool IsIconic(IntPtr hwnd);
     [DllImport("user32.dll")] static extern int GetWindowLong(IntPtr hwnd, int index);
     [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc proc, IntPtr data);
+    [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, EnumProc proc, IntPtr data);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr hwnd, StringBuilder name, int size);
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr hwnd, StringBuilder text, int size);
     [DllImport("user32.dll")] static extern bool SetProcessDpiAwarenessContext(IntPtr value);
@@ -61,6 +62,8 @@ namespace KiteAgent {
     static string awareness = "unaware";
     static List<AutomationElement> cache = new List<AutomationElement>();
     static int seq = 0;
+    static readonly HashSet<string> reselected = new HashSet<string>();
+    static readonly Condition DocumentCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Document);
     static readonly ControlType[] Interactive = {
       ControlType.Button, ControlType.SplitButton, ControlType.MenuItem, ControlType.TabItem, ControlType.Hyperlink,
       ControlType.CheckBox, ControlType.RadioButton, ControlType.ComboBox, ControlType.Edit, ControlType.ListItem,
@@ -80,7 +83,7 @@ namespace KiteAgent {
           Dictionary<string, object> result;
           if (op == "ping") result = new Dictionary<string, object> { { "awareness", awareness } };
           else if (op == "windows") result = Windows(Number(request, "excludePid", 0));
-          else if (op == "snapshot") result = Snapshot(new IntPtr(Number(request, "hwnd", 0)), Number(request, "pid", 0), Number(request, "excludePid", 0), Number(request, "limit", 400));
+          else if (op == "snapshot") result = Snapshot(new IntPtr(Number(request, "hwnd", 0)), Number(request, "pid", 0), Number(request, "excludePid", 0), Number(request, "limit", 400), Text(request, "query"));
           else if (op == "act") result = Act(Number(request, "seq", -1), Number(request, "ref", -1), Text(request, "action"), Text(request, "text"), Text(request, "direction"));
           else if (op == "keys") result = Keys(new IntPtr(Number(request, "hwnd", 0)), Number(request, "pid", 0), Number(request, "seq", -1), Number(request, "focus", -1), request.ContainsKey("items") ? request["items"] as object[] : null);
           else if (op == "activate") result = new Dictionary<string, object> { { "active", Activate(new IntPtr(Number(request, "hwnd", 0)), Number(request, "pid", 0)) } };
@@ -155,7 +158,8 @@ namespace KiteAgent {
       return new Dictionary<string, object> { { "windows", list } };
     }
 
-    static Dictionary<string, object> Snapshot(IntPtr requested, int pid, int excludePid, int limit) {
+    // query: the find action. Off-screen controls count too, and only those whose names contain every word are kept.
+    static Dictionary<string, object> Snapshot(IntPtr requested, int pid, int excludePid, int limit, string query) {
       var clock = Stopwatch.StartNew();
       // The task's window, or whichever window of the same app is in front (a dialog, a new document window).
       IntPtr foreground = Root(GetForegroundWindow());
@@ -179,12 +183,14 @@ namespace KiteAgent {
       }, IntPtr.Zero);
       var conditions = new List<Condition>();
       foreach (var type in Interactive) conditions.Add(new PropertyCondition(AutomationElement.ControlTypeProperty, type));
-      var filter = new AndCondition(new PropertyCondition(AutomationElement.IsOffscreenProperty, false), new OrCondition(conditions.ToArray()));
+      string[] words = string.IsNullOrWhiteSpace(query) ? null : query.ToLowerInvariant().Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+      Condition filter = words != null ? (Condition)new OrCondition(conditions.ToArray())
+        : new AndCondition(new PropertyCondition(AutomationElement.IsOffscreenProperty, false), new OrCondition(conditions.ToArray()));
       var request = new CacheRequest { TreeScope = TreeScope.Element };
       foreach (var property in new AutomationProperty[] { AutomationElement.NameProperty, AutomationElement.ControlTypeProperty, AutomationElement.BoundingRectangleProperty,
         AutomationElement.AutomationIdProperty, AutomationElement.IsEnabledProperty, AutomationElement.HelpTextProperty, AutomationElement.HasKeyboardFocusProperty,
         AutomationElement.IsPasswordProperty, AutomationElement.IsInvokePatternAvailableProperty, AutomationElement.IsTogglePatternAvailableProperty,
-        AutomationElement.IsSelectionItemPatternAvailableProperty, AutomationElement.IsExpandCollapsePatternAvailableProperty, AutomationElement.IsValuePatternAvailableProperty,
+        AutomationElement.IsSelectionItemPatternAvailableProperty, AutomationElement.IsExpandCollapsePatternAvailableProperty, AutomationElement.IsValuePatternAvailableProperty, AutomationElement.RuntimeIdProperty,
         AutomationElement.IsScrollPatternAvailableProperty, AutomationElement.IsTextPatternAvailableProperty, SelectionItemPattern.IsSelectedProperty, ExpandCollapsePattern.ExpandCollapseStateProperty,
         TogglePattern.ToggleStateProperty, ValuePattern.ValueProperty, ValuePattern.IsReadOnlyProperty }) request.Add(property);
       var found = new List<AutomationElement>();
@@ -200,50 +206,29 @@ namespace KiteAgent {
         if (windows[layer] == target)
           window = new Dictionary<string, object> { { "hwnd", target.ToInt64() }, { "title", title }, { "process", ProcessName(owner) }, { "pid", (int)owner },
             { "rect", Box(top.Current.BoundingRectangle) }, { "foreground", target == foreground } };
-        AutomationElementCollection matches;
-        try { using (request.Activate()) matches = top.FindAll(TreeScope.Descendants, filter); }
-        catch (ElementNotAvailableException) { continue; }
-        foreach (AutomationElement element in matches) {
-          Rect rect = element.Cached.BoundingRectangle;
-          if (rect.IsEmpty || rect.Width < 2 || rect.Height < 2) continue;
-          var item = new Dictionary<string, object> {
-            { "name", Clip(element.Cached.Name, 200) }, { "role", element.Cached.ControlType.ProgrammaticName.Replace("ControlType.", "") },
-            { "automationId", Clip(element.Cached.AutomationId, 100) }, { "help", Clip(element.Cached.HelpText, 200) },
-            { "enabled", element.Cached.IsEnabled }, { "layer", layer }, { "rect", Box(rect) },
-          };
-          bool password = false;
-          object value = element.GetCachedPropertyValue(AutomationElement.IsPasswordProperty, true);
-          if (value is bool && (bool)value) { password = true; item["password"] = true; }
-          value = element.GetCachedPropertyValue(AutomationElement.HasKeyboardFocusProperty, true);
-          if (value is bool && (bool)value) item["focused"] = true;
-          value = element.GetCachedPropertyValue(SelectionItemPattern.IsSelectedProperty, true);
-          if (value is bool) item["selected"] = value;
-          value = element.GetCachedPropertyValue(ExpandCollapsePattern.ExpandCollapseStateProperty, true);
-          if (value is ExpandCollapseState && (ExpandCollapseState)value != ExpandCollapseState.LeafNode) item["expanded"] = (ExpandCollapseState)value != ExpandCollapseState.Collapsed;
-          value = element.GetCachedPropertyValue(TogglePattern.ToggleStateProperty, true);
-          if (value is ToggleState) item["toggled"] = (ToggleState)value == ToggleState.On;
-          // Never read a password field's contents.
-          if (!password) {
-            value = element.GetCachedPropertyValue(ValuePattern.ValueProperty, true);
-            if (value is string && ((string)value).Length > 0) item["value"] = Clip((string)value, 400);
-            // Multi-line fields and documents expose their text through TextPattern instead (read only).
-            else if (Flag(element, AutomationElement.IsTextPatternAvailableProperty)) {
-              try { string text = ((TextPattern)element.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(400); if (text.Length > 0) item["value"] = text; } catch (Exception) { }
-            }
+        var layerFound = new List<AutomationElement>(); var layerItems = new List<Dictionary<string, object>>();
+        if (!Collect(top, layer, filter, request, layerFound, layerItems)) continue;
+        if (windows[layer] == target) {
+          var pages = VisiblePages(target);
+          // A tab loaded before anything asked for accessibility may have no tree at all, and keeps having none as it
+          // navigates. Selecting it again builds one (seconds later) and also brings the browser to the front, so it happens
+          // once per page (window and tab title), for an approved task.
+          int tab = layerItems.FindIndex(item => (string)item["role"] == "TabItem" && item.ContainsKey("selected") && (bool)item["selected"]);
+          if (pages.Count == 0 && words == null && tab >= 0 && ClassOf(target).StartsWith("Chrome_WidgetWin", StringComparison.Ordinal)
+              && reselected.Add(target.ToInt64() + "|" + (string)layerItems[tab]["name"])) {
+            try { ((SelectionItemPattern)layerFound[tab].GetCurrentPattern(SelectionItemPattern.Pattern)).Select(); } catch (Exception) { }
+            for (int wait = 0; wait < 20 && pages.Count == 0; wait++) { Thread.Sleep(150); pages = VisiblePages(target); }
           }
-          value = element.GetCachedPropertyValue(ValuePattern.IsReadOnlyProperty, true);
-          if (value is bool && (bool)value) item["readOnly"] = true;
-          var patterns = new List<string>();
-          if (Flag(element, AutomationElement.IsInvokePatternAvailableProperty)) patterns.Add("invoke");
-          if (Flag(element, AutomationElement.IsTogglePatternAvailableProperty)) patterns.Add("toggle");
-          if (Flag(element, AutomationElement.IsSelectionItemPatternAvailableProperty)) patterns.Add("select");
-          if (Flag(element, AutomationElement.IsExpandCollapsePatternAvailableProperty)) patterns.Add("expand");
-          if (Flag(element, AutomationElement.IsValuePatternAvailableProperty)) patterns.Add("value");
-          if (Flag(element, AutomationElement.IsScrollPatternAvailableProperty)) patterns.Add("scroll");
-          if (Flag(element, AutomationElement.IsTextPatternAvailableProperty)) patterns.Add("text");
-          item["patterns"] = patterns;
-          found.Add(element); items.Add(item);
+          var collected = new HashSet<string>(); foreach (var element in layerFound) collected.Add(IdOf(element));
+          if (pages.Exists(page => !collected.Contains(page))) { layerFound.Clear(); layerItems.Clear(); Collect(top, layer, filter, request, layerFound, layerItems); }
+          WithoutBackgroundTabs(layerFound, layerItems, pages, filter, request);
         }
+        if (words != null)
+          for (int i = layerItems.Count - 1; i >= 0; i--) {
+            string name = ((string)layerItems[i]["name"]).ToLowerInvariant();
+            if (!Array.TrueForAll(words, word => name.Contains(word)) || (string)layerItems[i]["role"] == "Document") { layerFound.RemoveAt(i); layerItems.RemoveAt(i); }
+          }
+        found.AddRange(layerFound); items.AddRange(layerItems);
       }
       if (window == null) throw new InvalidOperationException("ENOWINDOW");
       var order = new List<int>();
@@ -257,6 +242,100 @@ namespace KiteAgent {
       var elements = new List<object>();
       foreach (int i in order) { items[i]["ref"] = cache.Count; cache.Add(found[i]); elements.Add(items[i]); }
       return new Dictionary<string, object> { { "seq", seq }, { "window", window }, { "layers", layers }, { "elements", elements }, { "ms", (int)clock.ElapsedMilliseconds } };
+    }
+    // The controls of one window, in tree order. False when the window went away.
+    static bool Collect(AutomationElement top, int layer, Condition filter, CacheRequest request, List<AutomationElement> found, List<Dictionary<string, object>> items) {
+      AutomationElementCollection matches;
+      try { using (request.Activate()) matches = top.FindAll(TreeScope.Descendants, filter); }
+      catch (ElementNotAvailableException) { return false; }
+      foreach (AutomationElement element in matches) {
+        var item = Describe(element, layer);
+        if (item != null) { found.Add(element); items.Add(item); }
+      }
+      return true;
+    }
+    static Dictionary<string, object> Describe(AutomationElement element, int layer) {
+      Rect rect = element.Cached.BoundingRectangle;
+      if (rect.IsEmpty || rect.Width < 2 || rect.Height < 2) return null;
+      var item = new Dictionary<string, object> {
+        { "name", Clip(element.Cached.Name, 200) }, { "role", element.Cached.ControlType.ProgrammaticName.Replace("ControlType.", "") },
+        { "automationId", Clip(element.Cached.AutomationId, 100) }, { "help", Clip(element.Cached.HelpText, 200) },
+        { "enabled", element.Cached.IsEnabled }, { "layer", layer }, { "rect", Box(rect) },
+      };
+      bool password = false;
+      object value = element.GetCachedPropertyValue(AutomationElement.IsPasswordProperty, true);
+      if (value is bool && (bool)value) { password = true; item["password"] = true; }
+      value = element.GetCachedPropertyValue(AutomationElement.HasKeyboardFocusProperty, true);
+      if (value is bool && (bool)value) item["focused"] = true;
+      value = element.GetCachedPropertyValue(SelectionItemPattern.IsSelectedProperty, true);
+      if (value is bool) item["selected"] = value;
+      value = element.GetCachedPropertyValue(ExpandCollapsePattern.ExpandCollapseStateProperty, true);
+      if (value is ExpandCollapseState && (ExpandCollapseState)value != ExpandCollapseState.LeafNode) item["expanded"] = (ExpandCollapseState)value != ExpandCollapseState.Collapsed;
+      value = element.GetCachedPropertyValue(TogglePattern.ToggleStateProperty, true);
+      if (value is ToggleState) item["toggled"] = (ToggleState)value == ToggleState.On;
+      // Never read a password field's contents.
+      if (!password) {
+        value = element.GetCachedPropertyValue(ValuePattern.ValueProperty, true);
+        if (value is string && ((string)value).Length > 0) item["value"] = Clip((string)value, 400);
+        // Multi-line fields and documents expose their text through TextPattern instead (read only).
+        else if (Flag(element, AutomationElement.IsTextPatternAvailableProperty)) {
+          try { string text = ((TextPattern)element.GetCurrentPattern(TextPattern.Pattern)).DocumentRange.GetText(400); if (text.Length > 0) item["value"] = text; } catch (Exception) { }
+        }
+      }
+      value = element.GetCachedPropertyValue(ValuePattern.IsReadOnlyProperty, true);
+      if (value is bool && (bool)value) item["readOnly"] = true;
+      var patterns = new List<string>();
+      if (Flag(element, AutomationElement.IsInvokePatternAvailableProperty)) patterns.Add("invoke");
+      if (Flag(element, AutomationElement.IsTogglePatternAvailableProperty)) patterns.Add("toggle");
+      if (Flag(element, AutomationElement.IsSelectionItemPatternAvailableProperty)) patterns.Add("select");
+      if (Flag(element, AutomationElement.IsExpandCollapsePatternAvailableProperty)) patterns.Add("expand");
+      if (Flag(element, AutomationElement.IsValuePatternAvailableProperty)) patterns.Add("value");
+      if (Flag(element, AutomationElement.IsScrollPatternAvailableProperty)) patterns.Add("scroll");
+      if (Flag(element, AutomationElement.IsTextPatternAvailableProperty)) patterns.Add("text");
+      item["patterns"] = patterns;
+      return item;
+    }
+    static string IdOf(AutomationElement element) { var id = element.GetCachedPropertyValue(AutomationElement.RuntimeIdProperty, true) as int[]; return id == null ? "" : string.Join(".", id); }
+    // Chromium browsers (Edge, Chrome) show the visible tab in a child Chrome_RenderWidgetHostHWND. Asking it for its page
+    // can build the page's tree, so the caller looks again when a page returned here is missing from what it collected.
+    // Returns the runtime ids of the visible pages; empty when the page has no tree (see the re-select in Snapshot).
+    static List<string> VisiblePages(IntPtr window) {
+      var hosts = new List<IntPtr>(); var pages = new List<string>();
+      EnumChildWindows(window, (child, data) => { if (IsWindowVisible(child) && ClassOf(child) == "Chrome_RenderWidgetHostHWND") hosts.Add(child); return true; }, IntPtr.Zero);
+      foreach (IntPtr host in hosts) {
+        try {
+          var element = AutomationElement.FromHandle(host);
+          AutomationElement page = element.FindFirst(TreeScope.Subtree, DocumentCondition);
+          if (page != null) pages.Add(string.Join(".", page.GetRuntimeId()));
+        } catch (Exception) { }
+      }
+      return pages;
+    }
+    // Browsers keep the page of every tab shown so far in the window's tree, oldest first, so the visible page can come
+    // after hundreds of controls from tabs the user can't see. Drop a page whose name matches a tab in the tab strip
+    // unless it is the visible page (by runtime id, else the selected tab), with everything inside it. Frames inside the
+    // visible page and the browser's own popups don't match tab names, so they stay.
+    static void WithoutBackgroundTabs(List<AutomationElement> found, List<Dictionary<string, object>> items, List<string> pages, Condition filter, CacheRequest request) {
+      var tabs = new List<string>(); string selected = null;
+      for (int i = 0; i < items.Count; i++) {
+        if ((string)items[i]["role"] != "TabItem") continue;
+        string name = (string)items[i]["name"]; tabs.Add(name);
+        if (items[i].ContainsKey("selected") && (bool)items[i]["selected"]) selected = name;
+      }
+      if (tabs.Count < 2) return;
+      var drop = new HashSet<string>();
+      for (int i = 0; i < items.Count; i++) {
+        if ((string)items[i]["role"] != "Document") continue;
+        string name = ((string)items[i]["name"]).Trim(), id = IdOf(found[i]);
+        if (name.Length == 0 || drop.Contains(id)) continue;
+        bool visible = pages.Count > 0 ? pages.Contains(id) : selected != null && selected.StartsWith(name, StringComparison.Ordinal);
+        if (visible || !tabs.Exists(tab => tab.StartsWith(name, StringComparison.Ordinal))) continue;
+        drop.Add(id);
+        try { using (request.Activate()) foreach (AutomationElement inside in found[i].FindAll(TreeScope.Descendants, filter)) drop.Add(IdOf(inside)); }
+        catch (ElementNotAvailableException) { }
+      }
+      if (drop.Count == 0) return;
+      for (int i = items.Count - 1; i >= 0; i--) if (drop.Contains(IdOf(found[i]))) { found.RemoveAt(i); items.RemoveAt(i); }
     }
     static bool Flag(AutomationElement element, AutomationProperty property) { object value = element.GetCachedPropertyValue(property, true); return value is bool && (bool)value; }
     static int Rank(Dictionary<string, object> item) { return item.ContainsKey("focused") ? 0 : ((string)item["name"]).Length > 0 ? 1 : 2; }

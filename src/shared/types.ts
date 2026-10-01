@@ -91,6 +91,8 @@ export interface KiteAPI {
   demoBoard(): Promise<OperationResult>;
   onTaskEvent(callback: (view: import('./agent').TaskView | null) => void): () => void;
   taskControl(action: import('./agent').TaskAction): void;
+  /** Pick an option of the task's open choice; -1 for none of them. */
+  taskChoose(index: number): void;
   setTaskBounds(bounds: ScreenBounds | null): void;
   printRecentMessages(): Promise<OperationResult>;
   copyText(text: string): Promise<OperationResult>;

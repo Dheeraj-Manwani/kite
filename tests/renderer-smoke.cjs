@@ -21,7 +21,7 @@ onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRender
 approveTool:(id,approved,scope)=>ipcRenderer.invoke('test:approve',scope?{id,approved,scope}:{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
 onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},onGuideEvent:cb=>subscribe('guide:state',cb),guideControl:action=>ipcRenderer.send('test:guide',action),setGuideBounds:bounds=>ipcRenderer.send('test:guideBounds',bounds),setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true}),
 onBoardEvent:cb=>subscribe('board:state',cb),boardControl:action=>ipcRenderer.send('test:board',action),boardDrawn:(id,key)=>ipcRenderer.send('test:boardDrawn',id,key),setBoardBounds:bounds=>ipcRenderer.send('test:boardBounds',bounds),exportBoard:(action,png,title)=>ipcRenderer.invoke('test:boardExport',action,png,title),demoBoard:async()=>({ok:true}),
-onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
+onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),taskChoose:index=>ipcRenderer.send('test:taskChoose',index),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
   const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[];
@@ -469,6 +469,19 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('task:state',{...taskView,status:'done',action:null,target:null,message:'I wrote the haiku and saved it as haiku.txt.'});await delay(100);
     assert.match(await js("document.querySelector('.task-card').textContent"),/Done · Notepad.*saved it as haiku\.txt/);
     assert.equal(await js("document.querySelector('.task-stop')"),null,'no Stop button once finished');
+    // A job: the phase checklist (the user's steps marked "You"), and a choice answered from the card.
+    const chosen=[];ipcMain.on('test:taskChoose',(_e,i)=>chosen.push(i));
+    const job={url:'https://shop.example/p/whey',choices:[{label:'Whey Protein, one pack of 60 sachets',detail:'₹2,149'},{label:'Whey Protein, two packs of 30',detail:'₹2,298'}],
+      phases:[{id:'find',title:'Find it',state:'done'},{id:'choose',title:'Choose',state:'active'},{id:'cart',title:'Add to cart',state:'pending'},{id:'checkout',title:'Check out',state:'yours'},{id:'pay',title:'Pay',state:'yours'}]};
+    overlay.webContents.send('task:state',{...taskView,goal:'Find whey protein, 60 sachets, and add it to the cart',app:'Microsoft Edge',status:'asking',action:null,target:null,message:'I found two. Which one?',budget:45,job});await delay(150);
+    assert.deepEqual(await js("[...document.querySelectorAll('.job-phases li')].map(li=>li.className+':'+li.textContent)"),['done:✓Find it','active:●Choose','pending:○Add to cart','yours:YouCheck out (you do this)','yours:YouPay (you do this)']);
+    assert.equal(await js("document.querySelector('.job-phases [aria-current=step]').textContent"),'●Choose');
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-choices button')].map(b=>b.textContent)"),['1Whey Protein, one pack of 60 sachets₹2,149','2Whey Protein, two packs of 30₹2,298','None of these']);
+    fs.writeFileSync(path.join(temporary,'task-job.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("document.querySelectorAll('.task-choices button')[1].click()");await js("document.querySelector('.task-choices .choice-none').click()");await delay(50);
+    assert.deepEqual(chosen,[1,-1]);
+    overlay.webContents.send('task:state',{...taskView,app:'Microsoft Edge',status:'thinking',action:null,target:null,message:'Looking…',job:{...job,choices:null}});await delay(100);
+    assert.equal(await js("document.querySelector('.task-choices')"),null,'no choices once answered');
     overlay.webContents.send('task:state',null);await delay(100);
     assert.equal(await js("document.querySelector('.task-card')"),null); assert.equal(taskBounds.at(-1),null);
     // Overlay delight (UX-16 to UX-18, design.md K-09).

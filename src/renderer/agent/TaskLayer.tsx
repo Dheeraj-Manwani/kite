@@ -11,6 +11,7 @@ import { useKiteScale } from '../hooks/useSettings';
 const overlaps = (a: ScreenBounds, b: ScreenBounds) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 const ended = (view: TaskView) => ['done', 'failed', 'stopped'].includes(view.status);
 const heading: Partial<Record<TaskView['status'], string>> = { done: 'Done', failed: 'Couldn’t finish', stopped: 'Stopped', paused: 'Paused', approval: 'Your OK', asking: 'Question' };
+const phaseMark = { done: '✓', active: '●', pending: '○', yours: 'You' } as const;
 /**
  * The task card: what Kite is doing, the step budget, confirmations, and a Stop button that is always there.
  * The kite points at each control before it is used, with the same marker ring as guide mode.
@@ -68,8 +69,16 @@ export function TaskLayer() {
         <span className="task-progress">Step {view.step} of {view.budget}</span></header>
       <div className="task-meter" aria-hidden="true"><span style={{ width: `${Math.min(100, view.step / view.budget * 100)}%` }} /></div>
       <p className="task-goal" title={view.goal}>{view.goal}</p>
+      {view.job && <ol className="job-phases" aria-label="Job steps">{view.job.phases.map(p =>
+        <li key={p.id} className={p.state} aria-current={p.state === 'active' ? 'step' : undefined}>
+          <span className="job-mark" aria-hidden="true">{phaseMark[p.state]}</span>{p.title}{p.state === 'yours' && <span className="sr-only"> (you do this)</span>}</li>)}</ol>}
       {view.action && <p className="task-action"><span>{view.status === 'approval' ? 'Next' : 'Now'}</span>{view.action}</p>}
       {view.message && <p className="task-message" role="status" aria-live="polite">{view.message}</p>}
+      {view.status === 'asking' && view.job?.choices && <div className="task-choices" role="group" aria-label={view.message}>
+        {view.job.choices.map((option, i) => <button key={i} onClick={() => window.kite.taskChoose(i)}>
+          <span className="choice-number">{i + 1}</span><span><strong>{option.label}</strong>{option.detail && <small>{option.detail}</small>}</span></button>)}
+        <button className="choice-none" onClick={() => window.kite.taskChoose(-1)}>None of these</button>
+      </div>}
       {view.status === 'approval' && <div className="task-approval">
         <button className="primary" onClick={() => control('allow')}>{view.risk ? 'Allow' : 'Allow once'}</button>
         {view.scope === 'once' && !view.risk && <button onClick={() => control('allowAll')}>Allow the rest</button>}

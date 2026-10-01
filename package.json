@@ -12,7 +12,7 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
-    "test": "node --require ./tests/register.cjs --test tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs tests/vision.test.cjs tests/guide.test.cjs tests/board.test.cjs tests/agent.test.cjs tests/windows.test.cjs",
+    "test": "node --require ./tests/register.cjs --test tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs tests/vision.test.cjs tests/guide.test.cjs tests/board.test.cjs tests/agent.test.cjs tests/windows.test.cjs tests/shop.test.cjs tests/job.test.cjs",
     "test:capture": "electron tests/capture-native.cjs",
     "test:native": "electron tests/native-smoke.cjs",
     "test:clipboard": "electron tests/clipboard-native.cjs",
@@ -25,7 +25,10 @@
     "test:packaged": "node scripts/smoke.cjs",
     "assets": "python scripts/brand.py",
     "perf": "electron scripts/perf.cjs",
-    "eval:routing": "node scripts/routing-eval.cjs"
+    "eval:routing": "node scripts/routing-eval.cjs",
+    "measure:web": "node tests/web-measure.cjs",
+    "test:job": "node tests/job-live.cjs",
+    "shop": "node tests/fixtures/shop/server.cjs"
   },
   "keywords": [
     "electron",
