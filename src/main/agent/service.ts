@@ -109,7 +109,7 @@ export class TaskService {
   }
   command(text: string) { return this.active ? this.session?.command(text) : undefined; }
   control(action: TaskAction) { if (this.active) this.session?.control(action); }
-  choose(index: number) { if (this.active) this.session?.choose(index); }
+  choose(index: number, remember = false) { if (this.active) this.session?.choose(index, remember); }
   context(): string | undefined {
     if (!this.deps.enabled()) return undefined;
     const s = this.active ? this.session : undefined;

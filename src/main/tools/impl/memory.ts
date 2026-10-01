@@ -18,7 +18,7 @@ export interface MemoryToolDeps {
   source(): string;
 }
 const about = z.object({ about: z.string().trim().min(1).max(80) }).strict();
-const fields = ['name', 'phone', 'email', 'address', 'pincode', 'city', 'state', 'landmark', 'preference'] as const;
+const fields = ['name', 'phone', 'email', 'address', 'house', 'street', 'pincode', 'city', 'state', 'landmark', 'preference'] as const;
 export const rememberInput = z.object({
   field: z.enum(fields),
   value: z.string().trim().min(1).max(300),
@@ -34,7 +34,7 @@ export function keyFor({ field, place, topic }: Pick<RememberInput, 'field' | 'p
   const where = place ? place.toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, 20) : '';
   // A name or phone at an address is that address's contact; otherwise it is the user's own.
   if (field === 'email' || (['name', 'phone'].includes(field) && !where)) return `profile.${field}`;
-  return `${where.length >= 2 ? where : 'home'}.${field}`;
+  return `${where.length >= 2 ? where : 'home'}.${field === 'house' ? 'line1' : field === 'street' ? 'line2' : field}`;
 }
 const said = (f: MemoryFact) => sensitive(f) ? `${f.label}: ${mask(f)}, placeholder {{${f.key}}}` : `${f.label}: ${f.value}`;
 export function memoryTools(deps: MemoryToolDeps) {
@@ -53,7 +53,7 @@ export function memoryTools(deps: MemoryToolDeps) {
   });
   const remember = defineTool<RememberInput>({
     name: 'remember', kind: 'info', approvalRequired: false, inputSchema: rememberInput,
-    description: 'Save a fact the user asked you to remember, or corrected: their name, phone, email, an address (place: "home", "work"), a pincode or city, or a preference (topic: what it is about). Kite never saves passwords, card, bank, Aadhaar or PAN numbers, or codes, and says so.',
+    description: 'Save a fact the user asked you to remember, or corrected: their name, phone, email, an address (place: "home", "work"; the whole address, or its parts: house is the flat or house number and building, street the area or street), a pincode, city, state or landmark, or a preference (topic: what it is about). Kite never saves passwords, card, bank, Aadhaar or PAN numbers, or codes, and says so.',
     summarize: input => `Remember your ${placeholderLabel(keyFor(input)).toLowerCase()}.`,
     execute: async input => {
       const key = keyFor(input), kind = key.startsWith('profile.') ? 'profile' as const : key.startsWith('pref.') ? 'preference' as const : 'address' as const;

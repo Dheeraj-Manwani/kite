@@ -35,7 +35,8 @@ export function createMemory(table: MemoryTable, cipher: SecretCipher, options: 
   function write(fact: NewFact): SaveResult {
     const value = fact.value.trim().slice(0, 500), label = fact.label.trim().slice(0, 80) || fact.key;
     if (!validKey(fact.key) || kindOf(fact.key) !== fact.kind || !value) return { ok: false, reason: 'That isn’t something I can save.' };
-    const refused = neverSave(value, `${label} ${fact.key}`);
+    // Orders are read from the page by code; their numbers can be long (403-1234567-1234567) without being a card.
+    const refused = fact.kind === 'order' ? null : neverSave(value, `${label} ${fact.key}`);
     if (refused) return { ok: false, reason: refused };
     const previous = store.find(fact.key);
     if (previous && previous.value === value) return { ok: true, fact: previous, token: '', updated: false };

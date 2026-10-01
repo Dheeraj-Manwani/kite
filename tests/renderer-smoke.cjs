@@ -28,7 +28,7 @@ onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRender
 approveTool:(id,approved,scope)=>ipcRenderer.invoke('test:approve',scope?{id,approved,scope}:{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
 onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},onGuideEvent:cb=>subscribe('guide:state',cb),guideControl:action=>ipcRenderer.send('test:guide',action),setGuideBounds:bounds=>ipcRenderer.send('test:guideBounds',bounds),setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true}),
 onBoardEvent:cb=>subscribe('board:state',cb),boardControl:action=>ipcRenderer.send('test:board',action),boardDrawn:(id,key)=>ipcRenderer.send('test:boardDrawn',id,key),setBoardBounds:bounds=>ipcRenderer.send('test:boardBounds',bounds),exportBoard:(action,png,title)=>ipcRenderer.invoke('test:boardExport',action,png,title),demoBoard:async()=>({ok:true}),
-onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),taskChoose:index=>ipcRenderer.send('test:taskChoose',index),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
+onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),taskChoose:(index,remember)=>ipcRenderer.send('test:taskChoose',index,remember),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
   const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[], memoryCalls=[];
@@ -542,7 +542,7 @@ app.whenReady().then(async()=>{
     assert.match(await js("document.querySelector('.task-card').textContent"),/Done · Notepad.*saved it as haiku\.txt/);
     assert.equal(await js("document.querySelector('.task-stop')"),null,'no Stop button once finished');
     // A job: the phase checklist (the user's steps marked "You"), and a choice answered from the card.
-    const chosen=[];ipcMain.on('test:taskChoose',(_e,i)=>chosen.push(i));
+    const chosen=[];ipcMain.on('test:taskChoose',(_e,i,remember)=>chosen.push(remember?[i,remember]:i));
     const job={url:'https://shop.example/p/whey',choices:[{label:'Whey Protein, one pack of 60 sachets',detail:'₹2,149'},{label:'Whey Protein, two packs of 30',detail:'₹2,298'}],
       phases:[{id:'find',title:'Find it',state:'done'},{id:'choose',title:'Choose',state:'active'},{id:'cart',title:'Add to cart',state:'pending'},{id:'checkout',title:'Check out',state:'yours'},{id:'pay',title:'Pay',state:'yours'}]};
     overlay.webContents.send('task:state',{...taskView,goal:'Find whey protein, 60 sachets, and add it to the cart',app:'Microsoft Edge',status:'asking',action:null,target:null,message:'I found two. Which one?',budget:45,job});await delay(150);
@@ -554,6 +554,28 @@ app.whenReady().then(async()=>{
     assert.deepEqual(chosen,[1,-1]);
     overlay.webContents.send('task:state',{...taskView,app:'Microsoft Edge',status:'thinking',action:null,target:null,message:'Looking…',job:{...job,choices:null}});await delay(100);
     assert.equal(await js("document.querySelector('.task-choices')"),null,'no choices once answered');
+    // Checkout (phase 4): who checks out, with "Remember for this site"; the order card; then the user's turn to pay.
+    const checkoutJob={...job,phases:job.phases.map(p=>({...p,state:p.id==='cart'?'done':p.state==='active'?'done':p.state})),remember:'Remember for shop.example.in',
+      choices:[{label:'I’ll do it',detail:'I stop here and leave the cart on screen'},{label:'You do it',detail:'I fill in checkout and ask you before placing the order'}]};
+    overlay.webContents.send('task:state',{...taskView,app:'Microsoft Edge',status:'asking',action:null,target:null,budget:45,message:'It’s in your cart: Sunfold Whey Protein, 60 sachets, ₹2,149. Do you want to check out yourself, or should I?',job:checkoutJob});await delay(150);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-choices button')].map(b=>b.textContent)"),['1I’ll do itI stop here and leave the cart on screen','2You do itI fill in checkout and ask you before placing the order']);
+    assert.equal(await js("document.querySelector('.choice-remember').textContent"),'Remember for shop.example.in');
+    await js("document.querySelector('.choice-remember input').click()");await delay(30);
+    fs.writeFileSync(path.join(temporary,'task-checkout.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("document.querySelectorAll('.task-choices button')[1].click()");await delay(50);
+    assert.deepEqual(chosen.at(-1),[1,true]);
+    const order={total:'₹2,169',address:'Asha K, Flat 12, Baner Road, Pune 411045',payment:'UPI',delivery:'Standard delivery'};
+    overlay.webContents.send('task:state',{...taskView,app:'Microsoft Edge',status:'approval',scope:'task',budget:45,action:'Click “Place order” button',risk:'This may spend money: the total here is ₹2,169.',
+      message:'Place the order for ₹2,169?',ask:null,job:{...checkoutJob,choices:null,remember:null,order}});await delay(150);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-order dt')].map(d=>d.textContent+': '+d.nextElementSibling.textContent)"),['Total: ₹2,169','Deliver to: Asha K, Flat 12, Baner Road, Pune 411045','Payment: UPI','Delivery: Standard delivery']);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-approval button')].map(b=>b.textContent)"),['Place order','No']);
+    assert.equal(await js("document.querySelector('.task-remember')"),null,'no Always for placing an order');
+    fs.writeFileSync(path.join(temporary,'task-order.png'),(await overlay.webContents.capturePage()).toPNG());
+    overlay.webContents.send('task:state',{...taskView,app:'Microsoft Edge',status:'waiting',action:null,target:null,budget:45,message:'Approve the payment request in your UPI app. I’ll wait.',job:{...checkoutJob,choices:null,remember:null}});await delay(150);
+    assert.match(await js("document.querySelector('.task-card').textContent"),/Your turn · Microsoft Edge.*Approve the payment request in your UPI app/);
+    assert.deepEqual(await js("[...document.querySelectorAll('.task-actions button')].map(b=>b.textContent)"),['I’ve paid','Stop']);
+    await js("[...document.querySelectorAll('.task-actions button')].find(b=>b.textContent==='I’ve paid').click()");await delay(30);
+    assert.equal(taskActions.at(-1),'resume');
     overlay.webContents.send('task:state',null);await delay(100);
     assert.equal(await js("document.querySelector('.task-card')"),null); assert.equal(taskBounds.at(-1),null);
     // Overlay delight (UX-16 to UX-18, design.md K-09).

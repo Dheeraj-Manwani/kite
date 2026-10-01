@@ -17,3 +17,4 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [Whiteboard lessons are scripts of beats, drawn by the kite](013-whiteboard.md)
 - [Permission categories and modes for tasks and jobs](014-permissions.md)
 - [Memory keeps personal values away from models](015-memory.md)
+- [Kite checks out, and the person pays](016-checkout.md)

@@ -155,13 +155,19 @@ test('a store job opens the site in a new tab, walks its phases, and ends with t
     { type: 'next_phase', summary: 'Found it.' }, { type: 'next_phase', summary: 'Chose the 60-sachet pack.' },
     { decision: { type: 'click', ref: 6 }, page: 1 }, { type: 'done', summary: 'The model says it is in the cart.' }] });
   h.session.start();
+  // At the cart, Balanced asks who checks out (phase 4); "I'll do it" hands over with the cart read back.
+  await h.until(() => h.view?.status === 'asking', 'asks who checks out');
+  assert.deepEqual(h.view.job.choices.map(c => c.label), ['I’ll do it', 'You do it']); assert.equal(h.view.job.remember, 'Remember for shop.example.in');
+  assert.match(h.said.at(-1), /^It’s in your cart: .* Do you want to check out yourself, or should I\?$/);
+  h.session.choose(0);
   await h.until(() => h.ended.length, 'finishes');
   assert.deepEqual(h.keys[0], [{ vk: 0x54, mods: [0x11] }, { text: 'https://shop.example.in' }, { vk: 0x0d, mods: [] }], 'Ctrl+T, the site, Enter');
   assert.equal(h.audits[0].summary, 'Open shop.example.in in a new tab');
   assert.equal(h.ended[0].status, 'done');
-  assert.equal(h.ended[0].message, 'It’s in your cart: Sunfold Whey Protein, 60 sachets, Unflavoured, ₹2,149; and 2 × Sunfold Protein Bar, Pack of 6, Chocolate, ₹360. The subtotal is ₹2,869. Check out whenever you’re ready; I’ll leave that to you.');
+  assert.equal(h.ended[0].message, 'Okay. It’s in your cart: Sunfold Whey Protein, 60 sachets, Unflavoured, ₹2,149; and 2 × Sunfold Protein Bar, Pack of 6, Chocolate, ₹360. The subtotal is ₹2,869. It’s all yours from here.');
   assert.doesNotMatch(h.ended[0].message, /model says/, 'the user hears the cart as read by code');
   assert.equal(h.view.budget, 45); assert.deepEqual(h.view.job.phases.map(p => p.state), ['done', 'done', 'done', 'yours', 'yours']);
+  assert.equal(h.audits.filter(a => /checkout/i.test(a.summary)).length, 0, 'nothing toward checkout ran');
   assert.equal(h.prompts[0].job.phase, 0); assert.equal(h.prompts[1].job.phase, 1); assert.equal(h.prompts[2].job.phase, 2);
   assert.equal(h.prompts[0].url, 'https://shop.example.in/search?q=sunfold+whey');
   assert.match(h.prompts[0].controls, /Hyperlink “Sunfold Whey Protein, 15 sachets”/);

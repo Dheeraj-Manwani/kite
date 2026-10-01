@@ -9,7 +9,7 @@ export interface JobPhase {
   id: string; title: string;
   /** Steps this phase usually needs; past it Kite asks whether to keep going. */
   budget: number;
-  /** False for the user's own steps (checkout, payment): shown on the checklist, never done by Kite. */
+  /** False for the user's own steps (payment, and checkout until the user asks Kite to do it): shown on the checklist as theirs. */
   kite: boolean;
 }
 export interface JobPlan {
@@ -27,13 +27,19 @@ export interface JobPlan {
 export type PhaseState = 'done' | 'active' | 'pending' | 'yours';
 export interface ChoiceOption { label: string; detail?: string; ref?: number }
 /** What the task card shows for a job, beside the usual task view. */
-export interface JobView { phases: { id: string; title: string; state: PhaseState }[]; url: string | null; choices: ChoiceOption[] | null }
+export interface JobView {
+  phases: { id: string; title: string; state: PhaseState }[]; url: string | null; choices: ChoiceOption[] | null;
+  /** The open choice offers "Remember for <site>" (the checkout question). */
+  remember?: string | null;
+  /** Placing the order: what code read from the page, for the confirmation card. */
+  order?: OrderSummary | null;
+}
 
 /** A whole job, however its phases go: about 45 model decisions and 20 minutes (a first order is 25–45). */
 export const jobLimits = { steps: 45, wallMs: 20 * 60_000 } as const;
 const templates: Record<JobKind, JobPhase[]> = {
   store: [{ id: 'find', title: 'Find it', budget: 12, kite: true }, { id: 'choose', title: 'Choose', budget: 6, kite: true },
-    { id: 'cart', title: 'Add to cart', budget: 6, kite: true }, { id: 'checkout', title: 'Check out', budget: 0, kite: false }, { id: 'pay', title: 'Pay', budget: 0, kite: false }],
+    { id: 'cart', title: 'Add to cart', budget: 6, kite: true }, { id: 'checkout', title: 'Check out', budget: 20, kite: false }, { id: 'pay', title: 'Pay', budget: 0, kite: false }],
   form: [{ id: 'open', title: 'Open the form', budget: 8, kite: true }, { id: 'fill', title: 'Fill it in', budget: 15, kite: true },
     { id: 'review', title: 'Check it', budget: 4, kite: true }, { id: 'submit', title: 'Submit', budget: 0, kite: false }],
 };
@@ -138,6 +144,57 @@ export function pageTotal(snapshot: AgentSnapshot): number | null {
     if (price) { rank = found; value = amount(price); }
   }
   return value;
+}
+
+// Checkout (docs/end-to-end-jobs.md §3.3, phase 4): what the page says about the order, read by code.
+const textOf = (snapshot: AgentSnapshot) => pageElements(snapshot).map(e => (e.name || e.value || '').replace(/\s+/g, ' ').trim()).filter(Boolean);
+export interface OrderSummary { total: string | null; address: string | null; payment: string | null; delivery: string | null }
+/** The total, address, payment method and delivery shown before an order is placed; null fields when not shown. */
+export function orderSummary(snapshot: AgentSnapshot): OrderSummary {
+  const lines = textOf(snapshot), joined = lines.join(' · ');
+  const field = (pattern: RegExp) => { const m = joined.match(pattern); return m ? m[1].replace(/[·|]+$/, '').trim().slice(0, 160) || null : null; };
+  const total = pageTotal(snapshot);
+  return { total: total === null ? null : `₹${total.toLocaleString('en-IN')}`,
+    address: field(/\b(?:deliver(?:ing)? to|shipping to|ship to|delivery address)\s*:?\s*([^·]+)/i),
+    payment: field(/\b(?:payment(?: method)?|pay(?:ing)? (?:by|with)|paid by)\s*:?\s*([^·]+)/i),
+    delivery: field(/\bdelivery\s*:\s*([^·]+)/i) };
+}
+/** The button that places the order or pays: the step that gets its own confirmation card. */
+export const placesOrder = /\b(place (your |the |my )?order|pay (now|securely|₹|rs)|pay$|confirm (order|purchase|and pay|payment)|complete (order|purchase|payment)|submit order|click to pay|make payment|buy now)\b/i;
+const placedWords = /\b(order (has been )?(placed|confirmed|successful|received)|thank you for (your )?(order|purchase)|thanks for (your )?(order|purchase)|order is confirmed)\b/i;
+const pendingWords = /\b(complete your payment|approve the payment|approve the (payment )?request|payment (is )?pending|waiting for (your )?payment|enter the otp|otp sent|upi app|not placed until|finish paying)\b/i;
+export interface PlacedOrder { number: string; total: string | null; when: string | null }
+/**
+ * The order confirmation, read by code: "order placed" (or similar) and an order number on the page. Kite only says
+ * "Ordered" when this finds both; a page that still waits for payment never counts.
+ */
+export function readOrder(snapshot: AgentSnapshot): PlacedOrder | null {
+  const lines = textOf(snapshot), joined = lines.join(' · ');
+  if (!placedWords.test(joined) || pendingWords.test(joined)) return null;
+  const at = lines.findIndex(l => /\border\s*(number|no\.?|id|#)/i.test(l));
+  if (at < 0) return null;
+  const id = (text: string) => text.replace(/^.*?\border\s*(?:number|no\.?|id|#)\s*:?\s*#?\s*/i, '').match(/^[A-Z0-9][A-Z0-9-]{4,}/i)?.[0];
+  const number = [lines[at], ...lines.slice(at + 1, at + 3)].map((l, i) => i ? l.match(/^#?\s*([A-Z0-9][A-Z0-9-]{4,})$/i)?.[1] : id(l)).find(n => n && /\d/.test(n));
+  if (!number) return null;
+  const total = pageTotal(snapshot), when = joined.match(/\barriv(?:ing|es)\s+([^·]+?)(?:\s+·|$)/i)?.[1]?.trim().slice(0, 60) ?? null;
+  return { number, total: total === null ? null : `₹${total.toLocaleString('en-IN')}`, when };
+}
+/** A page waiting for the user to pay (UPI request, bank OTP), and what to tell them; null when the page isn't waiting. */
+export function paymentPending(snapshot: AgentSnapshot): string | null {
+  const joined = textOf(snapshot).join(' · ');
+  if (!pendingWords.test(joined)) return null;
+  if (/\botp\b/i.test(joined)) return 'Enter the OTP from your bank on the payment page. I’ll wait.';
+  if (/\bupi\b/i.test(joined)) return 'Approve the payment request in your UPI app. I’ll wait.';
+  if (/\b(bank|net ?banking)\b/i.test(joined)) return 'Finish paying on your bank’s page. I’ll wait.';
+  return 'Finish the payment. I’ll wait.';
+}
+/** "I'll do it" or "you do it" to "check out yourself, or should I?"; null when unclear. */
+export function matchCheckout(text: string): { who: 'me' | 'kite'; remember: boolean } | null {
+  const s = text.toLowerCase().replace(/’/g, "'").replace(/[.,!?]/g, ' ').replace(/\s+/g, ' ').trim();
+  const remember = /\b(always|every time|from now on|remember( that)?|next time too)\b/.test(s);
+  if (/\b(i'?ll|i will|myself|let me|leave it|i can do it|i'?ll do it|i'?ll check out|no thanks|no)\b/.test(s)) return { who: 'me', remember };
+  if (/\b(you do it|you|go ahead|yes|yeah|sure|please do|do it|check( it)? out|place (it|the order))\b/.test(s)) return { who: 'kite', remember };
+  return null;
 }
 
 export const addToCart =/^(add to (cart|bag|basket|trolley)|buy now|add)$/i;

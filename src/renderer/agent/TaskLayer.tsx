@@ -10,7 +10,7 @@ import { taskRuntime } from './runtime';
 import { useKiteScale, useSettings } from '../hooks/useSettings';
 const overlaps = (a: ScreenBounds, b: ScreenBounds) => a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
 const ended = (view: TaskView) => ['done', 'failed', 'stopped'].includes(view.status);
-const heading: Partial<Record<TaskView['status'], string>> = { done: 'Done', failed: 'Couldn’t finish', stopped: 'Stopped', paused: 'Paused', approval: 'Your OK', asking: 'Question' };
+const heading: Partial<Record<TaskView['status'], string>> = { done: 'Done', failed: 'Couldn’t finish', stopped: 'Stopped', paused: 'Paused', approval: 'Your OK', asking: 'Question', waiting: 'Your turn' };
 const phaseMark = { done: '✓', active: '●', pending: '○', yours: 'You' } as const;
 /**
  * The task card: what Kite is doing, the step budget, confirmations, and a Stop button that is always there.
@@ -21,7 +21,8 @@ export function TaskLayer() {
   const [size, setSize] = useState({ width: 320, height: 220 });
   const card = useRef<HTMLElement>(null), previous = useRef<TaskView | null>(null);
   // "Always" and "Never" apply here (the site or app) or everywhere; here first, when there is a place.
-  const [everywhere, setEverywhere] = useState(false);
+  const [everywhere, setEverywhere] = useState(false), [rememberChoice, setRememberChoice] = useState(false);
+  useEffect(() => { setRememberChoice(false); }, [view?.job?.remember, view?.step]);
   const askKey = view?.status === 'approval' && view.ask ? `${view.id}:${view.step}:${view.ask.category}` : '';
   useEffect(() => { setEverywhere(false); }, [askKey]);
   // The hands-off marker on the kite (ADR 014): the mode itself, or a job started hands-off.
@@ -83,12 +84,19 @@ export function TaskLayer() {
       {view.action && <p className="task-action"><span>{view.status === 'approval' ? 'Next' : 'Now'}</span>{view.action}</p>}
       {view.message && <p className="task-message" role="status" aria-live="polite">{view.message}</p>}
       {view.status === 'asking' && view.job?.choices && <div className="task-choices" role="group" aria-label={view.message}>
-        {view.job.choices.map((option, i) => <button key={i} onClick={() => window.kite.taskChoose(i)}>
+        {view.job.choices.map((option, i) => <button key={i} onClick={() => window.kite.taskChoose(i, rememberChoice)}>
           <span className="choice-number">{i + 1}</span><span><strong>{option.label}</strong>{option.detail && <small>{option.detail}</small>}</span></button>)}
-        <button className="choice-none" onClick={() => window.kite.taskChoose(-1)}>None of these</button>
+        {view.job.remember ? <label className="choice-remember"><input type="checkbox" checked={rememberChoice} onChange={e => setRememberChoice(e.target.checked)} />{view.job.remember}</label>
+          : <button className="choice-none" onClick={() => window.kite.taskChoose(-1)}>None of these</button>}
       </div>}
+      {view.status === 'approval' && view.job?.order && <dl className="task-order" aria-label="The order, as the page shows it">
+        {view.job.order.total && <><dt>Total</dt><dd>{view.job.order.total}</dd></>}
+        {view.job.order.address && <><dt>Deliver to</dt><dd>{view.job.order.address}</dd></>}
+        {view.job.order.payment && <><dt>Payment</dt><dd>{view.job.order.payment}</dd></>}
+        {view.job.order.delivery && <><dt>Delivery</dt><dd>{view.job.order.delivery}</dd></>}
+      </dl>}
       {view.status === 'approval' && <div className="task-approval">
-        <button className="primary" onClick={() => control('allow')}>Yes</button>
+        <button className="primary" onClick={() => control('allow')}>{view.job?.order ? 'Place order' : 'Yes'}</button>
         {view.scope === 'once' && !view.risk && <button onClick={() => control('allowAll')}>Allow the rest</button>}
         <button onClick={() => control('skip')}>No</button>
       </div>}
@@ -101,10 +109,12 @@ export function TaskLayer() {
       </div>}
       {view.log.length > 0 && <ol className="task-log">{view.log.map((entry, i) => <li key={i} className={entry.ok ? 'ok' : 'bad'}>{entry.text}</li>)}</ol>}
       {!finished && <div className="task-actions">
-        <button onClick={() => control(view.status === 'paused' ? 'resume' : 'pause')}>{view.status === 'paused' ? 'Resume' : 'Pause'}</button>
+        {view.status === 'waiting' ? <button className="primary" onClick={() => control('resume')}>I’ve paid</button>
+          : <button onClick={() => control(view.status === 'paused' ? 'resume' : 'pause')}>{view.status === 'paused' ? 'Resume' : 'Pause'}</button>}
         <button className="task-stop danger" onClick={() => control('stop')}>Stop</button>
       </div>}
-      {!finished && <small className="task-hint">Say “stop” or press Esc anytime. Touching your mouse or keyboard pauses me. I never move your pointer.</small>}
+      {!finished && <small className="task-hint">{view.status === 'waiting' ? 'Go ahead and pay: I’m watching the page and will tell you when the order is confirmed.'
+        : 'Say “stop” or press Esc anytime. Touching your mouse or keyboard pauses me. I never move your pointer.'}</small>}
     </section>
   </div>;
 }

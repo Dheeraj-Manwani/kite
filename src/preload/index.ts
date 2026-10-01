@@ -90,7 +90,7 @@ const api: KiteAPI = {
     ipcRenderer.on('task:state', listener); return () => ipcRenderer.removeListener('task:state', listener);
   },
   taskControl: action => ipcRenderer.send('task:control', action),
-  taskChoose: index => ipcRenderer.send('task:choose', index),
+  taskChoose: (index, remember) => ipcRenderer.send('task:choose', index, remember === true),
   setTaskBounds: bounds => ipcRenderer.send('task:bounds', bounds),
   printRecentMessages: () => ipcRenderer.invoke('dev:recentMessages'),
   copyText: text => ipcRenderer.invoke('bubble:copy', text),

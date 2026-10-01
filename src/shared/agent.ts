@@ -23,7 +23,8 @@ export function jobsModel(settings: { model: ModelSelection; jobsModel?: ModelSe
 /** How far the approval to start reaches: the user's permission settings, hands-off for this job, or step by step. */
 export type TaskScope = 'task' | 'once' | 'handsOff';
 export const taskScopes: TaskScope[] = ['task', 'once', 'handsOff'];
-export type TaskStatus = 'starting' | 'thinking' | 'acting' | 'approval' | 'paused' | 'asking' | 'done' | 'failed' | 'stopped';
+/** "waiting": the user's own step in a job (approving a payment); Kite watches the page and makes no model calls. */
+export type TaskStatus = 'starting' | 'thinking' | 'acting' | 'approval' | 'paused' | 'asking' | 'waiting' | 'done' | 'failed' | 'stopped';
 export interface TaskLogEntry { text: string; ok: boolean }
 /** Everything the overlay needs to draw the task card and point at the control being used. Rectangles are global DIP. */
 export interface TaskView {
@@ -232,7 +233,7 @@ export function classifyTaskCommand(text: string): TaskAction | 'new-request' {
   const s = text.toLowerCase().trim().replace(/’/g, "'").replace(/[.!?,]+/g, '').replace(/\s+/g, ' ').replace(/^(ok|okay|kite|hey kite) /, '').replace(/ please$/, '');
   if (/^(stop|stop it|stop the task|cancel|cancel (it|that|the task)|abort|quit|never ?mind|forget it|that's enough|stop doing that)$/.test(s)) return 'stop';
   if (/^(wait|hold on|hang on|pause|pause (it|the task)|one sec(ond)?|just a (sec|second|moment|minute))$/.test(s)) return 'pause';
-  if (/^(continue|resume|go on|keep going|carry on|i'm done|i'm back|ready|go ahead and continue)$/.test(s)) return 'resume';
+  if (/^(continue|resume|go on|keep going|carry on|i'm done|i'm back|ready|go ahead and continue|done|all done|i've paid|i have paid|paid|payment done|it's paid|approved|i approved it)$/.test(s)) return 'resume';
   if (/^(always|yes always|always (allow|do) (it|that|this)|always allow)( here| on this site| in this app)?$/.test(s)) return 'always';
   if (/^(always|always (allow|do) (it|that|this)|always allow) everywhere$/.test(s)) return 'alwaysEverywhere';
   if (/^(never|no never|never (allow|do) (it|that|this)|never allow|don't ever do (it|that|this))( here| on this site| in this app)?$/.test(s)) return 'never';

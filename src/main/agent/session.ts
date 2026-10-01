@@ -1,6 +1,6 @@
 import { classifyStep, classifyTaskCommand, describeAction, formatSnapshot, maxTaskSteps, modifierVk, parseKeys, type AgentAction, type AgentElement, type AgentSnapshot, type AgentWindow, type TaskAction, type TaskLogEntry, type TaskScope, type TaskStatus, type TaskView } from '../../shared/agent';
 import type { ScreenBounds } from '../../shared/types';
-import { addToCart, cartSentence, hostOf, inScope, jobLimits, matchChoice, pageTotal, pageUrl, readCart, unconfirmedVariant, type ChoiceOption, type JobPlan, type JobView } from '../../shared/job';
+import { addToCart, cartSentence, hostOf, inScope, jobLimits, matchCheckout, matchChoice, orderSummary, pageTotal, pageUrl, paymentPending, placesOrder, readCart, readOrder, unconfirmedVariant, type CartLine, type ChoiceOption, type JobPlan, type JobView, type OrderSummary, type PlacedOrder } from '../../shared/job';
 import { categories, categoryInfo, defaultPermissions, jobCategories, permissionTable, placeLabel, placeOf, resolve, ruleFor, type Category, type Permission, type PermissionSettings, type Resolution, type StepClass } from '../../shared/permissions';
 import { labelScore } from '../guide/grounding';
 import type { Decision, StepPrompt } from './model';
@@ -49,10 +49,14 @@ export interface TaskMemory {
   learn(question: string, answer: string, where: string): void;
   /** The user chose an option in a store job: saved as a preference for what was searched. */
   chose(topic: string, choice: string, where: string): void;
+  /** An order Kite placed and saw confirmed: saved to the order history. */
+  ordered?(order: { number: string; items: string[]; total: string | null; site: string; when: string | null }): void;
 }
 type Answer = Exclude<TaskAction, 'pause' | 'resume'>;
 const yes = (answer: Answer) => answer === 'allow' || answer === 'allowAll' || answer === 'always' || answer === 'alwaysEverywhere';
-export interface TaskTiming { pointMs: number; settleMs: number; retryMs: number; launchMs: number; wallMs: number; lingerMs: number; rateRetries: number; rateMaxMs: number }
+export interface TaskTiming { pointMs: number; settleMs: number; retryMs: number; launchMs: number; wallMs: number; lingerMs: number; rateRetries: number; rateMaxMs: number;
+  /** While the user pays: how often Kite looks at the page, and how long it waits in all. */
+  pollMs?: number; payMs?: number }
 export const taskTiming: TaskTiming = { pointMs: 380, settleMs: 450, retryMs: 700, launchMs: 15_000, wallMs: 8 * 60_000, lingerMs: 7000, rateRetries: 4, rateMaxMs: 25_000 };
 /**
  * Milliseconds to wait when a provider error is a rate limit (HTTP 429, or "RPM", "rate limit", "too many
@@ -129,6 +133,15 @@ export class TaskSession {
   private cartMisses = 0;
   private siteOpened = false;
   private variantsAsked = new Set<string>();
+  // Checkout (phase 4): the user asked Kite to check out; the cart it set out with; the order button was pressed.
+  private checkout = false;
+  private cartLines: CartLine[] = [];
+  private placed = false;
+  private rememberLabel: string | null = null;
+  private rememberChoice = false;
+  private checkoutAsked = false;
+  private orderView: OrderSummary | null = null;
+  private nudge?: () => void;
   private variantQuestions = 0;
   private lookNext = false;
   private misses = 0;
@@ -148,7 +161,8 @@ export class TaskSession {
   private jobView(): JobView | null {
     const plan = this.plan; if (!plan) return null;
     const complete = this.status === 'done';
-    return { url: this.url, choices: this.status === 'asking' ? this.choices : null,
+    return { url: this.url, choices: this.status === 'asking' ? this.choices : null, remember: this.status === 'asking' ? this.rememberLabel : null,
+      order: this.status === 'approval' ? this.orderView : null,
       phases: plan.phases.map((p, i) => ({ id: p.id, title: p.title, state: !p.kite ? 'yours' : complete || i < this.phase ? 'done' : i === this.phase && !this.finished ? 'active' : 'pending' })) };
   }
   private emit() { this.deps.emit(this.view()); }
@@ -297,6 +311,7 @@ export class TaskSession {
         this.allowed.push(host);
       }
     }
+    if (this.placed && await this.afterPlacing(snapshot, signal)) return;
     const image = this.lookNext && this.vision && this.deps.look ? await this.deps.look(this.window, signal).catch((error: unknown): null => { if (signal.aborted) throw error; return null; }) : null;
     this.lookNext = false;
     // Saved values never reach the model: the controls, the steps so far and the page address carry placeholders instead.
@@ -312,8 +327,8 @@ export class TaskSession {
     const element = 'ref' in decision && decision.ref !== undefined ? snapshot.elements.find(e => e.ref === decision.ref) : undefined;
     if ('ref' in decision && decision.ref !== undefined && !element) { this.note(`[${decision.ref}] is not in the current control list.`, false, 'Picked a control that isn’t there'); this.emit(); return; }
     switch (decision.type) {
-      case 'done': if (this.plan) await this.finishJob(snapshot, decision.summary); else this.end('done', decision.summary); return;
-      case 'next_phase': await this.nextPhase(snapshot, decision.summary); return;
+      case 'done': if (this.plan) await this.finishJob(snapshot, decision.summary, signal); else this.end('done', decision.summary); return;
+      case 'next_phase': await this.nextPhase(snapshot, decision.summary, signal); return;
       case 'go_to': await this.goTo(decision.url, signal); return;
       case 'find': {
         if (!this.deps.find) { this.note('Searching the page is not available here.', false, 'Couldn’t search the page'); return; }
@@ -382,32 +397,113 @@ export class TaskSession {
     else this.note(`Asked which of ${list}; the user answered “${answer.slice(0, 300)}”. Act on that before adding to the cart.`, true, `You answered: ${answer.slice(0, 60)}`);
     return false;
   }
-  private async nextPhase(snapshot: AgentSnapshot, summary: string) {
+  private async nextPhase(snapshot: AgentSnapshot, summary: string, signal: AbortSignal) {
     const plan = this.plan, phase = plan?.phases[this.phase];
     if (!plan || !phase) { this.note('There are no phases in this task; use done when it is complete.', false, 'Tried to move on'); return; }
     this.note(`Finished “${phase.title}”: ${summary}`, true, `${phase.title}: ${summary}`);
     // What Kite picked is said out loud, so a choice made without asking is never silent.
     if (phase.id === 'choose') this.deps.say(summary);
     const next = this.phase + 1;
-    if (!plan.phases[next]?.kite) { await this.finishJob(snapshot, summary); return; }
+    if (!plan.phases[next]?.kite) { await this.finishJob(snapshot, summary, signal); return; }
     this.phase = next; this.phaseSteps = 0; this.phaseExtra = 0; this.emit();
   }
   /**
    * The end of a job, in words written by code. A store job ends with the cart read back from the page; when the
    * cart isn't on screen, the agent gets one chance to open it, then Kite says it couldn't check.
    */
-  private async finishJob(snapshot: AgentSnapshot, summary: string) {
+  private async finishJob(snapshot: AgentSnapshot, summary: string, signal: AbortSignal) {
     const plan = this.plan;
     if (!plan) { this.end('done', summary); return; }
     if (plan.kind === 'form') { this.end('done', `${summary} I haven’t submitted it; that part is yours.`); return; }
+    // Checking out: only an order confirmation read from the page ends the job as ordered.
+    if (this.checkout) {
+      if (this.placed && await this.afterPlacing(snapshot, signal)) return;
+      this.end('done', this.placed ? 'I couldn’t confirm the order went through. Check your orders page before you try again.'
+        : 'I stopped before placing the order. It’s ready for you on screen.');
+      return;
+    }
     const cart = readCart(snapshot);
-    if (cart?.lines.length) { this.end('done', `${cartSentence(cart)} Check out whenever you’re ready; I’ll leave that to you.`); return; }
+    if (cart?.lines.length) { await this.checkoutOrHandOver(cartSentence(cart), cart.lines, snapshot, signal); return; }
     if (this.cartMisses++ < 1) {
       this.phase = Math.max(this.phase, plan.phases.findIndex(p => p.id === 'cart'));
       this.note('Finishing needs the cart on screen so Kite can read it back to the user: open the cart page, then call done.', false, 'Opening the cart to check it');
       return;
     }
     this.end('done', `${summary} I couldn’t read the cart back myself, so please check it before you pay.`);
+  }
+  /**
+   * The end of the cart (docs/end-to-end-jobs.md §3.3): who checks out is the Spend money setting. Don't allow hands over;
+   * Allow, or Hands-off for this job, carries on; Ask asks "check out yourself, or should I?", with "Remember for this
+   * site". The spend limit is not checked here but at Place order, which has its own confirmation.
+   */
+  private async checkoutOrHandOver(said: string, lines: CartLine[], snapshot: AgentSnapshot, signal: AbortSignal) {
+    const plan = this.plan, at = plan.phases.findIndex(p => p.id === 'checkout');
+    const base = this.resolve({ category: 'money', reason: '' }, snapshot).base;
+    if (at < 0 || base === 'never') { this.end('done', `${said} Check out whenever you’re ready; I’ll leave that to you.`); return; }
+    let asked = false;
+    if (this.scope !== 'handsOff' && base !== 'allow') {
+      asked = true;
+      const place = this.place;
+      this.choices = [{ label: 'I’ll do it', detail: 'I stop here and leave the cart on screen' }, { label: 'You do it', detail: 'I fill in checkout and ask you before placing the order' }];
+      this.rememberLabel = place ? `Remember for ${placeLabel(place)}` : null; this.rememberChoice = false; this.checkoutAsked = true; this.action = null;
+      const question = `${said} Do you want to check out yourself, or should I?`;
+      this.set('asking', question); this.deps.say(question);
+      const answer = await waitFor<string | number>(signal, resolve => { this.answer = resolve; });
+      this.answer = undefined; this.choices = null; this.rememberLabel = null; this.checkoutAsked = false;
+      const spoken = typeof answer === 'string' ? matchCheckout(answer) : null;
+      const who = typeof answer === 'number' ? (answer === 1 ? 'kite' : 'me') : spoken?.who ?? 'me';
+      if ((this.rememberChoice || spoken?.remember) && place) this.deps.remember?.('money', who === 'kite' ? 'allow' : 'never', place);
+      if (who === 'me') { this.end('done', `Okay. ${said} It’s all yours from here.`, true); return; }
+    }
+    this.checkout = true; this.cartLines = lines;
+    plan.phases[at].kite = true; this.phase = at; this.phaseSteps = 0; this.phaseExtra = 0;
+    // A first order is 25–45 steps; checking out gets room of its own on top of what finding it used.
+    this.budget = Math.max(this.budget, this.step + 30);
+    this.note('The user asked Kite to check out. Go to checkout now: the cart phase is complete.', true, 'Checking out');
+    this.deps.say(asked ? 'Okay, I’ll check out. I’ll ask you before I place the order.' : `${said} Checking out now.`);
+    this.emit();
+  }
+  /** The button that places the order or pays: the one money step Kite confirms even after "you do it". */
+  private placesOrder(action: AgentAction, element: AgentElement | undefined, focused: AgentElement | undefined) {
+    const target = action.type === 'click' ? element : action.type === 'press_keys' && /^enter$/i.test(action.keys.trim()) ? focused : undefined;
+    return !!target && placesOrder.test(`${target.name} ${target.automationId.replace(/([a-z])([A-Z])/g, '$1 $2').replace(/[_-]+/g, ' ')}`.trim());
+  }
+  /** After the order button: a confirmation ends the job; a payment the user must approve is waited for. False: neither. */
+  private async afterPlacing(snapshot: AgentSnapshot, signal: AbortSignal): Promise<boolean> {
+    const order = readOrder(snapshot);
+    if (order) { this.ordered(order); return true; }
+    const pending = paymentPending(snapshot);
+    if (pending) { await this.waitForPayment(pending, signal); return true; }
+    return false;
+  }
+  private ordered(order: PlacedOrder) {
+    const site = this.plan?.site ?? hostOf(this.url) ?? this.app;
+    this.deps.memory?.ordered?.({ number: order.number, items: this.cartLines.map(l => `${l.quantity && l.quantity > 1 ? `${l.quantity} × ` : ''}${l.name}`), total: order.total, site, when: order.when });
+    for (const p of this.plan?.phases ?? []) p.kite = true;
+    this.end('done', `Ordered. Order number ${order.number}${order.total ? `, ${order.total}` : ''}${order.when ? `, arriving ${order.when}` : ''}.`);
+  }
+  /**
+   * The payment handoff: an expected state, not a failure. Kite looks at the page every few seconds without asking the
+   * model, until the order is confirmed, the page moves on, the user says they've paid, or ten minutes pass.
+   */
+  private async waitForPayment(message: string, signal: AbortSignal) {
+    const deadline = Date.now() + (this.timing.payMs ?? 10 * 60_000);
+    clearTimeout(this.wall); this.wall = setTimeout(() => this.end('failed', 'I couldn’t confirm the order went through. Check your orders page before you pay again.'), (this.timing.payMs ?? 10 * 60_000) + 60_000);
+    this.action = null; this.target = null; this.set('waiting', message); this.deps.say(message);
+    let nudged = false;
+    while (!this.finished) {
+      await Promise.race([sleep(this.timing.pollMs ?? 2000, signal), new Promise<void>(resolve => { this.nudge = () => { nudged = true; resolve(); }; })]);
+      this.nudge = undefined; signal.throwIfAborted();
+      const page = await this.deps.snapshot({ hwnd: this.window.hwnd, pid: this.window.pid }, signal).catch((error: unknown): null => { if (signal.aborted) throw error; return null; });
+      if (page) {
+        this.url = pageUrl(page) ?? this.url;
+        const order = readOrder(page);
+        if (order) { this.ordered(order); return; }
+        if (!paymentPending(page)) { this.note('The payment page changed without an order confirmation. Look at the page: finish if it shows an error or asks for something.', false, 'The payment page changed'); this.set('thinking', `Looking at ${this.app}…`); return; }
+        if (nudged) { nudged = false; this.deps.say('The page still says the payment is pending. I’ll keep watching.'); }
+      }
+      if (Date.now() > deadline) { this.end('failed', 'I couldn’t confirm the order went through. Check your orders page before you pay again.'); return; }
+    }
   }
   private async goTo(url: string, signal: AbortSignal) {
     const host = hostOf(url), summary = describeAction({ type: 'go_to', url });
@@ -483,12 +579,33 @@ export class TaskSession {
     const main = snapshot.layers.find(l => l.main)?.layer;
     const dialogText = snapshot.elements.filter(e => e.layer !== main && (e.role === 'Text' || e.role === 'Document')).map(e => e.name).join(' ');
     const step = classifyStep(action, { element, focused, process: this.window.process, title: this.window.title, dialogText, url: this.plan ? this.url : null, phase: this.plan?.phases[this.phase]?.id });
-    const resolution = this.resolve(step, snapshot);
+    let resolution = this.resolve(step, snapshot);
     this.action = summary;
     this.target = element?.rect ?? (action.type !== 'click' && action.type !== 'scroll' ? focused?.rect ?? null : null);
     if (resolution.permission === 'never') { this.refuse(action.type, summary, resolution, step.floor === 'secret'); return; }
     let decision: 'approved' | 'auto' = 'auto';
-    if (resolution.permission === 'ask') {
+    const commit = this.checkout && step.category === 'money' && this.placesOrder(action, element, focused);
+    // "You do it" covers checkout's steps (address, delivery, payment method) but not the one that places the order.
+    if (this.checkout && step.category === 'money' && !commit && resolution.permission === 'ask') resolution = { ...resolution, permission: 'allow' };
+    if (commit) {
+      if (resolution.permission === 'allow') { const total = pageTotal(snapshot); this.deps.say(`Placing the order${total !== null ? ` for ₹${total.toLocaleString('en-IN')}` : ''}.`); }
+      else {
+        // The order card: total, address, payment and delivery as code read them from the page. The address is shown, not spoken.
+        const order = orderSummary(snapshot);
+        this.orderView = order; this.ask = null; this.risk = resolution.reason;
+        // The card lists the address, payment and delivery under the question.
+        this.set('approval', `Place the order${order.total ? ` for ${order.total}` : ''}?`);
+        this.deps.say(`Place the order${order.total ? ` for ${order.total}` : ''}${order.payment ? `, paying by ${order.payment}` : ''}? The address is on the card. Say yes or no.`);
+        const answer = await waitFor<Answer>(signal, resolve => { this.approval = resolve; });
+        this.approval = undefined; this.orderView = null; this.risk = null;
+        if (answer === 'stop') { this.end('stopped', 'Okay, I stopped. Nothing was ordered.'); return; }
+        if (!yes(answer)) {
+          this.deps.audit(action.type, summary, 'denied', { ok: false, message: 'User declined.' });
+          this.note(`${summary}: the user doesn’t want Kite to place the order. Call done now; the order is ready for them.`, false, 'Not placing the order (you said no)'); return;
+        }
+        decision = 'approved';
+      }
+    } else if (resolution.permission === 'ask') {
       const answer = await this.askStep(summary, resolution, signal);
       if (answer === 'stop') { this.end('stopped', 'Okay, I stopped.'); return; }
       if (!yes(answer)) {
@@ -514,6 +631,7 @@ export class TaskSession {
     }
     const result = await this.execute(run, element, snapshot, signal);
     const message = result.ok ? result.message : result.message || 'That didn’t work.';
+    if (commit && result.ok) this.placed = true;
     this.deps.audit(action.type, summary, decision, { ok: result.ok, message });
     this.note(`${summary} → ${message}`, result.ok, summary);
     this.failed = result.ok ? 0 : this.failed + 1;
@@ -570,11 +688,14 @@ export class TaskSession {
     return { ok: true, message: action.submit ? 'Typed and pressed Enter.' : 'Typed.' };
   }
   /** A choice made on the card: the option's index, or -1 for none of them. */
-  choose(index: number) { if (this.status === 'asking' && this.choices && this.answer && Number.isInteger(index) && index >= -1 && index < this.choices.length) this.answer(index); }
+  choose(index: number, remember = false) {
+    if (this.status === 'asking' && this.choices && this.answer && Number.isInteger(index) && index >= -1 && index < this.choices.length) { this.rememberChoice = remember === true; this.answer(index); }
+  }
   /** Card buttons and voice. Returns nothing; replies are chosen by command(). */
   control(action: TaskAction) {
     if (this.finished) return;
     if (this.status === 'approval' && this.approval && action !== 'pause' && action !== 'resume') { this.approval(action); return; }
+    if (action === 'resume' && this.status === 'waiting') { this.nudge?.(); return; }
     if (action === 'stop') this.end('stopped', 'Okay, I stopped.');
     else if (action === 'pause') this.pause('Paused. Say “continue” or press Resume when you’re ready.');
     else if (action === 'resume') this.resume();
@@ -611,6 +732,17 @@ export class TaskSession {
       if ((action === 'always' || action === 'alwaysEverywhere') && what) return ask.always ? `Okay. I won’t ask about “${what.label}” steps${action === 'always' ? where : ''} again.` : 'Okay, this once. I always ask about steps like this one.';
       if ((action === 'never' || action === 'neverEverywhere') && what) return `Okay. I won’t ${what.verb}${action === 'never' ? where : ''}.`;
       return action === 'never' || action === 'neverEverywhere' ? 'Okay, I won’t do that.' : 'Okay.';
+    }
+    if (this.status === 'waiting') {
+      if (action === 'stop') { this.control('stop'); return 'Okay, I’ve stopped watching. Check your orders page to see if it went through.'; }
+      if (action === 'resume') { this.nudge?.(); return 'Let me check.'; }
+      return undefined;
+    }
+    if (this.status === 'asking' && this.answer && this.checkoutAsked) {
+      if (action === 'stop') { this.control('stop'); return 'Okay, I’ve stopped.'; }
+      const m = matchCheckout(text);
+      this.answer(text.trim());
+      return m?.who === 'kite' ? 'Okay, I’ll check out.' : 'Okay, it’s all yours.';
     }
     if (this.status === 'asking' && this.answer) {
       if (action === 'stop') { this.control('stop'); return 'Okay, I’ve stopped.'; }

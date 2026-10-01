@@ -3,6 +3,9 @@
 // questions and declines anything risky or off the site. The shop's own state decides pass or fail.
 //   npm run test:job -- [runs] [provider:model] [--ambiguous]   (default: 1 run on deepseek:deepseek-flash)
 // --ambiguous asks only for "60 sachets of Sunfold protein": whey or isolate, and which flavour, are the user's to choose.
+// --checkout (phase 4) places the whole order: signed in, nothing saved at the shop; Kite's memory holds the address, so the
+// form is filled from placeholders; the scripted user says "you do it" and yes to Place order. Cash on delivery, or with --upi
+// a UPI payment that the scripted user approves through the shop's test hook while Kite waits. Implies --memory.
 // --memory starts with a saved name and pincode (phase 3): the pincode prompt can be filled from memory, and the run fails
 // if any prompt sent to the model carries a saved value.
 // Edge comes to the front while a job runs; keys are only sent while it is in front.
@@ -13,7 +16,7 @@ const { ActClient } = require('../src/main/agent/sidecar.ts');
 const { TaskSession } = require('../src/main/agent/session.ts');
 const { decideStep, agentSystem, agentPrompt } = require('../src/main/agent/model.ts');
 const { createMemory } = require('../src/main/memory/store.ts');
-const { factsFromAnswer } = require('../src/shared/memory.ts');
+const { factsFromAnswer, placeholderLabel, sensitive } = require('../src/shared/memory.ts');
 const { planJob } = require('../src/main/agent/planner.ts');
 const { getModel } = require('../src/main/ai/providers.ts');
 const { describeModel, providerTraits } = require('../src/main/ai/catalog.ts');
@@ -28,10 +31,18 @@ const entry = describeModel({ provider, id: rest.join(':') });
 const envNames = { deepseek: ['DEEPSEEK_API_KEY'], moonshot: ['MOONSHOT_API_KEY', 'KIMI_API_KEY'], google: ['GOOGLE_API_KEY', 'GEMINI_API_KEY'], openai: ['OPENAI_API_KEY'], anthropic: ['ANTHROPIC_API_KEY'] }[provider] ?? [];
 const dotenv = (() => { try { return fs.readFileSync(path.join(__dirname, '..', '.env'), 'utf8'); } catch { return ''; } })();
 const key = envNames.map(n => process.env[n] ?? dotenv.match(new RegExp(`^${n}=(.*)$`, 'm'))?.[1]?.trim()).find(Boolean);
-const goal = process.argv.includes('--ambiguous') ? 'Buy me 60 sachets of Sunfold protein from Kite Test Mart'
+const checkout = process.argv.includes('--checkout'), upi = process.argv.includes('--upi');
+const goal = checkout ? `Buy Sunfold Whey Protein, 60 sachets, unflavoured, from Kite Test Mart and pay ${upi ? 'by UPI' : 'cash on delivery'}`
+  : process.argv.includes('--ambiguous') ? 'Buy me 60 sachets of Sunfold protein from Kite Test Mart'
   : 'Find Sunfold Whey Protein, 60 sachets, unflavoured, on Kite Test Mart and add one pack to the cart';
 const wanted = 'sunfold-whey~60-sachets~unflavoured';
 
+// A placed order of exactly the item, to the saved address, paid the way this run tests, and Kite said "Ordered" with its number.
+function checkoutPassed(state, result) {
+  const placed = state.orders.filter(o => o.status === 'placed'), o = placed[0];
+  return placed.length === 1 && o.lines.length === 1 && o.lines[0].sku === wanted && o.lines[0].qty === 1 && o.address.pincode === '411045' && o.address.phone === '9876543210'
+    && o.payment === (upi ? 'upi' : 'cod') && result.message.startsWith(`Ordered. Order number ${o.id}`);
+}
 async function job(shop, run) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'kite-job-live-'));
   const browser = spawn(edge, [`--user-data-dir=${path.join(dir, 'profile')}`, '--inprivate', '--no-first-run', '--no-default-browser-check',
@@ -41,13 +52,13 @@ async function job(shop, run) {
   const record = { run, questions: [], approvals: [], log: [], started: Date.now(), leaks: [] };
   // Memory over an in-memory table with a stand-in cipher: what matters here is what reaches the model.
   let memory;
-  if (process.argv.includes('--memory')) {
+  const saved = { 'profile.name': 'Asha Kulkarni', 'home.pincode': '411045', ...(checkout ? { 'profile.phone': '9876543210', 'home.line1': 'Flat 12, Green Park Society', 'home.line2': 'Baner Road', 'home.city': 'Pune', 'home.state': 'Maharashtra' } : {}) };
+  if (process.argv.includes('--memory') || checkout) {
     const rows = new Map(); let id = 0;
     const store = createMemory({ list: () => [...rows.values()], put: r => { const old = [...rows.values()].find(x => x.key === r.key); const row = { ...r, id: old?.id ?? ++id, used_at: null }; rows.set(row.id, row); return row.id; },
       remove: i => rows.delete(i), removeAll: () => { rows.clear(); return 0; }, touch: () => {} },
     { isEncryptionAvailable: () => true, encryptString: v => Buffer.from(v), decryptString: b => b.toString() }, { enabled: () => true });
-    store.save({ kind: 'profile', key: 'profile.name', label: 'Name', value: 'Asha Kulkarni', source: 'live test' });
-    store.save({ kind: 'address', key: 'home.pincode', label: 'Home pincode', value: '411045', source: 'live test' });
+    for (const [key, value] of Object.entries(saved)) store.save({ kind: key.startsWith('profile.') ? 'profile' : 'address', key, label: placeholderLabel(key), value, source: 'live test' });
     memory = { context: () => store.context(), redact: t => store.redact(t), fill: t => store.fill(t), chose: () => {},
       learn: (q, a, where) => { for (const f of factsFromAnswer(q, a, where)) store.save(f); } };
   }
@@ -67,7 +78,10 @@ async function job(shop, run) {
           return { ...plan, site: '127.0.0.1', scope: ['127.0.0.1'], start: shop.url };
         },
         decide: (prompt, signal) => {
-          if (memory) { const sent = agentSystem(prompt) + JSON.stringify(agentPrompt(prompt)); for (const v of ['411045', 'Asha', 'Kulkarni']) if (sent.includes(v)) record.leaks.push(`step ${prompt.step}: ${v}`); }
+          if (memory) {
+            const sent = agentSystem(prompt) + JSON.stringify(agentPrompt(prompt));
+            for (const [k, v] of Object.entries(saved)) if (sensitive({ kind: k.startsWith('profile.') ? 'profile' : 'address', key: k }) && sent.includes(v)) record.leaks.push(`step ${prompt.step}: ${v}`);
+          }
           return decideStep({ model, prompt, signal, toolChoice, providerOptions: providerOptionsFor(entry) });
         },
         memory,
@@ -77,7 +91,9 @@ async function job(shop, run) {
           // The scripted user: answers questions, keeps going when asked, declines anything risky or off the site.
           if (view.status === 'asking' && !record.questions.includes(view.message + '@' + view.step)) {
             record.questions.push(view.message + '@' + view.step);
-            const answer = view.job?.choices ? 'the 60 sachets unflavoured one' : /pin ?code|postal/i.test(view.message) ? '411045' : /flavou?r/i.test(view.message) ? 'Unflavoured.' : /whey|isolate|which (one|product)/i.test(view.message) ? 'The whey protein, unflavoured.' : 'You decide.';
+            // Checkout: "you do it"; a payment method question gets the one this run tests.
+            const answer = view.job?.remember !== undefined && view.job?.remember !== null || /check out yourself/.test(view.message) ? 'You do it'
+              : /payment|pay /i.test(view.message) ? (upi ? 'UPI' : 'Cash on delivery') : view.job?.choices ? 'the 60 sachets unflavoured one' : /pin ?code|postal/i.test(view.message) ? '411045' : /flavou?r/i.test(view.message) ? 'Unflavoured.' : /whey|isolate|which (one|product)/i.test(view.message) ? 'The whey protein, unflavoured.' : 'You decide.';
             record.questions[record.questions.length - 1] += ` → “${answer}”${view.job?.choices ? ` [options: ${view.job.choices.map(o => o.label).join(' / ')}]` : ''}`;
             setTimeout(() => session.command(answer), 300);
           }
@@ -87,7 +103,12 @@ async function job(shop, run) {
           }
           if (view.status === 'approval' && !record.approvals.includes(view.message + '@' + view.step)) {
             record.approvals.push(view.message + '@' + view.step);
-            setTimeout(() => session.control(/taking longer than usual/.test(view.message) ? 'allow' : 'skip'), 300);
+            setTimeout(() => session.control(/taking longer than usual/.test(view.message) || (checkout && /^Place the order/.test(view.message)) ? 'allow' : 'skip'), 300);
+          }
+          // The user's own step: approve the UPI request (the shop's test hook stands in for the phone).
+          if (view.status === 'waiting' && !record.approvals.includes('paid')) {
+            record.approvals.push('paid'); record.log.push(`waiting: ${view.message}`);
+            setTimeout(async () => { const pending = shop.state().orders.find(o => o.status === 'pending'); if (pending) await fetch(`${shop.url}/__/pay/${pending.id}`, { method: 'POST' }); }, 4000);
           }
         },
         say: text => record.log.push(`say: ${text}`),
@@ -97,11 +118,12 @@ async function job(shop, run) {
       }, false, 15);
       session.start();
     });
-    const result = await Promise.race([ended, delay(4 * 60_000).then(() => ({ status: 'timeout', message: '' }))]);
+    const result = await Promise.race([ended, delay((checkout ? 8 : 4) * 60_000).then(() => ({ status: 'timeout', message: '' }))]);
     if (result.status === 'timeout') session.control('stop');
     const state = shop.state();
     Object.assign(record, result, { steps: session.steps, ms: Date.now() - record.started, cart: state.cart, orders: state.orders.length,
-      history: session.view().log, pincode: state.pincode ?? null, pass: record.leaks.length === 0 && result.status === 'done' && state.orders.length === 0 && state.cart.length === 1 && state.cart[0].sku === wanted && state.cart[0].qty === 1 && /60 sachets/.test(result.message)
+      orderList: state.orders.map(o => `${o.id} ${o.status} ${o.payment} → ${o.address.pincode}`), history: session.view().log, pincode: state.pincode ?? null, pass: record.leaks.length === 0 && result.status === 'done' && (checkout ? checkoutPassed(state, result)
+        : state.orders.length === 0 && state.cart.length === 1 && state.cart[0].sku === wanted && state.cart[0].qty === 1 && /60 sachets/.test(result.message))
         // A vague request must be asked about, not settled by the page's defaults.
         && (!process.argv.includes('--ambiguous') || record.questions.length >= 1) });
     return record;
@@ -117,18 +139,19 @@ async function job(shop, run) {
   const shop = await startShop(0), results = [];
   try {
     for (let run = 1; run <= runs; run++) {
-      shop.reset();
+      shop.reset(checkout ? { signedIn: true } : undefined);
       const r = await job(shop, run); results.push(r);
       console.log(`\nrun ${run}: ${r.pass ? 'PASS' : 'FAIL'} · ${r.status} · ${r.steps} steps · ${(r.ms / 1000).toFixed(0)} s · ${r.questions.length} questions · planned ${JSON.stringify(r.planned)}`);
       console.log(`  said: ${r.message}`);
       console.log(`  cart: ${JSON.stringify(r.cart.map(l => `${l.qty} × ${l.sku}`))} · orders ${r.orders}`);
       if (r.questions.length) console.log(`  questions: ${r.questions.join(' | ')}`);
       if (r.approvals.length) console.log(`  approvals: ${r.approvals.join(' | ')}`);
-      if (process.argv.includes('--memory')) console.log(`  memory: shop pincode ${r.pincode ?? 'not set'} · ${r.leaks.length ? `LEAKS ${r.leaks.join(', ')}` : 'no saved value in any prompt'}`);
+      if (checkout) console.log(`  orders: ${JSON.stringify(r.orderList)}`);
+      if (process.argv.includes('--memory') || checkout) console.log(`  memory: shop pincode ${r.pincode ?? 'not set'} · ${r.leaks.length ? `LEAKS ${r.leaks.join(', ')}` : 'no saved value in any prompt'}`);
       console.log(r.log.map(l => `    ${l}`).join('\n'));
     }
   } finally { await shop.close(); }
   const passed = results.filter(r => r.pass).length;
-  console.log(`\n${entry.label}: ${passed}/${results.length} to the cart · median ${results.map(r => r.steps).sort((a, b) => a - b)[Math.floor(results.length / 2)]} steps · questions ${results.map(r => r.questions.length).join(',')}`);
+  console.log(`\n${entry.label}: ${passed}/${results.length} ${checkout ? 'ordered' : 'to the cart'} · median ${results.map(r => r.steps).sort((a, b) => a - b)[Math.floor(results.length / 2)]} steps · questions ${results.map(r => r.questions.length).join(',')}`);
   process.exit(passed === results.length ? 0 : 1);
 })();

@@ -75,6 +75,13 @@ export function startVoiceService() {
     learn: (question: string, answer: string, where: string) => {
       for (const fact of factsFromAnswer(question, answer, `From the ${where} task, ${today()}`)) { const r = memory.save(fact); if (r.ok && r.token) savedNotice(r); }
     },
+    // A confirmed order joins the order history (phase 5 repeats it). The number and total come from the page, read by code.
+    ordered: (order: { number: string; items: string[]; total: string | null; site: string; when: string | null }) => {
+      const items = order.items.join('; ') || 'Order';
+      const r = memory.save({ kind: 'order', key: `order.${slug(`${order.site}-${order.number}`)}`, label: items.slice(0, 80),
+        value: [items, order.total, order.site, `order ${order.number}`, order.when && `arriving ${order.when}`].filter(Boolean).join(' · '), source: `Ordered on ${order.site}, ${today()}` });
+      if (r.ok && r.token) appEvent({ type: 'memory:saved', token: r.token, text: 'Saved the order to your history' });
+    },
     chose: (topic: string, choice: string, where: string) => {
       const label = topic.trim().slice(0, 60); if (!label) return;
       const r = memory.save({ kind: 'preference', key: `pref.${slug(label)}`, label: label.charAt(0).toUpperCase() + label.slice(1), value: choice, source: `Chosen on ${where}, ${today()}` });
@@ -239,7 +246,7 @@ export function startVoiceService() {
   });
   ipcMain.on('guide:control', (event, action: unknown) => { if (trusted(event, 'overlay') && guideActions.includes(action as GuideAction)) guide.control(action as GuideAction); });
   ipcMain.on('task:control', (event, action: unknown) => { if (trusted(event, 'overlay') && taskActions.includes(action as TaskAction)) agent.control(action as TaskAction); });
-  ipcMain.on('task:choose', (event, index: unknown) => { if (trusted(event, 'overlay') && Number.isInteger(index)) agent.choose(index as number); });
+  ipcMain.on('task:choose', (event, index: unknown, remember: unknown) => { if (trusted(event, 'overlay') && Number.isInteger(index)) agent.choose(index as number, remember === true); });
   ipcMain.on('board:control', (event, action: unknown) => { if (trusted(event, 'overlay') && boardActions.includes(action as BoardAction)) board.control(action as BoardAction); });
   ipcMain.on('board:drawn', (event, id: unknown, key: unknown) => { if (trusted(event, 'overlay') && Number.isSafeInteger(id) && Number.isSafeInteger(key)) board.drawn(id as number, key as number); });
   ipcMain.handle('dev:boardDemo', (event): OperationResult => {

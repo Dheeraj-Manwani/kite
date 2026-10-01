@@ -19,10 +19,11 @@ export interface MemoryFact {
 }
 export type NewFact = Pick<MemoryFact, 'kind' | 'key' | 'label' | 'value' | 'source'>;
 
-export const addressFields = ['address', 'pincode', 'city', 'state', 'landmark', 'name', 'phone'] as const;
+/** An address is saved field by field, as checkout forms ask for it; "address" is the whole line when that is all Kite has. */
+export const addressFields = ['address', 'line1', 'line2', 'landmark', 'city', 'state', 'pincode', 'name', 'phone'] as const;
 export const profileFields = ['name', 'phone', 'email'] as const;
-const fieldWords: Record<string, string> = { address: 'address', pincode: 'pincode', city: 'city', state: 'state', landmark: 'landmark', name: 'name', phone: 'phone number', email: 'email' };
-const keyPattern = /^(profile\.(name|phone|email)|[a-z][a-z0-9]{1,19}\.(address|pincode|city|state|landmark|name|phone)|pref\.[a-z0-9-]{1,40}|order\.[a-z0-9-]{1,60})$/;
+const fieldWords: Record<string, string> = { address: 'address', line1: 'flat or house', line2: 'area or street', pincode: 'pincode', city: 'city', state: 'state', landmark: 'landmark', name: 'name', phone: 'phone number', email: 'email' };
+const keyPattern = /^(profile\.(name|phone|email)|[a-z][a-z0-9]{1,19}\.(address|line1|line2|pincode|city|state|landmark|name|phone)|pref\.[a-z0-9-]{1,40}|order\.[a-z0-9-]{1,60})$/;
 export const validKey = (key: string) => keyPattern.test(key);
 export const placeholderPattern = /\{\{([a-z0-9.-]{3,80})\}\}/g;
 const title = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
@@ -110,12 +111,19 @@ export function factsFromAnswer(question: string, answer: string, source: string
   const pin = a.match(/(?<!\d)[1-9]\d{2}\s?\d{3}(?!\d)/)?.[0].replace(/\s/g, '');
   const phone = a.replace(/[\s-]/g, '').match(/(?<!\d)(?:\+?91)?([6-9]\d{9})(?!\d)/)?.[1];
   const email = a.match(/[\w.+-]+@[\w-]+(\.[\w-]+)+/)?.[0];
+  // An address form's fields, by the question's words (most specific first), then a whole address. A pincode, phone or
+  // email question wins over the words around it ("the pincode of your area").
+  const part = !/pin ?code|postal code|zip|\b(phone|mobile|e-?mail)\b/.test(q);
+  if (part && /\b(flat|house|building|apartment|door)\b/.test(q)) { add(`${place}.line1`, a); return facts; }
+  if (part && /\b(area|street|sector|locality|road|colony)\b/.test(q)) { add(`${place}.line2`, a); return facts; }
+  if (part && /\blandmark\b/.test(q)) { add(`${place}.landmark`, a); return facts; }
+  if (part && /\bstate\b/.test(q) && /^[\p{L} .-]{2,40}$/u.test(a)) { add(`${place}.state`, a); return facts; }
   if (/\baddress\b/.test(q) && a.split(/\s+/).length >= 3) { add(`${place}.address`, a); if (pin) add(`${place}.pincode`, pin); return facts; }
   if (/pin ?code|postal code|zip/.test(q) && pin && a.replace(/\D/g, '').length === 6) add(`${place}.pincode`, pin);
   else if (/\b(phone|mobile|contact number|number to call)\b/.test(q) && phone) add('profile.phone', phone);
   else if (/\be-?mail\b/.test(q) && email) add('profile.email', email);
   else if (/\b(your|full) name\b|\bwhat should i call you\b/.test(q) && /^[\p{L} .'-]{2,60}$/u.test(a) && !/\b(no|skip|later|don'?t)\b/i.test(a)) add('profile.name', a.replace(/^(it'?s|i'?m|my name is)\s+/i, ''));
-  else if (/\bcity\b/.test(q) && /^[\p{L} .-]{2,40}$/u.test(a)) add(`${place}.city`, a);
+  else if (/\b(city|town)\b/.test(q) && /^[\p{L} .-]{2,40}$/u.test(a)) add(`${place}.city`, a);
   return facts;
 }
 
