@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { OperationResult, SecretId, SettingsSnapshot } from '../../shared/types';
-import { CheckIcon, ExternalIcon, MoreIcon } from '../icons';
+import { CheckIcon, ExternalIcon, MoreIcon, Working } from '../icons';
 
 const checkMessages: Record<string, string> = {
   'invalid key': 'That key didn’t work. Check it and try again.',
@@ -60,8 +60,8 @@ export function ProviderRow({ id, label, badge, snapshot, toast, onConnected }: 
   return <div className={`provider-row${open ? '' : ' connected'}`}>
     <div className="provider-head"><strong>{label}</strong>{badge && <span className="tag">{badge}</span>}
       {open ? <button className="link external" onClick={() => window.kite.openKeyPage(id)}>Get a key<ExternalIcon /></button> : <>
-        <span className={`provider-state${problem ? ' problem' : ''}`} role="status">
-          {working ? CHECKING : problem ? 'Key saved · needs attention' : <><CheckIcon />Connected · {count} {things}</>}</span>
+        <span className={`provider-state${working ? ' working' : problem ? ' problem' : ''}`} role="status">
+          {working ? <Working text={CHECKING} /> : problem ? 'Key saved · needs attention' : <><CheckIcon />Connected · {count} {things}</>}</span>
         <details ref={menu} className="overflow" onToggle={e => setMenuOpen(e.currentTarget.open)}><summary aria-label={`More for ${label}`}><MoreIcon /></summary>
           <div className="menu">
             <button className="ghost" onClick={act(() => { void check(false); })}>Check connection</button>
@@ -73,7 +73,7 @@ export function ProviderRow({ id, label, badge, snapshot, toast, onConnected }: 
     {open && <div className="provider-connect">
       <input aria-label={`${label} API key`} type="password" autoComplete="off" spellCheck={false} value={key} placeholder="Paste API key"
         onChange={e => setKey(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && key.trim() && !working) void connect(); }} />
-      <button className="primary" disabled={working || !key.trim()} onClick={() => { void connect(); }}>{working ? 'Connecting…' : 'Connect'}</button>
+      <button className="primary" disabled={working || !key.trim()} aria-busy={working || undefined} onClick={() => { void connect(); }}>{working ? <Working text="Connecting…" /> : 'Connect'}</button>
       {editing && <button className="ghost" onClick={() => setEditing(false)}>Cancel</button>}
     </div>}
     {problem && <small className="field-error" role="alert">{problem}</small>}

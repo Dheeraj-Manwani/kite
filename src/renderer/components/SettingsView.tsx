@@ -5,7 +5,7 @@ import { sections, type Section } from './sections';
 import { configurableTools, type ConfigurableTool } from '../../shared/release';
 import { routeVision } from '../../shared/vision';
 import type { AboutInfo, AppSettings, ModelSelection, OperationResult, ProviderId, SettingsSnapshot } from '../../shared/types';
-import { LockIcon } from '../icons';
+import { BusyDots, LockIcon, Working } from '../icons';
 import { ProviderRow } from './ProviderRow';
 
 // Groq comes first: without it Kite can't hear you.
@@ -30,6 +30,12 @@ function Row({ label, description, children }: { label: string; description?: Re
 function SwitchRow({ label, description, checked, disabled, change }: { label: string; description?: ReactNode; checked: boolean; disabled?: boolean; change(value: boolean): void }) {
   return <label className="setting-row switch-row"><span className="row-text"><span className="row-label">{label}</span>{description && <small>{description}</small>}</span>
     <input type="checkbox" role="switch" className="switch" checked={checked} disabled={disabled} onChange={e => change(e.target.checked)} /></label>;
+}
+
+/** An action that takes a moment shows the kite tail's three dots while it runs (UX-06). */
+function BusyButton({ run, disabled, children }: { run(): Promise<unknown>; disabled?: boolean; children: ReactNode }) {
+  const [busy, setBusy] = useState(false);
+  return <button disabled={disabled || busy} aria-busy={busy || undefined} onClick={() => { setBusy(true); void run().finally(() => setBusy(false)); }}>{children}{busy && <BusyDots />}</button>;
 }
 
 /** One section of Settings at a time (UX-50). */
@@ -70,7 +76,7 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
     {content}
     {toast && <div className="toast" role="status">{toast}</div>}
   </main>;
-  if (!snapshot) return shell(!loadError && <p className="loading">Loading…</p>);
+  if (!snapshot) return shell(!loadError && <p className="loading"><Working text="Loading…" /></p>);
   const s = snapshot.settings, hotkey = s.hotkey ?? ['Control', 'Meta'];
   const mainModel = snapshot.models.find(m => encode(m) === encode(s.model));
   let visionName = 'your vision model';
@@ -106,7 +112,7 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
         <SwitchRow label="Speak replies" checked={s.ttsEnabled} change={v => update({ ttsEnabled: v })} />
         <Row label="Voice"><select aria-label="Voice" value={s.voiceId} onChange={e => update({ voiceId: e.target.value })}>
           <option value="">Choose a voice</option>{snapshot.voices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
-          <button disabled={!s.ttsEnabled} onClick={() => { void operation(() => window.kite.previewVoice(), 'Playing a preview.'); }}>Preview</button></Row>
+          <BusyButton disabled={!s.ttsEnabled} run={() => operation(() => window.kite.previewVoice(), 'Playing a preview.')}>Preview</BusyButton></Row>
         <Row label="Speed" description={`${s.speed.toFixed(2)}×`}><input aria-label="Speed" type="range" min="0.6" max="1.5" step="0.05" value={s.speed} onChange={e => update({ speed: Number(e.target.value) })} /></Row>
       </Group>
     </>);
@@ -127,7 +133,7 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
       <Group title="Actions">
         <Row label="Search engine"><select aria-label="Search engine" value={s.searchEngine} onChange={e => update({ searchEngine: e.target.value as AppSettings['searchEngine'] })}>
           <option value="google">Google</option><option value="bing">Bing</option><option value="duckduckgo">DuckDuckGo</option></select></Row>
-        <Row label="Apps" description="Kite finds apps in your Start menu."><button onClick={() => { void operation(() => window.kite.rescanApps(), 'Apps rescanned.'); }}>Rescan apps</button></Row>
+        <Row label="Apps" description="Kite finds apps in your Start menu."><BusyButton run={() => operation(() => window.kite.rescanApps(), 'Apps rescanned.')}>Rescan apps</BusyButton></Row>
         <SwitchRow label="Show me how" checked={s.guideMode ?? true} change={v => update({ guideMode: v })}
           description="Ask “how do I…?” and Kite points at each control, step by step. It reads control names with Windows UI Automation and never clicks for you." />
         <SwitchRow label="Whiteboard" checked={s.whiteboard ?? true} change={v => update({ whiteboard: v })}

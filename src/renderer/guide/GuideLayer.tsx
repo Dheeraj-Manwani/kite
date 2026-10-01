@@ -6,7 +6,7 @@ import { cursorInput } from '../kite/useKiteLoop';
 import { react } from '../voice/runtime';
 import { guideRuntime } from './runtime';
 import { ringPaths } from './ring';
-import { BackIcon, LookAgainIcon, PauseIcon, ResumeIcon, SkipIcon, StopIcon } from '../icons';
+import { BackIcon, BusyDots, LookAgainIcon, PauseIcon, ResumeIcon, SkipIcon, StopIcon } from '../icons';
 const estimate = { width: 280, height: 150 };
 function message(view: GuideView) {
   switch (view.status) {
@@ -71,7 +71,7 @@ export function GuideLayer() {
         <span key={i} className={view.status === 'done' || i < view.index ? 'done' : i === view.index ? 'current' : ''} />)}</div>
       <p className="guide-instruction" role="status" aria-live="polite">{message(view)}</p>
       {(view.status === 'pointing' || view.status === 'locating') && <div className="guide-target">
-        <span>{view.status === 'locating' ? 'Looking for' : 'Click'}</span><kbd className="guide-key">{view.target}</kbd>
+        <span>{view.status === 'locating' ? 'Looking for' : 'Click'}</span><kbd className="guide-key">{view.target}</kbd>{view.status === 'locating' && <BusyDots />}
         {view.status === 'pointing' && view.source === 'vision' && <small>found on screen</small>}
       </div>}
       {/* Lost always offers a one-click way forward (UX-31); otherwise quiet icon-and-label controls, with Stop the quietest (UX-32). */}

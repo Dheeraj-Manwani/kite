@@ -8,7 +8,7 @@ import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
 import { modelLabel, useSettings } from '../hooks/useSettings';
-import { AlertIcon, CopyIcon, HistoryIcon, PinIcon, SetupIcon } from '../icons';
+import { AlertIcon, BusyDots, CopyIcon, HistoryIcon, PinIcon, SetupIcon, Working } from '../icons';
 interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean; status?: Status; error?: { title: string; text: string; setup?: boolean } }
 type Status = 'listening' | 'thinking';
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
@@ -200,11 +200,11 @@ export function SpeechBubble() {
     aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
     <div className="bubble-body">{pill ? <StatusLine status={pill} /> : <>
     {bubble.transcript && <div className="bubble-transcript">You asked · {bubble.transcript}</div>}
-    {(bubble.text || bubble.streaming) && <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <span className="stream-caret">▍</span>}</div>}
+    {(bubble.text || bubble.streaming) && <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <BusyDots />}</div>}
     {bubble.error && <div className={`bubble-error${bubble.error.setup ? ' setup' : ''}`} role="alert">
       <strong>{bubble.error.setup ? <SetupIcon /> : <AlertIcon />}{bubble.error.title}</strong><p>{bubble.error.text}</p></div>}
     {bubble.approval && <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />}
-    {bubble.toolStatus && <div className="bubble-tool-status" role="status">{bubble.toolStatus}</div>}
+    {bubble.toolStatus && <div className="bubble-tool-status" role="status"><Working text={bubble.toolStatus} /></div>}
     {bubble.alarm && <button className="primary" onClick={() => { voiceRuntime.alarmUntil = 0; voiceRuntime.reaction = null; window.kite.dismissReminder(); update({ ...state.current, alarm: false }); }}>Dismiss reminder</button>}
     {bubble.voiceStatus && <div className="bubble-voice-status">{bubble.voiceStatus}</div>}
     {bubble.settings && <button className="primary" onClick={() => window.kite.openSettings()}>Open settings</button>}

@@ -2,6 +2,7 @@ import { StrictMode, lazy, Suspense, useEffect, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { KiteRenderer } from './kite/KiteRenderer';
 import { SailMark } from './kite/SailMark';
+import { Working } from './icons';
 import { sections, type Section } from './components/sections';
 import { SpeechBubble } from './voice/SpeechBubble';
 import { runtime } from './kite/runtime';
@@ -60,7 +61,7 @@ function DesktopWindow(){
   // The window title names the view, so the taskbar and Alt+Tab say where you are.
   useEffect(()=>{document.title=view==='onboarding'?'Set up Kite':`Kite · ${current}`;},[view,current]);
   const go=(next:string,to?:Section)=>{location.hash=next;setView(next);if(to)setSection(to);};
-  const content=<Suspense fallback={<p className="loading">Opening Kite…</p>}>{view==='history'?<History/>:view==='onboarding'?<Onboarding/>:<Settings section={section}/>}</Suspense>;
+  const content=<Suspense fallback={<p className="loading"><Working text="Opening Kite…" /></p>}>{view==='history'?<History/>:view==='onboarding'?<Onboarding/>:<Settings section={section}/>}</Suspense>;
   if(view==='onboarding')return content;
   return <div className="window-layout">
     <nav className="window-sidebar" aria-label="Kite">

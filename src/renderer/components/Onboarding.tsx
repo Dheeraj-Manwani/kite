@@ -6,7 +6,7 @@ import { inkPath } from '../vision/ink';
 import type { ScreenBounds, SettingsSnapshot } from '../../shared/types';
 import { hotkeyLabel, modifiers, type Modifier } from '../../shared/release';
 import { analyzeStrokes, type Stroke } from '../../shared/vision';
-import { CheckIcon } from '../icons';
+import { CheckIcon, Working } from '../icons';
 import { HotkeyRecorder } from './HotkeyRecorder';
 import { Keycaps } from './Keycaps';
 import { KeysStep, missingKeys } from './KeysStep';
@@ -117,7 +117,7 @@ export default function Onboarding() {
     {step===0&&<><p>I’m a little company beside your cursor. Hold a shortcut to talk, or circle something on your screen and ask about it.</p><p>Your keys stay on this computer. I ask before taking actions or looking at your screen.</p></>}
     {step===1&&<><p>I listen only while you hold your shortcut. This check stays on your computer.</p>
       <p className={`step-status ${mic.state}`} role="status">{
-        mic.state==='starting' ? 'Opening your microphone…'
+        mic.state==='starting' ? <Working text="Opening your microphone…" />
         : mic.state==='listening' ? <>Say something. My tail follows your voice.<small>Using {mic.device}</small></>
         : mic.state==='heard' ? <><CheckIcon />I can hear you.<small>Using {mic.device}</small></>
         : mic.state==='blocked' ? 'I can’t use your microphone. Allow desktop apps in Windows Settings → Privacy & security → Microphone.'
@@ -126,7 +126,7 @@ export default function Onboarding() {
     {step===2&&snapshot&&<><p>Keys stay encrypted on this computer.</p><KeysStep snapshot={snapshot} /></>}
     {step===3&&snapshot&&<><p>Hold your shortcut now, then let go.</p>
       <div className="big-keys" aria-hidden="true">{hotkey.map(k=><kbd key={k} className={`big-key${held.includes(k)?' lit':''}`}>{hotkeyLabel([k])}</kbd>)}{heard&&<span className="big-check"><CheckIcon /></span>}</div>
-      <p className={`step-status${heard?' heard':''}`} role="status">{heard?'Nice — I felt that!':'Waiting for your shortcut…'}</p>
+      <p className={`step-status${heard?' heard':''}`} role="status">{heard?'Nice — I felt that!':<Working text="Waiting for your shortcut…" />}</p>
       <HotkeyRecorder suppressVoice compact value={hotkey} change={value=>void window.kite.updateSettings({hotkey:value})}/></>}
     {step===4&&<><p>Hold your shortcut and say <strong>“Ask me what I can do.”</strong> Then release. Your answer appears beside Kite.</p>{!snapshot?.keys.groq&&<p>Add a Groq key in the previous step to continue with voice.</p>}<blockquote aria-live="polite">{answer||'Your first answer will appear here.'}</blockquote></>}
     {step===5&&<><p>Practice here: draw a circle around the rising chart. In other apps, hold your voice shortcut, wait for the crosshair, then mark and ask “what does this mean?”</p>

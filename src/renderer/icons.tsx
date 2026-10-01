@@ -24,3 +24,8 @@ export const ExternalIcon = () => <Icon><path d="M9 3h4v4M13 3 7.5 8.5" /><path 
 export const SearchIcon = () => <Icon><circle cx="7" cy="7" r="4.5" /><path d="M10.5 10.5 14 14" /></Icon>;
 export const TrashIcon = () => <Icon><path d="M2.5 4.5h11M6.5 4.5V3h3v1.5M4 4.5l.7 8.5a1 1 0 0 0 1 .9h4.6a1 1 0 0 0 1-.9l.7-8.5" /></Icon>;
 export const ExportIcon = () => <Icon><path d="M8 2.5v8M5 5.5l3-3 3 3" /><path d="M3 10v2.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V10" /></Icon>;
+
+/** The kite tail's three dots, the one loading motif (UX-06). They wave in the tail's rhythm and inherit the text color. */
+export const BusyDots = () => <span className="busy-dots" aria-hidden="true"><i /><i /><i /></span>;
+/** A status that is still going ("Checking…"): the ellipsis becomes the tail's dots. */
+export const Working = ({ text }: { text: string }) => text.endsWith('…') ? <>{text.slice(0, -1)}<BusyDots /></> : <>{text}</>;

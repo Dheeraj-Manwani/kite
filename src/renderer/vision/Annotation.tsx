@@ -15,7 +15,7 @@ export function Annotation() {
       if (event.type === 'looking') {
         document.documentElement.classList.toggle('capture-hidden', event.hidden);
         setLooking(event.active);
-        if (event.active && !event.hidden) vr.blinkUntil = performance.now() + 180;
+        if (event.active && !event.hidden) vr.blinkAt = performance.now();
         if (event.hidden) requestAnimationFrame(() => requestAnimationFrame(() => window.kite.screenHidden(event.token)));
       } else if (event.type === 'prepare') {
         void import('./images').then(m => m.prepareImages(event.png, event.display, event.strokes, event.crop)).then(images => window.kite.screenPrepared(event.token, images)).catch(() => window.kite.screenPrepared(event.token, null));

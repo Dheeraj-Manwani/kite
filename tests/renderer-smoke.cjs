@@ -246,7 +246,16 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.kite-canvas')).opacity"),'0');
     overlay.webContents.send('screen:event',{type:'looking',active:true,hidden:false});await delay(60);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.screen-looking').textContent"),'Kite is looking');
+    // A capture is a shutter blink: one thin gold ring opens around the kite, and nothing filters it (personality.md K-10).
+    assert.ok(+(await overlay.webContents.executeJavaScript("document.querySelector('.kite-shutter').getAttribute('opacity')"))>.3,'the shutter ring shows');
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas > g').style.filter"),'');
+    assert.notEqual(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.kite-glint-body')).stopColor"),'rgb(0, 0, 0)','the sail gradient resolves');
     overlay.webContents.send('test:voice',{id:3,type:'ptt:start'});await delay(60);
+    // Muted: the tail greys out with a slash across it, and there is no emoji anywhere on the kite (K-10).
+    overlay.webContents.send('test:voice',{id:3,type:'voice:muted'});await delay(60);
+    assert.ok(await overlay.webContents.executeJavaScript("document.querySelector('.kite-tail').classList.contains('muted')&&document.querySelector('.kite-mute-slash').getAttribute('opacity')==='1'&&document.querySelector('.kite-mute-slash path').getAttribute('d').startsWith('M')"),'a muted tail greys out and gets a slash');
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas').textContent"),'','no emoji on the kite');
+    await delay(350);assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-shutter').getAttribute('opacity')"),'0','the ring has faded');
     overlay.webContents.send('screen:event',{type:'annotate',id:3,display:{id:1,bounds:{x:0,y:0,width:760,height:960},scaleFactor:1},origin:{x:0,y:0}});await delay(60);
     assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).cursor"),'crosshair');
     for(let stroke=0;stroke<6;stroke++){
@@ -304,6 +313,9 @@ app.whenReady().then(async()=>{
     assert.deepEqual(guideActions,['next','pause','stop']);
     overlay.webContents.send('guide:state',{...view,index:1,completed:1,instruction:'Click Footer.',target:'Footer',rect:{x:420,y:120,width:50,height:40}});await delay(100);
     assert.match(await js("document.querySelector('.guide-card').textContent"),/Step 2 of 3.*Click Footer\./);
+    // While the next control is found, the tail's three dots wave after its name; no blinking keycap (UX-06).
+    overlay.webContents.send('guide:state',{...view,index:1,status:'locating',target:'Footer',rect:null});await delay(100);
+    assert.ok(await js("!!document.querySelector('.guide-target .busy-dots')&&getComputedStyle(document.querySelector('.guide-key')).animationName==='none'"));
     // Lost always offers a way forward: Look again re-runs the search; Skip step moves on (UX-31).
     overlay.webContents.send('guide:state',{...view,index:1,status:'lost',target:'Footer',rect:null});await delay(100);
     assert.deepEqual(await js("[...document.querySelectorAll('.guide-actions button')].map(b=>b.textContent)"),['Look again','Skip step','Stop']);

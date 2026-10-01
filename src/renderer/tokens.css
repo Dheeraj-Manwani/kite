@@ -26,6 +26,12 @@
   --fs-lead: 15px;
   --fs-title: 20px;
   --fs-display: 28px;
+  /* Radii by register (UX-06). Windows: 4 px controls and 8 px cards, as in Windows 11. The overlay: 12 px surfaces,
+     with 8 px for the controls and frames inside them. Status chips are full pills. */
+  --radius-s: 4px;
+  --radius-m: 8px;
+  --radius-l: 12px;
+  --radius-pill: 999px;
   /* The kite tail's three-dot rhythm, shared by every loading and progress motif (UX-06, personality.md K-03). */
   --rhythm-beat: 1.2s;
   --rhythm-stagger: .2s;

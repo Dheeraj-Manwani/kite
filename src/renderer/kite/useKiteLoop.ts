@@ -39,7 +39,8 @@ export function useKiteLoop(refs: KiteElements) {
     const tailNode = refs.tail.current, eyesNode = refs.eyes.current;
     if (!svg || !bodyNode || !sailNode || !tailNode || !eyesNode) return;
     const sparkle = bodyNode.querySelector<SVGPathElement>('.kite-sparkle');
-    const muted = bodyNode.querySelector<SVGTextElement>('.kite-muted');
+    const shutter = svg.querySelector<SVGCircleElement>('.kite-shutter'), slash = svg.querySelector<SVGGElement>('.kite-mute-slash');
+    let glint = '', ringShown = false, muted = false;
     const media = matchMedia('(prefers-reduced-motion: reduce)');
     let reduced = media.matches || runtime.reducedMotion;
     const preferenceChanged = () => { reduced = media.matches; };
@@ -230,10 +231,19 @@ export function useKiteLoop(refs: KiteElements) {
       stretch = stepSpring(stretch, desiredStretch, wake ? 1000 : 240, wake ? 42 : 26, dt);
       const along = reduced ? 1 : clamp(stretch.value * reaction.stretch, 0.75, Math.max(config.maxStretch, 1.1));
       const direction = wake ? Math.PI / 2 : Math.atan2(body.y.velocity, body.x.velocity);
-      const captureBlink = now < vr.blinkUntil;
-      bodyNode.style.filter = captureBlink ? 'brightness(2.5) drop-shadow(0 0 5px #fff)' : reaction.flash > 0 ? `brightness(${1 + reaction.flash * 2})` : '';
+      // A capture is a shutter blink (personality.md §5.3, K-10): a quick squash and a blink of the tail, and one thin gold
+      // ring that opens around the kite and fades. Under reduced motion only the ring shows. No filters touch the kite.
+      const shot = (now - vr.blinkAt) / 1000, captureBlink = !reduced && shot < .18, ring = shot < .4;
+      if (shutter && (ring || ringShown)) {
+        ringShown = ring;
+        shutter.setAttribute('opacity', ring ? (1 - shot / .4).toFixed(2) : '0');
+        shutter.setAttribute('cx', String(body.x.value)); shutter.setAttribute('cy', String(body.y.value));
+        shutter.setAttribute('r', String((reduced ? 18 : 14 + 8 * (1 - (1 - shot / .4) ** 2)) * scale));
+      }
+      // A flash (success, a costume change) lifts the sail's own colours toward white for a moment (kite.css, --kite-glint).
+      const shine = reaction.flash > 0 ? reaction.flash.toFixed(2) : '';
+      if (shine !== glint) { glint = shine; svg.style.setProperty('--kite-glint', shine || '0'); }
       if (sparkle) sparkle.style.opacity = reaction.happy ? String(reaction.flash) : '0';
-      if (muted) muted.style.opacity = now < voiceRuntime.mutedUntil ? '1' : '0';
       svg.style.visibility = 'visible';
       svg.style.opacity = String(1 + (motion.opacity - 1) * ambient);
       const squash = captureBlink ? .65 : vr.drawing ? .88 : look && mood === 'thinking' ? .78 : 1;
@@ -263,8 +273,16 @@ export function useKiteLoop(refs: KiteElements) {
       dots.forEach((dot, i) => {
         const node = dotNodes[i]; if (!node) return;
         node.setAttribute('transform', `translate(${dot.x.value} ${dot.y.value}) rotate(${bodyFrame.rotation + 12}) scale(${scale * shaped[i].scale})`);
-        node.style.opacity = shaped[i].opacity.toFixed(2);
+        node.style.opacity = (shaped[i].opacity * (captureBlink ? .25 : 1)).toFixed(2);
       });
+      // Muted (K-10): the dots grey out and the familiar mute slash, a "/" on screen, crosses the tail at its middle dot.
+      const mutedNow = now < voiceRuntime.mutedUntil;
+      if (mutedNow !== muted) { muted = mutedNow; tailNode.classList.toggle('muted', muted); slash?.setAttribute('opacity', muted ? '1' : '0'); }
+      if (muted && slash) {
+        const middle = dots[1], reach = 5 * scale;
+        const d = `M${middle.x.value - reach} ${middle.y.value + reach}L${middle.x.value + reach} ${middle.y.value - reach}`;
+        for (const path of Array.from(slash.children)) path.setAttribute('d', d);
+      }
       positionBubble(body.x.value, body.y.value, geometry, now);
       if (time >= blinkAt) {
         blinkStart = time; blinkAt = time + config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin);

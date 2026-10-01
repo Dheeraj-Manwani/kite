@@ -1,7 +1,9 @@
 import type { CursorPoint } from '../../shared/types';
 import type { Stroke } from '../../shared/vision';
 export const visionRuntime = { id: 0, drawing: false, strokes: [] as Stroke[], pen: null as CursorPoint | null,
-  target: null as CursorPoint | null, blinkUntil: 0, glanceUntil: 0 };
+  target: null as CursorPoint | null, glanceUntil: 0,
+  /** When the latest capture began (performance.now() ms): the kite blinks like a shutter (personality.md §5.3, K-10). */
+  blinkAt: -Infinity };
 export function submittedStrokes(id: number) { return id === visionRuntime.id ? visionRuntime.strokes.map(s => s.map(p => ({ ...p }))) : []; }
 /**
  * Split a hold's marks: strokes drawn on the whiteboard become references to its elements (the board is
