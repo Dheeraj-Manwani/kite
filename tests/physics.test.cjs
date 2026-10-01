@@ -107,16 +107,25 @@ test('sail path is one closed, mirrored shape whose dials bend it', () => {
 
 const { reactionMotion } = require('../src/renderer/voice/frame.ts');
 const { voiceRuntime } = require('../src/renderer/voice/runtime.ts');
-test('a half-strength spin still ends upright instead of hanging upside down', () => {
-  for (const intensity of [1, 0.5]) {
-    voiceRuntime.reaction = { kind: 'costume', at: 0, intensity };
-    const settled = reactionMotion(1000, false);
-    assert.equal(settled.spin % 360, 0, `intensity ${intensity} settles on a whole turn`);
-    assert.ok(settled.spin > 0, 'the turn really happened');
-    voiceRuntime.reaction = { kind: 'costume', at: 0, intensity };
-    assert.ok(reactionMotion(0, false).flash <= intensity, 'intensity softens the flash');
+test('no reaction spins the kite in place or flashes it; the big moves are flown (K-00, K-09)', () => {
+  for (const kind of ['success', 'costume', 'approved', 'perk', 'nod', 'flutter', 'tangled', 'puzzled']) {
+    for (const t of [0, .2, .5, 1]) {
+      voiceRuntime.reaction = { kind, at: 0, intensity: 1 };
+      const motion = reactionMotion(t * 1000, false);
+      assert.ok(!('spin' in motion) && !('flash' in motion), kind);
+      if (kind === 'success' || kind === 'costume') assert.deepEqual(motion, { x: 0, y: 0, tilt: 0, stretch: 1, tailY: 0, flutter: 0 }, `${kind} is played by the loop`);
+    }
   }
   voiceRuntime.reaction = null;
+});
+test('a reminder tugs toward its bubble for a few seconds, then lets go (K-09)', () => {
+  voiceRuntime.alarmUntil = 3500; voiceRuntime.bubble = { dataset: { side: 'left' } };
+  const pulls = Array.from({ length: 60 }, (_, i) => reactionMotion(i * 50, false));
+  assert.ok(Math.min(...pulls.map(m => m.x)) < -3 && pulls.every(m => m.x <= 1e-9), 'pulls left, toward the bubble');
+  assert.ok(pulls.some(m => m.x === 0 || Math.abs(m.x) < .05), 'between tugs it eases back');
+  assert.equal(reactionMotion(3600, false).x, 0, 'and settles when the tug is over');
+  assert.equal(reactionMotion(1000, true).x, 0, 'reduced motion never tugs');
+  voiceRuntime.alarmUntil = 0; voiceRuntime.bubble = null;
 });
 
 const { toScreen, tailAt, stepTail } = require('../src/renderer/kite/tail.ts');
@@ -199,4 +208,40 @@ test('flutter hello ripples the edge and flicks the tail, then is still', () => 
   assert.ok(early.some(s => Math.abs(s.flutter) > .5) && early.every(s => s.tailY < 0 && s.y < 0));
   const done = reactionShape('flutter', 1);
   assert.equal(done.flutter, 0); assert.ok(Math.abs(done.tailY) < 1e-9 && Math.abs(done.y) < 1e-9);
+});
+
+const { loopFlight, swoopFlight, reelFlight } = require('../src/renderer/kite/flight.ts');
+test('signature flights: a loop in place comes home, the swoop dips, reeling out speeds up (K-09)', () => {
+  const here = { x: 300, y: 300 };
+  const loop = loopFlight(here, here, { radius: 16, heading: { x: 0, y: -1 }, bulge: { x: -1, y: 0 }, duration: .9 });
+  assert.ok(Math.hypot(loop.at(1).point.x - 300, loop.at(1).point.y - 300) < 1e-6 && loop.duration === .9);
+  const xs = Array.from({ length: 50 }, (_, i) => loop.at(i / 49).point), lowest = Math.max(...xs.map(p => p.y)), leftmost = Math.min(...xs.map(p => p.x));
+  assert.ok(Math.min(...xs.map(p => p.y)) < 300 - 14 && lowest > 300 + 14 && leftmost < 300 - 30 && Math.max(...xs.map(p => p.x)) <= 300 + 1e-6, 'climbs, and swings round on the side away from the bubble');
+  const swoop = swoopFlight({ x: 100, y: 200 }, { x: 400, y: 150 });
+  const path = Array.from({ length: 50 }, (_, i) => swoop.at(i / 49).point);
+  assert.ok(Math.max(...path.map(p => p.y)) > 200 + 10, 'dives below where it started');
+  assert.ok(Math.hypot(path[49].x - 400, path[49].y - 150) < 1e-6 && swoop.at(1).heading.y < 0, 'and swoops up into the control');
+  const reel = reelFlight({ x: 300, y: 500 }, { x: 390, y: -120 });
+  assert.ok(500 - reel.at(.5).point.y < (500 + 120) / 2, 'gathers speed as it goes');
+  assert.ok(Math.hypot(reel.at(1).point.x - 390, reel.at(1).point.y + 120) < 1e-6 && reel.at(.5).heading.y < 0);
+});
+
+const { parseMarkdown, parseInline } = require('../src/renderer/voice/markdown.ts');
+test('answers read as lists, headings, and marks, with nothing navigable (UX-17)', () => {
+  const blocks = parseMarkdown('## Steps\nDo this:\n\n1. Open **Word**\n\n2. Click `Insert`\n   then Footer\n  - pick *Blank*\n3. Done\n\nSee [the docs](https://support.microsoft.com/word) or https://example.com/a.');
+  assert.deepEqual(blocks.map(b => b.kind), ['heading', 'text', 'list', 'text']);
+  const list = blocks[2];
+  assert.equal(list.ordered, true); assert.equal(list.start, 1);
+  assert.deepEqual(list.items.map(i => i.depth), [0, 0, 1, 0], 'blank lines between items keep one list; nested items keep their depth');
+  assert.deepEqual(list.items[0].inline, [{ kind: 'text', text: 'Open ' }, { kind: 'strong', text: 'Word' }]);
+  assert.deepEqual(list.items[1].inline, [{ kind: 'text', text: 'Click ' }, { kind: 'code', text: 'Insert' }, { kind: 'text', text: '\nthen Footer' }]);
+  assert.deepEqual(list.items[2].inline, [{ kind: 'text', text: 'pick ' }, { kind: 'em', text: 'Blank' }]);
+  assert.deepEqual(blocks[3].inline, [{ kind: 'text', text: 'See ' }, { kind: 'link', text: 'the docs', url: 'https://support.microsoft.com/word' },
+    { kind: 'text', text: ' or ' }, { kind: 'link', text: 'https://example.com/a', url: 'https://example.com/a' }, { kind: 'text', text: '.' }]);
+  // snake_case and maths stay text; a list that starts at 3 keeps its number; half-streamed marks stay raw until closed.
+  assert.deepEqual(parseInline('use file_name_here and 2 * 3 * 4'), [{ kind: 'text', text: 'use file_name_here and 2 * 3 * 4' }]);
+  assert.equal(parseMarkdown('3. third\n4. fourth')[0].start, 3);
+  assert.deepEqual(parseMarkdown('Open **Wo')[0].inline, [{ kind: 'text', text: 'Open **Wo' }]);
+  assert.deepEqual(parseMarkdown('- a\n- b\n1. c').map(b => b.kind === 'list' && b.ordered), [false, true], 'a new kind of list starts a new list');
+  assert.deepEqual(parseMarkdown('```js\nconst a = 1;\n```')[0], { kind: 'code', text: 'const a = 1;\n' });
 });

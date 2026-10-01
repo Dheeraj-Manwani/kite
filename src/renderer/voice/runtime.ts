@@ -1,8 +1,10 @@
 import type { Timing } from '../../shared/types';
-export type Reaction = 'perk' | 'puzzled' | 'aha' | 'happy' | 'tangled' | 'flinch' | 'costume' | 'phew' | 'proposing' | 'approved' | 'success' | 'denied' | 'alarm' | 'nod' | 'flutter';
+export type Reaction = 'perk' | 'puzzled' | 'aha' | 'tangled' | 'flinch' | 'costume' | 'phew' | 'proposing' | 'approved' | 'success' | 'denied' | 'alarm' | 'nod' | 'flutter';
 export const voiceRuntime = {
   tickAudio: null as ((dt: number) => void) | null,
   bubble: null as HTMLElement | null,
+  /** A notice bubble from the kite (UX-18), shown only while no answer bubble is. */
+  notice: null as HTMLElement | null,
   hover: false,
   waitingSince: 0,
   reaction: null as { kind: Reaction; at: number; intensity?: number } | null,

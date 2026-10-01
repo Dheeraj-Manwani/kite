@@ -7,17 +7,12 @@ import { voiceRuntime, react } from './runtime';
 import { VoiceRecorder } from './recorder';
 import { VoicePlayback } from './playback';
 import { displayText, wordOffsets } from './reveal';
+import { MarkdownView } from './MarkdownView';
 import { modelLabel, useSettings } from '../hooks/useSettings';
 import { AlertIcon, BusyDots, CopyIcon, HistoryIcon, PinIcon, SetupIcon, Working } from '../icons';
 interface Bubble { id: number; visible: boolean; transcript: string; text: string; streaming: boolean; settings: boolean; revealed: number; fallback: string; vision?: string; voiceStatus: string; approval?: Card; toolStatus?: string; alarm?: boolean; quiet?: boolean; compact?: boolean; status?: Status; error?: { title: string; text: string; setup?: boolean } }
 type Status = 'listening' | 'thinking';
 const empty: Bubble = { id: 0, visible: false, transcript: '', text: '', streaming: false, settings: false, revealed: Infinity, fallback: '', voiceStatus: '' };
-function Markdown({ text }: { text: string }) {
-  return <>{displayText(text).split(/(```[\s\S]*?(?:```|$))/g).map((block, i) => block.startsWith('```')
-    ? <pre key={i}><code>{block.replace(/^```[^\n]*\n?/, '').replace(/```$/, '')}</code></pre>
-    : <span key={i}>{block.split(/(\*\*[^*]+\*\*|`[^`]+`)/g).map((part, j) => part.startsWith('**') && part.endsWith('**')
-      ? <strong key={j}>{part.slice(2, -2)}</strong> : part.startsWith('`') && part.endsWith('`') ? <code key={j}>{part.slice(1, -1)}</code> : part)}</span>)}</>;
-}
 /**
  * Listening and thinking as a compact pill beside the kite (UX-12), sharing the tail's three-dot rhythm.
  * Listening: the dots are a live level meter, the later dots lagging so the voice flows down them; after 2 s of
@@ -68,7 +63,8 @@ export function SpeechBubble() {
       if (!llmDone || !playbackDone) return;
       update({ ...state.current, streaming: false, revealed: Infinity });
       if (state.current.quiet) { voiceRuntime.quiet = false; idle(300); return; }
-      if (!['costume', 'success', 'denied', 'alarm'].includes(voiceRuntime.reaction?.kind)) react('happy'); idle(300); life(4000 + state.current.text.trim().split(/\s+/).length * 60);
+      // A quiet "here's your answer": one flutter of the trailing edge (personality.md §5.4), unless a bigger move is playing.
+      if (!['costume', 'success', 'denied', 'alarm'].includes(voiceRuntime.reaction?.kind)) react('flutter'); idle(300); life(4000 + state.current.text.trim().split(/\s+/).length * 60);
     };
     const player = new VoicePlayback(type => {
       window.kite.reportPlayback(latest.current, type);
@@ -141,7 +137,8 @@ export function SpeechBubble() {
           react(event.decision === 'approved' ? 'approved' : 'denied'); window.kite.setOverlayInteractive(false); break;
         case 'tool:executing': voiceRuntime.toolPose = 'executing'; update({ ...state.current, toolStatus: 'Working…' }); break;
         case 'tool:result': voiceRuntime.toolPose = null; update({ ...state.current, toolStatus: event.text ?? '' }); react(event.success ? 'success' : 'tangled'); break;
-        case 'reminder:fired': voiceRuntime.alarmUntil = performance.now() + 10000; update({ ...state.current, alarm: true }); react('alarm'); break;
+        // The reminder tug lasts a few seconds, then the kite settles; the bubble keeps the reminder (personality.md §5.3).
+        case 'reminder:fired': voiceRuntime.alarmUntil = performance.now() + 3500; update({ ...state.current, alarm: true }); react('alarm'); break;
         case 'vision:routed': react('costume', .5); update({ ...state.current, vision: event.text }); break;
         case 'model:fallback': react('phew'); update({ ...state.current, fallback: event.text ?? '' }); break;
         case 'llm:delta':
@@ -200,7 +197,7 @@ export function SpeechBubble() {
     aria-hidden={!bubble.visible} onPointerEnter={() => hover(true)} onPointerLeave={() => hover(false)}>
     <div className="bubble-body">{pill ? <StatusLine status={pill} /> : <>
     {bubble.transcript && <div className="bubble-transcript">You asked · {bubble.transcript}</div>}
-    {(bubble.text || bubble.streaming) && <div className="bubble-reply"><Markdown text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <BusyDots />}</div>}
+    {(bubble.text || bubble.streaming) && <div className="bubble-reply"><MarkdownView text={hovered ? bubble.text : bubble.text.slice(0, bubble.revealed)} />{bubble.streaming && <BusyDots />}</div>}
     {bubble.error && <div className={`bubble-error${bubble.error.setup ? ' setup' : ''}`} role="alert">
       <strong>{bubble.error.setup ? <SetupIcon /> : <AlertIcon />}{bubble.error.title}</strong><p>{bubble.error.text}</p></div>}
     {bubble.approval && <ApprovalCard key={bubble.approval.approvalId} card={bubble.approval} />}

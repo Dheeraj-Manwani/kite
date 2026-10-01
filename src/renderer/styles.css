@@ -21,8 +21,14 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .dev-panel .dev-check { display: flex; align-items: center; gap: 8px; }
 .dev-check input { width: auto; margin: 0; }
 .dev-panel small { display: block; font-size: var(--fs-caption); line-height: 1.5; color: var(--text-muted); }
-.speech-bubble { position: absolute; left: 0; top: 0; width: 320px; max-width: calc(100vw - 24px); max-height: min(420px, calc(100vh - 24px)); display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-l); background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); opacity: 0; visibility: hidden; transition: opacity .22s, visibility .22s; pointer-events: none; user-select: text; font-size: max(var(--fs-body), .85rem); line-height: 1.6; }
-.speech-bubble.visible { opacity: 1; visibility: visible; pointer-events: auto; }
+.speech-bubble { position: absolute; left: 0; top: 0; width: 320px; max-width: calc(100vw - 24px); max-height: min(420px, calc(100vh - 24px)); display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-l); background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); opacity: 0; visibility: hidden; pointer-events: none;
+  transform: translateX(var(--grow-x, -4px)) scale(.96); transform-origin: 0 var(--tail-y, 22px); transition: opacity .18s, visibility .18s, transform .18s cubic-bezier(.3,.7,.4,1); user-select: text; font-size: max(var(--fs-body), .85rem); line-height: 1.6; }
+.speech-bubble.visible { opacity: 1; visibility: visible; pointer-events: auto; transform: none; }
+/* The bubble grows out of the kite and collapses back into it (UX-16): it scales from its tail, which faces the kite.
+   positionBubble places it with the translate property, so transform is free for this. Reduced motion keeps the fade. */
+.speech-bubble[data-side='left'] { --grow-x: 4px; transform-origin: 100% var(--tail-y, 22px); }
+.speech-bubble.compact { transform-origin: 0 50%; }
+.speech-bubble.compact[data-side='left'] { transform-origin: 100% 50%; }
 /* Short status lines (a tap that was too short, silence) are a pill, not a card (UX-10). */
 /* The body scrolls, so the tail can sit outside the bubble's edge without being clipped. */
 .bubble-body { min-height: 0; overflow: auto; padding: 16px 18px; }
@@ -72,7 +78,8 @@ html[data-view='overlay'] { overflow: hidden; background: transparent; }
 .bubble-keys { display: none; margin-top: 10px; font-size: var(--fs-caption); color: var(--text-muted); }
 .overlay-focused .bubble-keys { display: block; }
 .bubble-reply .busy-dots { color: var(--text-muted); }
-@media (prefers-reduced-motion: reduce) { .speech-bubble, .kite-stage { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .speech-bubble { transform: none; transition: opacity .18s, visibility .18s; } .kite-stage { transition: none; } }
+.reduce-motion .speech-bubble { transform: none; }
 /* Under reduced motion the wave stops and the middle dot stays lit, as on the kite's tail. */
 @media (prefers-reduced-motion: reduce) { .status-dots i, .busy-dots i { transform: none !important; animation: none !important; } .status-dots[data-status='thinking'] i:nth-child(2), .busy-dots i:nth-child(2) { opacity: 1; } }
 .reduce-motion .status-dots i, .reduce-motion .busy-dots i { transform: none !important; } .reduce-motion .status-dots[data-status='thinking'] i:nth-child(2), .reduce-motion .busy-dots i:nth-child(2) { opacity: 1; }
@@ -176,6 +183,20 @@ button:disabled { opacity: .45; cursor: default; }
 .settings-view small { color: var(--text-muted); font-size: var(--fs-caption); }
 .bubble-voice-status { font-size: var(--fs-caption); color: var(--text-muted); margin-top: 7px; }
 .bubble-reply pre { white-space: pre-wrap; background: var(--surface-subtle); padding: 8px; border-radius: var(--radius-s); }
+/* Answers (UX-17): lists, headings as bold lines, and links as chips that copy their address; nothing navigates. */
+.bubble-reply ul, .bubble-reply ol { margin: 4px 0; padding-left: 20px; }
+.bubble-reply li { margin: 2px 0; padding-left: 2px; }
+.bubble-reply li::marker { color: var(--text-muted); }
+.bubble-reply .md-depth-1 { margin-left: 16px; }
+.bubble-reply .md-depth-2 { margin-left: 32px; }
+.bubble-reply .md-heading { display: block; margin: 8px 0 2px; }
+.bubble-reply .md-heading:first-child { margin-top: 0; }
+.speech-bubble .link-chip { margin: 0 1px; padding: 0 7px; border-color: var(--border); border-radius: var(--radius-pill); background: var(--surface-subtle); color: var(--text-muted); font-size: var(--fs-caption); line-height: 1.6; vertical-align: baseline; }
+.speech-bubble .link-chip:hover { color: var(--text); }
+/* App notices (UX-18): a small bubble from the kite, with at most one action. */
+.speech-bubble.notice { width: auto; max-width: 320px; }
+.speech-bubble.notice .bubble-body { display: flex; align-items: center; gap: 12px; padding: 9px 10px 9px 14px; line-height: 1.4; }
+.speech-bubble.notice button { flex: none; margin-top: 0; }
 
 .approval-card { border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--surface-subtle); padding: 12px; margin-top: 10px; }
 /* Risk tiers (UX-21): low-risk approvals sit lightly in the bubble; sensitive ones are framed and say what leaves this PC. */
@@ -303,7 +324,6 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
 .cheat-sheet dd { color: var(--text-muted); }
 .onboarding blockquote { background: var(--surface-subtle); padding: 24px; border-left: 4px solid var(--border); min-height: 90px; }
 .hotkey-recorder small { display: block; margin: 10px 0; color: var(--text-muted); }
-.app-notice { position: fixed; right: 24px; bottom: 24px; padding: 12px 20px; background: var(--surface-overlay); color: var(--text); border: 1px solid var(--border); box-shadow: var(--shadow-overlay); border-radius: var(--radius-l); max-width: 350px; pointer-events: none; }
 .reduce-motion *, .reduce-motion *::before { animation: none !important; transition: none !important; }
 
 /* Guide mode: a marker ring on the control and a step card that never covers it. */
@@ -394,7 +414,7 @@ button.link:where(:hover:not(:disabled)) { background: transparent; color: var(-
    Surfaces become Canvas and CanvasText with a Highlight edge; anything that showed state through a fill
    (switches, dots, pills, lit keys) gets an explicit system color so the state survives. */
 @media (forced-colors: active) {
-  .speech-bubble, .speech-bubble::before, .approval-card.sensitive, .guide-card, .task-card, .app-notice, .toast, .pill, .dev-panel { border-color: Highlight; }
+  .speech-bubble, .speech-bubble::before, .approval-card.sensitive, .guide-card, .task-card, .toast, .pill, .dev-panel { border-color: Highlight; }
   .toast, .screen-looking { border: 1px solid CanvasText; }
   button { border-color: ButtonText; }
   /* Chromium forces a button's text color, so the primary fill opts out and uses Highlight explicitly. */

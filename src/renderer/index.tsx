@@ -5,8 +5,8 @@ import { SailMark } from './kite/SailMark';
 import { Working } from './icons';
 import { sections, type Section } from './components/sections';
 import { SpeechBubble } from './voice/SpeechBubble';
+import { AppNotices } from './voice/AppNotices';
 import { runtime } from './kite/runtime';
-import { react } from './voice/runtime';
 import './tokens.css';
 import './kite.css';
 import './styles.css';
@@ -20,19 +20,9 @@ const History = lazy(() => import('./components/HistoryView'));
 const Onboarding = lazy(() => import('./components/Onboarding'));
 const DevPanel = import.meta.env.DEV ? lazy(() => import('./kite/DevPanel')) : null;
 function Overlay() {
-  const [notice,setNotice]=useState('');
   useEffect(()=>{
     const settings=(s: import('../shared/types').SettingsSnapshot)=>{runtime.reducedMotion=s.settings.reducedMotion;document.documentElement.classList.toggle('reduce-motion',s.settings.reducedMotion);};
     void window.kite.getSettings().then(settings);const off=window.kite.onSettingsChanged(settings);
-    let timer: ReturnType<typeof setTimeout>;
-    const app=window.kite.onAppEvent(e=>{
-      if(e.type==='onboarding:done'){runtime.flight=e.from;return;}
-      if(e.type==='paused'){document.documentElement.classList.add('kite-paused');setNotice('Paused — see you soon.');}
-      if(e.type==='resumed'){document.documentElement.classList.remove('kite-paused');setNotice('Welcome back.');react('happy');}
-      if(e.type==='update:ready'){setNotice('Update ready · Restart from the tray when you’re ready.');react('costume',.5);}
-      if(e.type==='fault'){setNotice('Something went wrong. Try again, or open the logs from the tray.');react('tangled');}
-      clearTimeout(timer);timer=setTimeout(()=>setNotice(''),6000);
-    });
     // Keyboard controls (tray, or Ctrl + Alt + K): focus the first control on screen. With nothing to control,
     // hand focus straight back so the user's typing never disappears into a transparent window. Esc also hands it back.
     const focused=()=>{
@@ -45,10 +35,9 @@ function Overlay() {
     const blurred=()=>document.documentElement.classList.remove('overlay-focused');
     const escape=(e:KeyboardEvent)=>{if(e.key==='Escape')window.kite.releaseOverlay();};
     window.addEventListener('focus',focused);window.addEventListener('blur',blurred);window.addEventListener('keydown',escape);
-    return()=>{off();app();clearTimeout(timer);window.removeEventListener('focus',focused);window.removeEventListener('blur',blurred);window.removeEventListener('keydown',escape);};
+    return()=>{off();window.removeEventListener('focus',focused);window.removeEventListener('blur',blurred);window.removeEventListener('keydown',escape);};
   },[]);
-  return <main className="overlay"><Suspense fallback={null}><Annotation /></Suspense><Suspense fallback={null}><Board /></Suspense><Suspense fallback={null}><Task /></Suspense><Suspense fallback={null}><Guide /></Suspense><KiteRenderer /><SpeechBubble />
-    {notice&&<div className="app-notice" role="status">{notice}</div>}
+  return <main className="overlay"><Suspense fallback={null}><Annotation /></Suspense><Suspense fallback={null}><Board /></Suspense><Suspense fallback={null}><Task /></Suspense><Suspense fallback={null}><Guide /></Suspense><KiteRenderer /><SpeechBubble /><AppNotices />
     {DevPanel&&<Suspense fallback={null}><DevPanel /></Suspense>}
   </main>;
 }

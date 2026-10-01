@@ -13,9 +13,8 @@
 .kite-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
 .kite-sail { fill: url(#kite-sail); stroke: var(--kite-halo); stroke-width: 2; stroke-linejoin: round; paint-order: stroke; vector-effect: non-scaling-stroke; }
 .kite-tail rect { fill: var(--kite-tail); stroke: var(--kite-halo); stroke-width: 1; paint-order: stroke; vector-effect: non-scaling-stroke; }
-.kite-sparkle { fill: var(--sun); }
-/* The sail's gradient. A flash lifts its own colours toward white for a moment (--kite-glint, 0–1, set by the loop);
-   nothing filters the kite (personality.md K-10). */
+/* The sail's gradient. Under reduced motion the colour ripple lifts its own colours toward white for a moment
+   (--kite-glint, 0–1, set by the loop); nothing filters the kite (personality.md K-10). */
 .kite-glint-body { stop-color: color-mix(in srgb, var(--kite-body), #fff calc(var(--kite-glint, 0) * 35%)); }
 .kite-glint-shade { stop-color: color-mix(in srgb, var(--kite-shade), #fff calc(var(--kite-glint, 0) * 35%)); }
 /* Sail-native cues (personality.md §5.3, K-10): a capture's thin gold shutter ring; a muted tail, grey with a slash. */
@@ -23,6 +22,10 @@
 .kite-tail.muted rect { fill: var(--kite-muted); }
 .kite-mute-slash path { fill: none; stroke: var(--kite-muted); stroke-width: 1.6; stroke-linecap: round; }
 .kite-mute-slash .halo { stroke: var(--kite-halo); stroke-width: 3.2; }
+/* The colour ripple (personality.md §5.4, K-09): a soft white band that the loop slides across the sail. */
+.kite-sheen { fill: url(#kite-sheen); pointer-events: none; }
+.kite-sheen-edge { stop-color: #fff; stop-opacity: 0; }
+.kite-sheen-band { stop-color: #fff; stop-opacity: .7; }
 .sail-mark { flex: none; display: inline-block; vertical-align: -.2em; }
 .sail-mark path { fill: var(--kite-body); }
 .sail-mark rect { fill: var(--kite-shade); }
@@ -36,7 +39,6 @@
 /* Off the stage, over the practice canvas, it takes the overlay kite's halo, and the string fades. */
 .kite-stage-layer.off-stage .kite-stage-sail { stroke: var(--kite-halo); }
 .kite-stage-layer.off-stage .kite-stage-string { opacity: 0; }
-.kite-paused .kite-canvas { transition: transform .6s ease-in; transform: translateY(-120vh) rotate(-12deg); }
 /* The kite in High Contrast (docs/personality.md §5.8, K-16): the sail in CanvasText with a Highlight halo, the tail in CanvasText. */
 @media (forced-colors: active) {
   .kite-sail, .kite-stage-sail { fill: CanvasText; stroke: Highlight; }
@@ -44,6 +46,7 @@
   .kite-tail.muted rect, .kite-mute-slash path { fill: GrayText; stroke: GrayText; }
   .kite-mute-slash .halo { stroke: Canvas; }
   .kite-shutter { stroke: Highlight; }
+  .kite-sheen { display: none; }
   .sail-mark path, .sail-mark rect { fill: CanvasText; }
   .kite-stage { background: Canvas; }
   .kite-stage-string { stroke: GrayText; }

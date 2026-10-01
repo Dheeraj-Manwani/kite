@@ -13,11 +13,15 @@ export const KiteRenderer = memo(function KiteRenderer() {
       <linearGradient id="kite-sail" x1="0" y1="0" x2="1" y2="1">
         <stop className="kite-glint-body" /><stop className="kite-glint-shade" offset="1" />
       </linearGradient>
+      {/* The colour ripple's band (personality.md §5.4); the loop slides it across the sail. */}
+      <linearGradient id="kite-sheen" x1="-.6" y1="-.6" x2="0" y2="0">
+        <stop className="kite-sheen-edge" /><stop className="kite-sheen-band" offset=".5" /><stop className="kite-sheen-edge" offset="1" />
+      </linearGradient>
     </defs>
       <g ref={body}>
         <path ref={sail} className="kite-sail" d={sailPath(config.sail)} />
         <g ref={eyes} fill="#fff"><circle cx="-2.4" cy="-2" r=".85" /><circle cx="2.4" cy="-2" r=".85" /></g>
-        <path className="kite-sparkle" d="M16 -17 L17.2 -13.2 L21 -12 L17.2 -10.8 L16 -7 L14.8 -10.8 L11 -12 L14.8 -13.2 Z" opacity="0" />
+        <path className="kite-sheen" opacity="0" />
       </g>
       {/* The tail lives outside the body so each dot can trail on its own spring; the loop places them (K-03). */}
       <g ref={tail} className="kite-tail">{config.tailDots.map(({ x, y, size }) =>

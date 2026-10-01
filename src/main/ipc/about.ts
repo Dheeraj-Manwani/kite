@@ -18,10 +18,10 @@ export function registerAboutIPC() {
   ipcMain.handle('about:get', (event): AboutInfo | null => trusted(event, 'settings')
     ? { version: app.getVersion(), updateStatus: appRuntime.updateStatus, updateReady: appRuntime.updateReady } : null);
   ipcMain.on('about:action', (event, action: unknown) => {
-    if (!trusted(event, 'settings')) return;
-    if (action === 'logs') void openLogs();
-    else if (action === 'report') void reportProblem();
-    else if (action === 'restart') restartToUpdate();
+    // The overlay's notices (UX-18) may restart into a ready update or open the logs; reporting a problem stays in Settings.
+    if (action === 'logs' && trusted(event, 'either')) void openLogs();
+    else if (action === 'restart' && trusted(event, 'either')) restartToUpdate();
+    else if (action === 'report' && trusted(event, 'settings')) void reportProblem();
   });
   ipcMain.on('keys:page', (event, provider: unknown) => {
     if (trusted(event, 'settings') && typeof provider === 'string' && Object.hasOwn(keyPages, provider)) void shell.openExternal(keyPages[provider as SecretId]);
