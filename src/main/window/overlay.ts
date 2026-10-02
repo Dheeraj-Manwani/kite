@@ -1,9 +1,21 @@
-import { BrowserWindow, screen } from 'electron';
+import { BrowserWindow, globalShortcut, screen } from 'electron';
 import { loadRenderer, preloadPath } from './renderer';
 import { resetPanelHitTest } from '../ipc/overlay';
 
 let overlayWindow: BrowserWindow | null = null;
 export const getOverlayWindow = () => overlayWindow;
+/** Keyboard controls: the overlay takes focus so Tab reaches the bubble and cards; Esc hands focus back. */
+const KEYBOARD_CONTROLS_SHORTCUT = 'CommandOrControl+Alt+K';
+let keyboardShortcutActive = false;
+export function focusOverlayControls() { overlayWindow?.setFocusable(true); overlayWindow?.focus(); }
+export function registerKeyboardControlsShortcut() {
+  keyboardShortcutActive = globalShortcut.register(KEYBOARD_CONTROLS_SHORTCUT, focusOverlayControls);
+  return keyboardShortcutActive;
+}
+/** The accelerator to show in menus, only when registering it succeeded (another app may own it). */
+export const keyboardControlsShortcut = () => keyboardShortcutActive ? KEYBOARD_CONTROLS_SHORTCUT : undefined;
+// Blurring returns focus to the app underneath; the window's blur handler makes it unfocusable again.
+export function releaseOverlayControls() { if (overlayWindow?.isFocused()) overlayWindow.blur(); }
 export function getDesktopBounds() {
   const displays = screen.getAllDisplays().map(display => display.bounds);
   const x = Math.min(...displays.map(bounds => bounds.x));

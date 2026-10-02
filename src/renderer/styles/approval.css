@@ -1,0 +1,30 @@
+/* The approval card (UX-20 to UX-23): the trust moment. */
+.approval-card { border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--surface-subtle); padding: 12px; margin-top: 10px; }
+/* Risk tiers (UX-21): low-risk approvals sit lightly in the bubble; sensitive ones are framed and say what leaves this PC. */
+.approval-card.low { background: transparent; border: 0; padding: 0; margin-top: 14px; }
+.approval-flow { display: flex; align-items: flex-start; gap: 6px; margin: 8px 0 0; font-size: var(--fs-caption); line-height: 1.45; color: var(--text); }
+.approval-flow .icon { margin-top: 1px; color: var(--text-muted); }
+.approval-heading { display: flex; align-items: flex-start; gap: 8px; }
+.approval-heading .sail-mark { margin-top: 3px; }
+.approval-summary { margin: 0; color: var(--text); font: 600 var(--fs-lead)/1.35 var(--font-display); overflow-wrap: anywhere; }
+.approval-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 12px 0 2px; }
+.approval-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+/* A thin gold ring that thickens, with the number in bold, only for the last 5 seconds (UX-22). */
+.approval-countdown { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+.approval-countdown svg { flex: none; width: 16px; height: 16px; }
+.approval-countdown circle { fill: none; stroke-width: 2; }
+.approval-countdown .countdown-track { stroke: var(--border); }
+.approval-countdown .countdown-arc { stroke: var(--sun); stroke-linecap: round; transition: stroke-width .2s; }
+.approval-countdown.ending { color: var(--text); font-weight: 600; }
+.approval-countdown.ending .countdown-arc { stroke-width: 3.5; }
+.approval-details { margin-top: 8px; }
+.approval-details code { display: block; margin: 6px 0 2px; font: var(--fs-caption) var(--font-mono); color: var(--text-muted); }
+.approval-card pre, .tool-audit pre { max-height: 180px; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; font-size: var(--fs-caption); }
+.approval-card small { display: block; color: var(--text-muted); font-size: var(--fs-caption); margin-top: 8px; }
+.approval-card summary { font-size: var(--fs-caption); cursor: pointer; }
+.bubble-tool-status { font-size: var(--fs-caption); margin-top: 8px; color: var(--text-muted); }
+.approval-steps { margin: 6px 0 4px; padding-left: 20px; font-size: var(--fs-caption); color: var(--text); max-height: 150px; overflow: auto; }
+@media (forced-colors: active) {
+  .approval-card.sensitive { border-color: Highlight; }
+  .approval-countdown .countdown-arc { stroke: Highlight; filter: none; }
+}

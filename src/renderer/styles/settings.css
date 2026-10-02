@@ -1,0 +1,124 @@
+/* Settings (UX-50 to UX-57): groups of rows on a card, one section at a time. */
+.settings-view { max-width: 720px; padding: 24px 32px 48px; }
+.settings-view h1 { margin: 4px 0 20px; }
+.settings-group { margin: 0 0 24px; }
+.settings-group h2 { margin: 0 0 6px; font-size: var(--fs-lead); }
+.group-hint { margin: 0 0 10px; font-size: var(--fs-caption); color: var(--text-muted); }
+.group-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m); }
+.group-card > * + * { border-top: 1px solid var(--border); }
+.setting-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin: 0; padding: 12px 16px; font-size: var(--fs-body); font-weight: 400; }
+.setting-row.stacked { display: block; }
+.row-text { display: grid; gap: 2px; min-width: 0; }
+.row-label { color: var(--text); }
+.row-text small { font-size: var(--fs-caption); color: var(--text-muted); }
+.row-control { display: flex; align-items: center; gap: 8px; flex: 0 1 auto; min-width: 0; }
+.row-control select { width: 260px; max-width: 100%; }
+.row-control button { white-space: nowrap; }
+.row-control input[type='range'] { width: 200px; max-width: 100%; margin: 0; padding: 0; accent-color: var(--ink); }
+/* Sliders (UX-56): an ink fill and thumb on a border rail, filled up to the value (--fill), with a "Normal" tick under 1.0×. */
+.range-field { position: relative; display: inline-block; padding-bottom: 16px; }
+.row-control .range { display: block; -webkit-appearance: none; appearance: none; height: 20px; border: 0; background: transparent; cursor: pointer; }
+.range::-webkit-slider-runnable-track { height: 4px; border-radius: var(--radius-pill); background: linear-gradient(to right, var(--ink) var(--fill, 50%), var(--border) var(--fill, 50%)); }
+.range::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -5px; border: 2px solid var(--surface); border-radius: 50%; background: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.range:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
+/* The thumb's centre runs from 7 px to the width minus 7 px, so the tick sits where 1.0× really is. */
+.settings-view .range-tick { position: absolute; left: calc(7px + (100% - 14px) * var(--normal)); top: 20px; transform: translateX(-50%); padding: 0 2px; border: 0; background: transparent; color: var(--text-muted); font-size: 11px; line-height: 14px; }
+.settings-view .range-tick::before { content: ''; position: absolute; left: 50%; top: -6px; width: 1px; height: 4px; background: var(--text-muted); }
+.settings-view .range-tick:hover { background: transparent; color: var(--text); }
+.switch-row { cursor: pointer; }
+/* Windows-style switch; "on" is ink, not pink (UX-54). */
+.switch { appearance: none; flex: none; position: relative; width: 40px; height: 20px; margin: 0; padding: 0; border: 1px solid var(--text-muted); border-radius: var(--radius-pill); background: transparent; cursor: pointer; }
+.switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 12px; height: 12px; border-radius: 50%; background: var(--text-muted); transition: left .15s; }
+.switch:checked { background: var(--ink); border-color: var(--ink); }
+.switch:checked::after { left: 23px; background: var(--on-ink); }
+.switch:disabled { opacity: .45; cursor: default; }
+.always-ask { justify-content: flex-start; }
+.always-ask .icon { color: var(--text-muted); }
+.flow-list { margin: 0; padding: 12px 16px 12px 34px; display: grid; gap: 6px; font-size: var(--fs-body); }
+.tag { flex: none; padding: 0 7px; border-radius: var(--radius-pill); background: var(--surface-subtle); color: var(--text-muted); font-size: var(--fs-caption); font-weight: 600; }
+/* Provider rows (UX-51): a key field and Connect until connected; then a status and an overflow menu. */
+.provider-row { display: grid; gap: 8px; padding: 12px 16px; }
+.provider-head { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.provider-head > .link, .provider-state { margin-left: auto; }
+.provider-state { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; font-size: var(--fs-caption); color: var(--success); }
+.provider-state.problem { color: var(--danger); }
+.provider-state.working { color: var(--text-muted); }
+.provider-connect { display: flex; gap: 8px; }
+.provider-connect input { flex: 1; min-width: 0; margin: 0; padding: 7px 10px; }
+.field-error { display: block; margin: 0; color: var(--danger); font-size: var(--fs-caption); }
+.link.external { display: inline-flex; align-items: center; gap: 4px; }
+.overflow { position: relative; }
+.overflow summary { list-style: none; padding: 4px; border-radius: var(--radius-s); line-height: 0; color: var(--text-muted); cursor: pointer; }
+.overflow summary::-webkit-details-marker { display: none; }
+.overflow summary:hover, .overflow[open] summary { background: var(--surface-subtle); color: var(--text); }
+.overflow .menu { position: absolute; right: 0; top: calc(100% + 4px); z-index: 5; display: grid; min-width: 180px; padding: 4px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m); box-shadow: var(--shadow-overlay); }
+.settings-view .overflow .menu button { justify-content: flex-start; text-align: left; padding: 7px 10px; border-radius: var(--radius-s); }
+.advanced { margin: -8px 0 24px; }
+.advanced summary { padding: 4px 0; font-size: var(--fs-caption); color: var(--text-muted); cursor: pointer; }
+.custom-model { display: grid; gap: 4px; margin-top: 8px; padding: 12px 16px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m); }
+.advanced > .group-card { margin-top: 8px; }
+/* The model listbox (UX-55): a button that shows the choice, and a list grouped by provider with tier, Vision, and Actions badges. */
+.model-picker { position: relative; width: 300px; max-width: 100%; }
+.settings-view .model-picker-button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 6px 8px 6px 10px; text-align: left; }
+.model-picker-button .model-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.model-picker-button > .icon { flex: none; color: var(--text-muted); }
+.model-list { position: absolute; right: 0; top: calc(100% + 4px); z-index: 6; width: max(100%, 360px); max-height: 320px; overflow: auto; padding: 4px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-m); box-shadow: var(--shadow-overlay); }
+.model-list.up { top: auto; bottom: calc(100% + 4px); }
+.model-list:focus { outline: none; }
+.model-list:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.model-group { padding: 8px 8px 4px; font-size: var(--fs-caption); font-weight: 600; color: var(--text-muted); }
+.model-option { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border-radius: var(--radius-s); cursor: default; }
+.model-option.active { background: var(--surface-subtle); }
+.model-option .model-name { flex: 1; min-width: 0; }
+.model-option[aria-selected='true'] .model-name { font-weight: 600; }
+.model-check { flex: none; width: 16px; line-height: 0; }
+.model-badges { display: inline-flex; flex: none; gap: 4px; }
+.badge { padding: 0 6px; border-radius: var(--radius-pill); background: var(--surface-subtle); color: var(--text-muted); font-size: 11px; font-weight: 600; line-height: 18px; white-space: nowrap; }
+.model-option.active .badge { background: var(--surface); }
+.badge.quiet { background: transparent; box-shadow: inset 0 0 0 1px var(--border); font-weight: 400; }
+.custom-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.custom-model label { display: grid; gap: 6px; margin: 8px 0; font-size: var(--fs-body); }
+.settings-view select, .custom-model input { box-sizing: border-box; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); }
+.custom-model input { width: 100%; margin: 0; }
+/* The kite color's live preview (K-15). */
+.kite-color-preview { display: inline-flex; line-height: 0; }
+.hotkey-current { display: flex; align-items: center; gap: 10px; margin: 0 0 8px; color: var(--text); }
+.settings-toggle { display: flex; align-items: center; gap: 8px; margin: 18px 0; }
+.settings-toggle input[type="checkbox"] { width: auto; flex: 0 0 auto; margin: 0; padding: 0; accent-color: var(--ink); }
+.settings-view button { padding: 7px 12px; }
+.settings-view small { color: var(--text-muted); font-size: var(--fs-caption); }
+/* Link-style buttons (UX-03) come after the views' button padding, so a link keeps its tight inline padding everywhere. */
+button.link { background: transparent; border-color: transparent; color: var(--text-muted); text-decoration: underline; text-underline-offset: 3px; padding-inline: 6px; }
+button.link:where(:hover:not(:disabled)) { background: transparent; color: var(--text); }
+@media (forced-colors: active) {
+  .switch { border-color: ButtonText; }
+  .switch::after { background: ButtonText; }
+  .switch:checked { background: Highlight; border-color: Highlight; }
+  .switch:checked::after { background: HighlightText; }
+  .model-option.active { outline: 1px solid Highlight; }
+  .badge { box-shadow: inset 0 0 0 1px CanvasText; }
+  .range { forced-color-adjust: none; }
+  .range::-webkit-slider-runnable-track { background: linear-gradient(to right, Highlight var(--fill, 50%), GrayText var(--fill, 50%)); }
+  .range::-webkit-slider-thumb { background: Highlight; border-color: Canvas; box-shadow: 0 0 0 1px Highlight; }
+  .range-tick::before { background: GrayText; }
+  .provider-state, .provider-state.problem, .field-error { color: CanvasText; }
+}
+/* Permissions (ADR 014): the mode as a radio list, one line each; the Hands-off confirmation; the rupee field. */
+.mode-row { justify-content: flex-start; align-items: flex-start; cursor: pointer; }
+.mode-row input[type='radio'] { flex: none; width: auto; margin: 3px 0 0; padding: 0; accent-color: var(--ink); }
+.mode-row .row-text { flex: 1; }
+.mode-row .row-label { display: flex; align-items: center; gap: 8px; }
+.mode-list > * + * { border-top: 1px solid var(--border); }
+.hands-off-confirm { border-top: 1px solid var(--border); background: var(--surface-subtle); }
+.hands-off-confirm p { margin: 0 0 10px; font-size: var(--fs-caption); color: var(--text); }
+.money-field { display: inline-flex; align-items: center; gap: 4px; color: var(--text-muted); }
+.money-field input { width: 120px; box-sizing: border-box; margin: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font-variant-numeric: tabular-nums; }
+.row-control:has(> .money-field) { flex: none; }
+/* Memory (docs/end-to-end-jobs.md §3.4): one row per fact, with where it came from. */
+.memory-fact .row-text { flex: 1; }
+.memory-value { display: flex; align-items: center; gap: 4px; color: var(--text); overflow-wrap: anywhere; }
+.memory-fact input { margin: 2px 0; padding: 6px 8px; }
+.memory-view .custom-actions button { display: inline-flex; align-items: center; gap: 6px; }
+.memory-empty { margin: 0 0 24px; }
+.speech-bubble.notice span[role='status'] { white-space: pre-line; }

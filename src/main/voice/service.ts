@@ -2,19 +2,20 @@ import { registerHistoryIPC } from '../ipc/history';
 import { createSettingsWindow, getSettingsWindow } from '../window/settings';
 import { appRuntime, appEvent, startUpdates, onResume, setLaunchOnStartup } from '../runtime';
 import { logEvent } from '../logging';
-import { ScreenSession, registerScreenIPC, captureUnderCursor, prepareImages } from '../vision/service';
+import { ScreenSession, registerScreenIPC, captureDisplay, captureUnderCursor, prepareImages } from '../vision/service';
 import { routeVision, type VisionTurn } from '../../shared/vision';
-import { setAnnotationInteractive } from '../ipc/overlay';
+import { overBoard, overlayHit, setAnnotationInteractive } from '../ipc/overlay';
 import { readScreen } from '../tools/impl/read_screen';
 import { persistVision } from '../vision/history';
-import { app, BrowserWindow, clipboard, dialog, globalShortcut, ipcMain, session, Notification, screen } from 'electron';
+import { app, BrowserWindow, clipboard, ClipboardItem, dialog, globalShortcut, ipcMain, nativeImage, session, shell, Notification, screen } from 'electron';
+import { mkdir, open } from 'node:fs/promises';
 import path from 'node:path';
 import { randomUUID } from 'node:crypto';
-import { openSecrets } from '../settings/secrets';
+import { openSecrets, osCipher } from '../settings/secrets';
 import { openDatabase } from '../storage/database';
 import { Conversation } from '../ai/conversation';
 import { transcribeAudio } from '../ai/transcribe';
-import { ask } from '../ai/ask';
+import { ask, providerOptionsFor } from '../ai/ask';
 import { VoiceController } from './controller';
 import { startPttHook } from '../input/hook';
 import { getOverlayWindow } from '../window/overlay';
@@ -23,18 +24,37 @@ import { isAppURL } from '../window/renderer';
 import { settingsConfig } from '../settings/config';
 import type { AppSettings, OperationResult, SecretId } from '../../shared/types';
 
-import { configureProviders } from '../ai/providers';
-import { providerIds, describeModel } from '../ai/catalog';
+import { configureProviders, getModel } from '../ai/providers';
+import { providerIds, providerTraits, describeModel } from '../ai/catalog';
 import { openPreferences } from '../settings/preferences';
 import { listModels, listVoices, testKey } from '../ai/discovery';
 import { TTSService } from './tts';
 import { createKiteTray } from '../tray';
 import { z } from 'zod';
 import { ApprovalBroker } from '../tools/approval';
-import { AppIndex } from '../tools/appIndex';
+import { AppIndex, findApps } from '../tools/appIndex';
 import { ToolSession, waitForTools } from '../tools/registry';
 import { createTools } from '../tools/platform';
 import { ReminderScheduler } from '../tools/reminders';
+import { showMeHow } from '../tools/impl/show_me_how';
+import { GuideService } from '../guide/service';
+import { guideActions, type GuideAction } from '../../shared/guide';
+import { BoardService } from '../board/service';
+import { boardActions, type BoardAction } from '../../shared/board';
+import { explainOnWhiteboard } from '../tools/impl/explain_on_whiteboard';
+import { safeFilename } from '../tools/impl/create_note';
+import { TaskService } from '../agent/service';
+import { decideStep } from '../agent/model';
+import { planJob } from '../agent/planner';
+import { doTask } from '../tools/impl/do_task';
+import { jobsModel, taskActions, taskScopes, type TaskAction, type TaskScope } from '../../shared/agent';
+import { countYes, permissionTable, remember, ruleFor } from '../../shared/permissions';
+import { createMemory } from '../memory/store';
+import { factsFromAnswer, slug } from '../../shared/memory';
+import { orderValue, pastOrders } from '../../shared/orders';
+import { reorder } from '../tools/impl/reorder';
+import { memoryTools } from '../tools/impl/memory';
+import { registerMemoryIPC } from '../ipc/memory';
 const validProvider = (value: unknown): value is SecretId => [...providerIds, 'cartesia'].includes(value as SecretId);
 export function startVoiceService() {
   const secrets = openSecrets();
@@ -44,6 +64,35 @@ export function startVoiceService() {
   const history = openDatabase(path.join(app.getPath('userData'), 'kite.db'));
   configureProviders(secrets);
   const preferences = openPreferences(id => secrets.hasKey(id));
+  // Memory (docs/end-to-end-jobs.md §3.4): values encrypted like API keys; the Memory view hears about every change.
+  const memory = createMemory(history.memory, osCipher, { enabled: () => preferences.get().memory !== false,
+    changed: () => { const win = getSettingsWindow(); if (win && !win.isDestroyed()) win.webContents.send('memory:changed'); } });
+  registerMemoryIPC(memory);
+  const today = () => new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  // Every save shows "Saved … · Undo · Edit" by the kite; nothing is saved silently.
+  const savedNotice = (result: { token: string; updated: boolean; fact: { label: string } }) =>
+    appEvent({ type: 'memory:saved', token: result.token, text: `${result.updated ? 'Updated' : 'Saved'} your ${result.fact.label.charAt(0).toLowerCase()}${result.fact.label.slice(1)}` });
+  const taskMemory = {
+    context: () => memory.context(), redact: (text: string) => memory.redact(text), fill: (text: string) => memory.fill(text),
+    learn: (question: string, answer: string, where: string) => {
+      for (const fact of factsFromAnswer(question, answer, `From the ${where} task, ${today()}`)) { const r = memory.save(fact); if (r.ok && r.token) savedNotice(r); }
+    },
+    // A confirmed order joins the order history (phase 5 repeats it). The number and total come from the page, read by code.
+    ordered: (order: { number: string; items: string[]; total: string | null; site: string; when: string | null; payment: string | null }) => {
+      const items = order.items.join('; ') || 'Order';
+      const r = memory.save({ kind: 'order', key: `order.${slug(`${order.site}-${order.number}`)}`, label: items.slice(0, 80), value: orderValue(order), source: `Ordered on ${order.site}, ${today()}` });
+      if (r.ok && r.token) appEvent({ type: 'memory:saved', token: r.token, text: 'Saved the order to your history' });
+    },
+    orders: () => memory.enabled() ? pastOrders(memory.facts()) : [],
+    chose: (topic: string, choice: string, where: string) => {
+      const label = topic.trim().slice(0, 60); if (!label) return;
+      const r = memory.save({ kind: 'preference', key: `pref.${slug(label)}`, label: label.charAt(0).toUpperCase() + label.slice(1), value: choice, source: `Chosen on ${where}, ${today()}` });
+      if (r.ok && r.token) savedNotice(r);
+    },
+  };
+  /** Saved values out of everything a chat model is sent, including earlier turns. */
+  const redactMessages = (messages: import('../ai/conversation').ChatMessage[]) => messages.map(m => m.role === 'assistant' ? { ...m, content: memory.redact(m.content) }
+    : { ...m, content: typeof m.content === 'string' ? memory.redact(m.content) : m.content.map(part => part.type === 'text' ? { ...part, text: memory.redact(part.text) } : part) });
   let ownsEscape = false;
   const emit = (event: import('../../shared/types').VoiceEvent) => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send(event.type, event); const setup = getSettingsWindow(); if (setup?.webContents.getURL().endsWith('#onboarding')) setup.webContents.send(event.type, event); logEvent(event.type, event.timing); };
   const tts = new TTSService(() => secrets.getKey('cartesia'), event => controller.ttsEvent(event));
@@ -64,10 +113,67 @@ export function startVoiceService() {
     userData: app.getPath('userData'), keep: preferences.get().keepScreenshots, row, turn, signal, history,
   });
   const conversation = new Conversation(randomUUID, settingsConfig.contextMessages, settingsConfig.inactivityMs);
+  const guide = new GuideService({
+    directory: path.join(app.getPath('userData'), 'guide'), log: logEvent, overlayHit,
+    emit: view => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('guide:state', view); },
+    announce: text => controller.announce(text), enabled: () => preferences.get().guideMode,
+    getKey: provider => secrets.getKey(provider),
+    visionModel: () => {
+      try { const { settings, models } = preferences.snapshot(); return routeVision(describeModel(settings.model, models), settings.visionModel, models, id => secrets.hasKey(id)); }
+      catch { return undefined; }
+    },
+  });
+  const board = new BoardService({
+    log: logEvent, enabled: () => preferences.get().whiteboard, speed: () => preferences.get().speed,
+    emit: view => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('board:state', view); },
+    speak: (text, hooks): boolean => controller.announce(text, hooks), silence: () => { controller.announce(null); },
+    // One thing moves the kite at a time: a lesson replaces a guide.
+    opened: () => guide.stop(),
+  });
+  const agent = new TaskService({
+    directory: path.join(app.getPath('userData'), 'agent'), log: logEvent, overlayHit, enabled: () => preferences.get().computerUse,
+    emit: view => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('task:state', view); },
+    say: text => { controller.announce(text); },
+    // Tasks are the one thing that moves the kite while they run.
+    starting: () => { guide.stop(); board.close(); },
+    launch: async name => { const found = findApps(apps.snapshot(), name).match; return !!found && !(await shell.openPath(found.lnkPath)); },
+    // Only the task's own window, after the Kite is looking indicator; never kept.
+    look: async (window, signal) => {
+      const display = screen.getDisplayMatching({ x: Math.round(window.rect.x), y: Math.round(window.rect.y), width: Math.max(1, Math.round(window.rect.width)), height: Math.max(1, Math.round(window.rect.height)) });
+      const captured = await captureDisplay(display.id, signal);
+      return (await prepareImages(captured, [], signal, window.rect)).overview;
+    },
+    audit: (messageId, tool, summary, decision, result) => {
+      const row = history.beginTool(messageId, tool, { summary }, summary, false);
+      history.finishTool(row, decision, result, result.ok ? null : result.message, 0); auditChanged();
+    },
+    finished: (goal, name, message, status) => conversation.add({ role: 'assistant', content: `[Task in ${name}: "${goal}". Result: ${status}. ${message}]` }, Date.now()),
+    decider: (model, key) => (prompt, signal) => decideStep({ model: getModel(model.provider, model.id, { getKey: () => key }), prompt, signal,
+      toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
+    planner: (model, key) => (goal, app, signal) => planJob({ model: getModel(model.provider, model.id, { getKey: () => key }), goal, app, signal,
+      toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
+    permissions: () => preferences.get().permissions, memory: taskMemory,
+    // "Stop asking?" after three yeses for the same kind of step on the same site (phase 5).
+    nudge: { yes: (category, place) => { const r = countYes(preferences.nudges(), category, place); preferences.setNudges(r.records); return r.offer; }, offered: () => undefined },
+    remember: (category, permission, place) => {
+      try { preferences.update({ permissions: remember(preferences.get().permissions, category, permission, place) }); }
+      catch { logEvent('permissions:remember', { ok: false }); }
+    },
+  });
+  /** The model that runs tasks (agent.ts `jobsModel`), which may differ from the one answering this turn. */
+  const taskModel = () => { const { settings, models } = preferences.snapshot(); return jobsModel(settings, models, id => secrets.hasKey(id)); };
+  /** Local commands and context for whatever is running: a task first, then the whiteboard, then the guide. */
+  const sessions = {
+    command: (text: string) => agent.command(text) ?? board.command(text) ?? guide.command(text),
+    context: () => [agent.context(), board.context(), guide.context(), memory.context()].filter(Boolean).join('\n') || undefined,
+    marks: (ids: string[]) => board.marks(ids),
+  };
   const controller = new VoiceController({
     vision: {
       start: (id, signal, ready, measured) => {
-        screens.start(id, signal, ready, measured);
+        // Holding over the whiteboard marks Kite's own board: no screenshot is needed or taken.
+        if (overBoard(screen.getCursorScreenPoint())) screens.skip(id, ready);
+        else screens.start(id, signal, ready, measured);
         // Swallow early clicks while the screenshot is pending, before ink is enabled.
         setAnnotationInteractive(true);
       },
@@ -77,8 +183,16 @@ export function startVoiceService() {
     },
     approvals,
     tools: (messageId, signal, activity, model, captureTiming) => new ToolSession({
-      imageToolResults: ['anthropic', 'openai', 'google'].includes(model?.provider),
-      definitions: [...createTools(apps, history, preferences.get()), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
+      imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
+      definitions: [...createTools(apps, history, preferences.get()),
+        ...memoryTools({ store: memory, show: text => appEvent({ type: 'memory:show', text }), saved: savedNotice, source: () => `From what you said, ${today()}` }), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
+        ...(preferences.get().whiteboard ? [explainOnWhiteboard(lesson => board.start(lesson))] : []),
+        ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions),
+          reorder({ orders: () => taskMemory.orders(),
+            handsOver: site => { const p = preferences.get().permissions; return (ruleFor(p, 'money', site)?.permission ?? permissionTable(p).money) === 'never'; },
+            address: () => { const home = memory.facts().find(f => f.kind === 'address'); return home ? `your ${home.key.split('.')[0].replace(/^./, c => c.toUpperCase())} address` : null; },
+            start: (order, scope) => { const jobs = taskModel(); return agent.start({ goal: `Buy ${order.items.join(' and ')} on ${order.site}${order.payment ? `, paying by ${order.payment}` : ''}, the same as last time`, app: 'Microsoft Edge' },
+              scope, jobs, secrets.getKey(jobs.provider), messageId, { site: order.site, items: order.items, total: order.total, payment: order.payment }); } })] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
         captureSignal.throwIfAborted(); const captured = await captureUnderCursor(captureSignal); captureSignal.throwIfAborted();
         captureTiming?.(captured.captureMs);
         const images = await prepareImages(captured, [], captureSignal);
@@ -88,8 +202,8 @@ export function startVoiceService() {
       audit: history, messageId, context: { dryRun: preferences.get().dryRun, signal }, activity, changed: auditChanged,
       event: (type, name, result) => { if (!signal.aborted) controller.toolEvent(type, name, result); } }),
     getKey: provider => secrets.getKey(provider), history,
-    conversation,
-    transcribe: transcribeAudio, ask, tts,
+    conversation, guide: sessions,
+    transcribe: transcribeAudio, ask: (messages, ...rest) => ask(redactMessages(messages), ...rest), tts,
     settings: preferences.get, describe: model => describeModel(model, preferences.snapshot().models),
     emit,
     setEscape: (active, abort) => {
@@ -102,7 +216,8 @@ export function startVoiceService() {
     },
   });
   const tray = createKiteTray(preferences);
-  appRuntime.changed = tray.update; appRuntime.cancel = () => controller.cancel();
+  // Pausing Kite keeps the guide's goal and progress; "continue" picks it up again.
+  appRuntime.changed = tray.update; appRuntime.cancel = () => { controller.cancel(); guide.pause(); board.pause(); agent.pause(); };
   const stopUpdates = startUpdates();
   registerHistoryIPC(history, async () => { controller.cancel(); await waitForTools(); conversation.reset(); });
   let rendererFPS=0, frameMs=0;
@@ -117,11 +232,11 @@ export function startVoiceService() {
   if (!preferences.get().onboardingComplete && !process.env.KITE_TEST_MODE) createSettingsWindow('onboarding');
   // Wait until the overlay can receive restored overdue reminders.
   getOverlayWindow()?.webContents.once('did-finish-load', () => reminders.refresh());
-  const decisionSchema = z.object({ id: z.string().uuid(), approved: z.boolean() }).strict();
+  const decisionSchema = z.object({ id: z.string().uuid(), approved: z.boolean(), scope: z.enum(taskScopes as [TaskScope, ...TaskScope[]]).optional() }).strict();
   ipcMain.handle('tools:approve', (event, input: unknown): OperationResult => {
     const parsed = decisionSchema.safeParse(input);
     if (!trusted(event, 'overlay') || !parsed.success) return { ok: false, error: 'Invalid approval.' };
-    return { ok: controller.decideApproval(parsed.data.id, parsed.data.approved) };
+    return { ok: controller.decideApproval(parsed.data.id, parsed.data.approved, parsed.data.scope) };
   });
   ipcMain.handle('tools:recent', event => trusted(event, 'overlay') && !app.isPackaged ? history.recentTools() : []);
   ipcMain.handle('tools:dryRun', (event, input: unknown): OperationResult => {
@@ -134,8 +249,42 @@ export function startVoiceService() {
     await apps.scan(); return { ok: true };
   });
   ipcMain.on('reminder:dismiss', event => { if (trusted(event, 'overlay')) controller.dismissReminder(); });
+  ipcMain.handle('dev:guideDemo', async (event): Promise<OperationResult> => {
+    if (app.isPackaged || !trusted(event, 'overlay')) return { ok: false };
+    return (await guide.demo()) ? { ok: true } : { ok: false, error: 'No menus or tabs found in the active window.' };
+  });
+  ipcMain.on('guide:control', (event, action: unknown) => { if (trusted(event, 'overlay') && guideActions.includes(action as GuideAction)) guide.control(action as GuideAction); });
+  ipcMain.on('task:control', (event, action: unknown) => { if (trusted(event, 'overlay') && taskActions.includes(action as TaskAction)) agent.control(action as TaskAction); });
+  ipcMain.on('task:choose', (event, index: unknown, remember: unknown) => { if (trusted(event, 'overlay') && Number.isInteger(index)) agent.choose(index as number, remember === true); });
+  ipcMain.on('board:control', (event, action: unknown) => { if (trusted(event, 'overlay') && boardActions.includes(action as BoardAction)) board.control(action as BoardAction); });
+  ipcMain.on('board:drawn', (event, id: unknown, key: unknown) => { if (trusted(event, 'overlay') && Number.isSafeInteger(id) && Number.isSafeInteger(key)) board.drawn(id as number, key as number); });
+  ipcMain.handle('dev:boardDemo', (event): OperationResult => {
+    if (app.isPackaged || !trusted(event, 'overlay')) return { ok: false };
+    const result = board.demo(); return result.ok ? { ok: true } : { ok: false, error: result.message };
+  });
+  const pngSchema = z.instanceof(Uint8Array).refine(b => b.byteLength > 8 && b.byteLength < 30_000_000 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((v, i) => b[i] === v), 'PNG');
+  ipcMain.handle('board:export', async (event, action: unknown, bytes: unknown, title: unknown): Promise<OperationResult> => {
+    const image = pngSchema.safeParse(bytes);
+    if (!trusted(event, 'overlay') || !['copy', 'save'].includes(action as string) || !image.success || typeof title !== 'string') return { ok: false, error: 'Invalid image.' };
+    const picture = nativeImage.createFromBuffer(Buffer.from(image.data));
+    if (picture.isEmpty()) return { ok: false, error: 'Invalid image.' };
+    try {
+      if (action === 'copy') { await clipboard.write([new ClipboardItem({ 'image/png': new Blob([Buffer.from(image.data)], { type: 'image/png' }) })]); return { ok: true }; }
+      const folder = path.join(app.getPath('documents'), 'Kite Boards'); await mkdir(folder, { recursive: true });
+      for (let i = 1; i <= 1000; i++) {
+        const filename = path.join(folder, `${safeFilename(title.slice(0, 80) || 'Whiteboard')}${i === 1 ? '' : ` (${i})`}.png`);
+        let file; try { file = await open(filename, 'wx'); } catch (error) { if ((error as NodeJS.ErrnoException).code === 'EEXIST') continue; throw error; }
+        try { await file.writeFile(Buffer.from(image.data)); } finally { await file.close(); }
+        shell.showItemInFolder(filename); return { ok: true };
+      }
+      return { ok: false, error: 'Too many boards with that name.' };
+    } catch { return { ok: false, error: 'Could not save the board.' }; }
+  });
   const unsubscribe = preferences.subscribe((snapshot, old) => {
     if (snapshot.settings.dryRun !== old.dryRun) { controller.cancel('voice:aborted'); reminders.refresh(); }
+    if (old.guideMode && !snapshot.settings.guideMode) guide.stop();
+    if (old.whiteboard && !snapshot.settings.whiteboard) board.close();
+    if (old.computerUse && !snapshot.settings.computerUse) agent.stop();
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('settings:changed', snapshot);
     tray.update();
     if (snapshot.settings.launchOnStartup !== old.launchOnStartup) setLaunchOnStartup(snapshot.settings.launchOnStartup);
@@ -191,12 +340,13 @@ export function startVoiceService() {
     catch { return { ok: false, error: 'Could not delete the saved key.' }; }
   });
   const strokesSchema = z.array(z.array(z.object({ x: z.number().finite().min(-100000).max(100000), y: z.number().finite().min(-100000).max(100000), t: z.number().finite() }).strict()).min(1).max(2000)).max(5).refine(s => s.reduce((n, v) => n + v.length, 0) <= 2000);
-  ipcMain.handle('voice:submit', async (event, buffer: unknown, id: unknown, inputStrokes: unknown = []): Promise<OperationResult> => {
-    const strokes = strokesSchema.safeParse(inputStrokes);
-    if (!strokes.success || !trusted(event, 'overlay') || !Number.isSafeInteger(id) || !(buffer instanceof ArrayBuffer) || (!buffer.byteLength && !strokes.data.length) || buffer.byteLength > settingsConfig.maxAudioBytes) {
+  const marksSchema = z.array(z.string().regex(/^[A-Za-z0-9_-]{1,40}$/)).max(8);
+  ipcMain.handle('voice:submit', async (event, buffer: unknown, id: unknown, inputStrokes: unknown = [], inputMarks: unknown = []): Promise<OperationResult> => {
+    const strokes = strokesSchema.safeParse(inputStrokes), marks = marksSchema.safeParse(inputMarks ?? []);
+    if (!strokes.success || !marks.success || !trusted(event, 'overlay') || !Number.isSafeInteger(id) || !(buffer instanceof ArrayBuffer) || (!buffer.byteLength && !strokes.data.length && !marks.data.length) || buffer.byteLength > settingsConfig.maxAudioBytes) {
       return { ok: false, error: 'Invalid or oversized recording.' };
     }
-    await controller.submit(id as number, buffer, strokes.data);
+    await controller.submit(id as number, buffer, strokes.data, marks.data);
     return { ok: true };
   });
   ipcMain.on('voice:audioResult', (event, id: number, result: 'empty' | 'micDenied' | 'captureFailed') => {
@@ -233,11 +383,12 @@ export function startVoiceService() {
   let stopHook = startPttHook(hookAction, preferences.get().hotkey);
   const restartHook = () => { controller.cancel(); stopHook(); try { stopHook = startPttHook(hookAction, preferences.get().hotkey); logEvent('hook:restart', { ok: true }); } catch { stopHook = () => undefined; logEvent('hook:restart', { ok: false }); appEvent({ type: 'fault' }); } };
   const offResume = onResume(() => { restartHook(); if (appRuntime.pausedUntil && appRuntime.pausedUntil <= Date.now()) import('../runtime').then(m => m.pauseKite(0)); });
-  const reset = () => controller.cancel();
+  const reset = () => { controller.cancel(); guide.relocate(); board.refresh(); agent.refresh(); };
   screen.on('display-metrics-changed', reset); screen.on('display-removed', reset); screen.on('display-added', reset);
   const overlay = getOverlayWindow();
   overlay?.webContents.on('did-start-loading', reset);
+  overlay?.webContents.on('did-finish-load', () => { guide.refresh(); board.refresh(); agent.refresh(); });
   overlay?.webContents.on('render-process-gone', reset);
   overlay?.on('closed', reset);
-  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
+  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); guide.dispose(); board.close(); agent.dispose(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
 }

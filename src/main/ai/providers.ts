@@ -20,6 +20,10 @@ export function getModel(providerId: ProviderId, modelId: string, source: Secret
     case 'moonshot': return createOpenAICompatible({ name: 'moonshot', baseURL: 'https://api.moonshot.ai/v1', apiKey,
       transformRequestBody: body => ['kimi-k2.5', 'kimi-k2.6'].includes(modelId) ? ({ ...body, thinking: { type: 'disabled' } }) : body,
     })(modelId);
+    // Thinking is on by default and then needs reasoning_content sent back on every tool follow-up, or the API returns 400.
+    case 'deepseek': return createOpenAICompatible({ name: 'deepseek', baseURL: 'https://api.deepseek.com', apiKey,
+      transformRequestBody: body => ({ ...body, thinking: { type: 'disabled' } }),
+    })(modelId);
     default: throw new Error('Unsupported provider');
   }
 }

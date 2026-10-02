@@ -1,0 +1,16 @@
+/* The UI's styles, one file per component (docs/design.md UX-08). The order is part of the cascade:
+   base first, then the overlay's surfaces, then the windows. tokens.css and kite.css load before this. */
+@import './base.css';
+@import './dev-panel.css';
+@import './bubble.css';
+@import './pills.css';
+@import './approval.css';
+@import './capture.css';
+@import './settings.css';
+@import './window.css';
+@import './history.css';
+@import './onboarding.css';
+@import './guide.css';
+@import './board.css';
+@import './task.css';
+@import './high-contrast.css';

@@ -5,6 +5,7 @@ import path from 'node:path';
 import { getOverlayWindow } from '../window/overlay';
 import { trusted } from '../ipc/trust';
 import { protectedCapture } from './captureCore';
+import type { ScreenBounds } from '../../shared/types';
 import { analyzeStrokes, contains, type DisplayInfo, type ScreenEvent, type Stroke, type VisionImages, type VisionTurn } from '../../shared/vision';
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 const send = (event: ScreenEvent) => getOverlayWindow()?.webContents.send('screen:event', event);
@@ -55,18 +56,20 @@ export function captureDisplay(displayId: number, signal?: AbortSignal): Promise
   const result = queue.then(capture); queue = result.catch((): void => undefined); return result;
 }
 export const captureUnderCursor = (signal?: AbortSignal) => captureDisplay(screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).id, signal);
-export function prepareImages(capture: { png: Buffer; display: DisplayInfo }, strokes: Stroke[], signal: AbortSignal): Promise<VisionImages> {
+export function prepareImages(capture: { png: Buffer; display: DisplayInfo }, strokes: Stroke[], signal: AbortSignal, crop?: ScreenBounds): Promise<VisionImages> {
   signal.throwIfAborted();
   return new Promise((resolve, reject) => {
     const token = randomUUID();
     const finish = (images: VisionImages | null) => { clearTimeout(timer); pending.delete(token); signal.removeEventListener('abort', abort); images ? resolve(images) : reject(new Error('Image preparation failed')); };
     const abort = () => finish(null), timer = setTimeout(abort, 15000);
     pending.set(token, finish); signal.addEventListener('abort', abort, { once: true });
-    send({ type: 'prepare', token, png: new Uint8Array(capture.png), display: capture.display, strokes });
+    send({ type: 'prepare', token, png: new Uint8Array(capture.png), display: capture.display, strokes, ...(crop ? { crop } : {}) });
   });
 }
 export class ScreenSession {
   private captures = new Map<number, { result: ReturnType<typeof captureUnderCursor>; origin: { x: number; y: number } }>();
+  /** Holds that intentionally took no screenshot (marking Kite's own whiteboard). */
+  private skipped = new Set<number>();
   start(id: number, signal: AbortSignal, ready: () => boolean, measured: (ms: number) => void) {
     const origin = getOverlayWindow()?.getBounds(); if (!origin) return;
     const entry = { result: captureUnderCursor(signal), origin: { x: origin.x, y: origin.y } };
@@ -76,10 +79,18 @@ export class ScreenSession {
       if (!signal.aborted && ready()) send({ type: 'annotate', id, display: c.display, origin: entry.origin });
     }).catch(() => { /* Voice remains available if capture fails; never use another screen. */ });
   }
-  clear(id: number) { this.captures.delete(id); }
+  /** Allow marking at once without capturing: the hold began over Kite's whiteboard. */
+  skip(id: number, ready: () => boolean) {
+    const origin = getOverlayWindow()?.getBounds(); if (!origin) return;
+    const d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    this.skipped.add(id);
+    if (ready()) send({ type: 'annotate', id, display: { id: d.id, bounds: { ...d.bounds }, scaleFactor: d.scaleFactor }, origin: { x: origin.x, y: origin.y } });
+  }
+  clear(id: number) { this.captures.delete(id); this.skipped.delete(id); }
   async prepare(id: number, strokes: Stroke[], signal: AbortSignal): Promise<VisionTurn | undefined> {
     const entry = this.captures.get(id); this.captures.delete(id);
-    if (!strokes.length) return;
+    const skipped = this.skipped.delete(id);
+    if (!strokes.length || (!entry && skipped)) return;
     if (!entry) throw new Error('No capture for this hold');
     const capture = await entry.result; signal.throwIfAborted();
     const global = strokes.map(s => s.map(p => ({ ...p, x: p.x + entry.origin.x, y: p.y + entry.origin.y })))

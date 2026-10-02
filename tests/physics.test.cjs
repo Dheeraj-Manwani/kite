@@ -87,3 +87,161 @@ test('reduced motion prevents gusts and dizzy spins', () => {
     assert.equal(result.state.name, 'content');
   }
 });
+
+const { restSail, sailPath, sameSail } = require('../src/renderer/kite/sail.ts');
+test('sail path is one closed, mirrored shape whose dials bend it', () => {
+  const rest = sailPath(restSail);
+  assert.match(rest, /^M[^MZ]+Z$/, 'one closed subpath');
+  assert.equal(rest.match(/Q/g).length, 5, 'two leading edges, two scallops, and the soft nose');
+  const points = rest.slice(1, -1).split(/[MQ]/).flatMap(part => part.trim().split(/[\s]+/).map(Number));
+  const xs = points.filter((_, i) => i % 2 === 0), ys = points.filter((_, i) => i % 2 === 1);
+  assert.ok(Math.abs(Math.min(...xs) + Math.max(...xs)) < 1e-9, 'mirrored about the nose axis');
+  assert.ok(Math.max(...xs) - Math.min(...xs) > 25 && Math.max(...xs) - Math.min(...xs) < 28, 'about 26 px wide');
+  assert.ok(Math.min(...ys) < -10.5 && Math.max(...ys) <= 10.3, 'the nose leads on -y and the notch trails');
+  assert.match(rest, /13\.3 8\.6Q.* -13\.3 8\.6Q/, 'wingtips at rest');
+  assert.match(sailPath({ ...restSail, spread: 1.2 }), /15\.96 8\.6/, 'spread moves the wingtips');
+  assert.match(sailPath({ ...restSail, nose: 1.2 }), /Q0 -13\.32 /, 'nose extends the tip');
+  assert.match(sailPath({ ...restSail, billow: 0 }), /Q6\.65 -1\.25 13\.3 8\.6/, 'no billow gives straight leading edges');
+  assert.ok(sameSail(restSail, { ...restSail }) && !sameSail(restSail, { ...restSail, flutter: 0.5 }));
+});
+
+const { reactionMotion } = require('../src/renderer/voice/frame.ts');
+const { voiceRuntime } = require('../src/renderer/voice/runtime.ts');
+test('no reaction spins the kite in place or flashes it; the big moves are flown (K-00, K-09)', () => {
+  for (const kind of ['success', 'costume', 'approved', 'perk', 'nod', 'flutter', 'tangled', 'puzzled']) {
+    for (const t of [0, .2, .5, 1]) {
+      voiceRuntime.reaction = { kind, at: 0, intensity: 1 };
+      const motion = reactionMotion(t * 1000, false);
+      assert.ok(!('spin' in motion) && !('flash' in motion), kind);
+      if (kind === 'success' || kind === 'costume') assert.deepEqual(motion, { x: 0, y: 0, tilt: 0, stretch: 1, tailY: 0, flutter: 0 }, `${kind} is played by the loop`);
+    }
+  }
+  voiceRuntime.reaction = null;
+});
+test('a reminder tugs toward its bubble for a few seconds, then lets go (K-09)', () => {
+  voiceRuntime.alarmUntil = 3500; voiceRuntime.bubble = { dataset: { side: 'left' } };
+  const pulls = Array.from({ length: 60 }, (_, i) => reactionMotion(i * 50, false));
+  assert.ok(Math.min(...pulls.map(m => m.x)) < -3 && pulls.every(m => m.x <= 1e-9), 'pulls left, toward the bubble');
+  assert.ok(pulls.some(m => m.x === 0 || Math.abs(m.x) < .05), 'between tugs it eases back');
+  assert.equal(reactionMotion(3600, false).x, 0, 'and settles when the tug is over');
+  assert.equal(reactionMotion(1000, true).x, 0, 'reduced motion never tugs');
+  voiceRuntime.alarmUntil = 0; voiceRuntime.bubble = null;
+});
+
+const { toScreen, tailAt, stepTail } = require('../src/renderer/kite/tail.ts');
+test('tail dots sit where the body transform puts them, trail on their own springs, then settle', () => {
+  const still = { x: 0, y: 0, direction: 0, along: 1, rotation: 0, scale: 1, squash: 1 };
+  assert.deepEqual(toScreen({ x: 3, y: 4 }, still), { x: 3, y: 4 });
+  const turned = toScreen({ x: 1, y: 0 }, { ...still, x: 10, y: 20, rotation: 90, scale: 2 });
+  assert.ok(Math.abs(turned.x - 10) < 1e-9 && Math.abs(turned.y - 22) < 1e-9, 'rotate, scale, then translate');
+  const rest = [{ x: 0, y: 14 }, { x: 1, y: 18 }, { x: 3, y: 21 }];
+  let dots = tailAt(rest);
+  const moved = rest.map(p => ({ x: p.x + 50, y: p.y }));
+  dots = stepTail(dots, moved, 1 / 60, false);
+  const lag = dots.map((d, i) => moved[i].x - d.x.value);
+  assert.ok(lag[0] > 0 && lag[2] > lag[0], 'every dot lags, and the last lags most: ' + lag.map(n => n.toFixed(1)));
+  for (let i = 0; i < 120; i++) dots = stepTail(dots, moved, 1 / 60, false);
+  assert.ok(dots.every((d, i) => Math.abs(d.x.value - moved[i].x) < 0.05 && Math.abs(d.y.value - moved[i].y) < 0.05), 'settles on its anchors');
+  assert.deepEqual(stepTail(tailAt(rest), moved, 1 / 60, true).map(d => d.x.value), moved.map(p => p.x), 'reduced motion: no lag');
+});
+test('a fast flight stretches the tail but never detaches it', () => {
+  const rest = [{ x: 0, y: 14 }, { x: 1, y: 18 }, { x: 3, y: 21 }];
+  let dots = tailAt(rest), anchors = rest;
+  for (let i = 0; i < 30; i++) { anchors = anchors.map(p => ({ x: p.x + 15, y: p.y })); dots = stepTail(dots, anchors, 1 / 60, false); }
+  const stray = dots.map((d, i) => Math.hypot(d.x.value - anchors[i].x, d.y.value - anchors[i].y));
+  assert.ok(stray[2] > 5 && stray[2] <= 9 + 1e-9 && stray[0] <= 3 + 1e-9, 'trails within reach: ' + stray.map(n => n.toFixed(1)));
+});
+
+const { poseFor } = require('../src/renderer/kite/poses.ts');
+test('each state has a pose you can read at a glance (K-04, K-05)', () => {
+  const at = (name, extra = {}) => poseFor({ name, t: 1, time: 0, levels: [0, 0, 0], beat: 1.2, stagger: .2, reduced: false, ...extra });
+  // Listening: the sail fills and the tail swells with the voice, later dots lagging behind.
+  const loud = at('listening', { levels: [1, .6, .3] });
+  assert.ok(loud.sail.billow > 1.2 && loud.turn < 0, 'inflated, nose toward the cursor');
+  assert.ok(loud.tail[0].scale > loud.tail[1].scale && loud.tail[1].scale > loud.tail[2].scale && loud.tail[2].scale > 1);
+  // Silence: the tail dims and settles; release tucks the dots into the sail.
+  assert.ok(at('silent').tail.every(d => d.opacity < .5));
+  const zipped = at('released', { t: 1 });
+  assert.ok(zipped.tail.every(d => d.scale <= .5 + 1e-9) && Math.abs(zipped.tail[2].offset.y + (21.3 - 10.3)) < 1e-9, 'the last dot reaches the notch');
+  // Thinking: a wave runs through the dots in turn; under reduced motion only the middle one is lit.
+  const early = at('thinking', { time: .18 }), later = at('thinking', { time: .38 });
+  assert.ok(early.tail[0].scale > early.tail[1].scale && later.tail[1].scale > later.tail[0].scale, 'the swell moves down the tail');
+  assert.deepEqual(at('thinking', { reduced: true }).tail.map(d => d.opacity), [.5, 1, .5]);
+  // Tangled crumples; declined deflates; lost pops a dot up like a question mark.
+  const tangled = at('tangled');
+  assert.ok(tangled.sail.billow < .6 && tangled.sail.slack > 1.5 && tangled.sail.spread < 1);
+  assert.ok(at('declined').sail.billow < 1 && at('declined').lift > 0);
+  assert.ok(at('lost').tail[2].offset.y < 0 && at('lost').turn > 0);
+  // Reduced motion keeps meaning without flutter.
+  assert.equal(at('listening', { levels: [1, 1, 1], reduced: true, time: .1 }).sail.flutter, 0);
+  // Talking: the nose dips as each word starts, then settles; no word timings, no nods; reduced motion, no nods.
+  assert.ok(at('talking', { word: .11 }).turn > 4 && at('talking', { word: .11 }).lift > 0);
+  assert.equal(at('talking', { word: .5 }).turn, 0);
+  assert.equal(at('talking').turn, 0);
+  assert.equal(at('talking', { word: .11, reduced: true }).turn, 0);
+});
+
+const { loopRoute, routeAt, easeInOut, noseAngle } = require('../src/renderer/kite/flight.ts');
+test('"Let\'s fly" starts at the window, loops once up the screen, and lands at the cursor (K-07)', () => {
+  for (const [from, to] of [[{ x: 200, y: 300 }, { x: 900, y: 500 }], [{ x: 900, y: 200 }, { x: 150, y: 260 }], [{ x: 400, y: 100 }, { x: 410, y: 700 }]]) {
+    const route = loopRoute(from, to), at = s => routeAt(route, s);
+    assert.ok(Math.hypot(at(0).point.x - from.x, at(0).point.y - from.y) < 1e-9);
+    assert.ok(Math.hypot(at(route.length).point.x - to.x, at(route.length).point.y - to.y) < 1e-6, 'lands on the target');
+    // The path never jumps, the nose turns one whole turn, and the loop rises a full circle off the line, toward the top of the screen.
+    let turned = 0, previous = noseAngle(at(0).heading), jump = 0, rise = 0;
+    for (let i = 1; i <= 400; i++) {
+      const a = at(route.length * (i - 1) / 400), b = at(route.length * i / 400), angle = noseAngle(b.heading);
+      jump = Math.max(jump, Math.hypot(b.point.x - a.point.x, b.point.y - a.point.y));
+      turned += ((angle - previous) % 360 + 540) % 360 - 180; previous = angle;
+      rise = Math.max(rise, (b.point.x - from.x) * route.up.x + (b.point.y - from.y) * route.up.y);
+    }
+    assert.ok(jump <= route.length / 400 + 1e-6, 'continuous');
+    assert.ok(Math.abs(Math.abs(turned) - 360) < 1, 'one whole turn: ' + turned);
+    assert.ok(Math.abs(rise - 2 * route.radius) < .5 && route.up.y <= 0, 'the loop climbs: ' + rise);
+  }
+  assert.equal(easeInOut(0), 0); assert.equal(easeInOut(1), 1); assert.ok(easeInOut(.1) < .1 && easeInOut(.9) > .9);
+});
+
+const { reactionShape } = require('../src/renderer/voice/frame.ts');
+test('flutter hello ripples the edge and flicks the tail, then is still', () => {
+  const early = [.05, .1, .2].map(t => reactionShape('flutter', t));
+  assert.ok(early.some(s => Math.abs(s.flutter) > .5) && early.every(s => s.tailY < 0 && s.y < 0));
+  const done = reactionShape('flutter', 1);
+  assert.equal(done.flutter, 0); assert.ok(Math.abs(done.tailY) < 1e-9 && Math.abs(done.y) < 1e-9);
+});
+
+const { loopFlight, swoopFlight, reelFlight } = require('../src/renderer/kite/flight.ts');
+test('signature flights: a loop in place comes home, the swoop dips, reeling out speeds up (K-09)', () => {
+  const here = { x: 300, y: 300 };
+  const loop = loopFlight(here, here, { radius: 16, heading: { x: 0, y: -1 }, bulge: { x: -1, y: 0 }, duration: .9 });
+  assert.ok(Math.hypot(loop.at(1).point.x - 300, loop.at(1).point.y - 300) < 1e-6 && loop.duration === .9);
+  const xs = Array.from({ length: 50 }, (_, i) => loop.at(i / 49).point), lowest = Math.max(...xs.map(p => p.y)), leftmost = Math.min(...xs.map(p => p.x));
+  assert.ok(Math.min(...xs.map(p => p.y)) < 300 - 14 && lowest > 300 + 14 && leftmost < 300 - 30 && Math.max(...xs.map(p => p.x)) <= 300 + 1e-6, 'climbs, and swings round on the side away from the bubble');
+  const swoop = swoopFlight({ x: 100, y: 200 }, { x: 400, y: 150 });
+  const path = Array.from({ length: 50 }, (_, i) => swoop.at(i / 49).point);
+  assert.ok(Math.max(...path.map(p => p.y)) > 200 + 10, 'dives below where it started');
+  assert.ok(Math.hypot(path[49].x - 400, path[49].y - 150) < 1e-6 && swoop.at(1).heading.y < 0, 'and swoops up into the control');
+  const reel = reelFlight({ x: 300, y: 500 }, { x: 390, y: -120 });
+  assert.ok(500 - reel.at(.5).point.y < (500 + 120) / 2, 'gathers speed as it goes');
+  assert.ok(Math.hypot(reel.at(1).point.x - 390, reel.at(1).point.y + 120) < 1e-6 && reel.at(.5).heading.y < 0);
+});
+
+const { parseMarkdown, parseInline } = require('../src/renderer/voice/markdown.ts');
+test('answers read as lists, headings, and marks, with nothing navigable (UX-17)', () => {
+  const blocks = parseMarkdown('## Steps\nDo this:\n\n1. Open **Word**\n\n2. Click `Insert`\n   then Footer\n  - pick *Blank*\n3. Done\n\nSee [the docs](https://support.microsoft.com/word) or https://example.com/a.');
+  assert.deepEqual(blocks.map(b => b.kind), ['heading', 'text', 'list', 'text']);
+  const list = blocks[2];
+  assert.equal(list.ordered, true); assert.equal(list.start, 1);
+  assert.deepEqual(list.items.map(i => i.depth), [0, 0, 1, 0], 'blank lines between items keep one list; nested items keep their depth');
+  assert.deepEqual(list.items[0].inline, [{ kind: 'text', text: 'Open ' }, { kind: 'strong', text: 'Word' }]);
+  assert.deepEqual(list.items[1].inline, [{ kind: 'text', text: 'Click ' }, { kind: 'code', text: 'Insert' }, { kind: 'text', text: '\nthen Footer' }]);
+  assert.deepEqual(list.items[2].inline, [{ kind: 'text', text: 'pick ' }, { kind: 'em', text: 'Blank' }]);
+  assert.deepEqual(blocks[3].inline, [{ kind: 'text', text: 'See ' }, { kind: 'link', text: 'the docs', url: 'https://support.microsoft.com/word' },
+    { kind: 'text', text: ' or ' }, { kind: 'link', text: 'https://example.com/a', url: 'https://example.com/a' }, { kind: 'text', text: '.' }]);
+  // snake_case and maths stay text; a list that starts at 3 keeps its number; half-streamed marks stay raw until closed.
+  assert.deepEqual(parseInline('use file_name_here and 2 * 3 * 4'), [{ kind: 'text', text: 'use file_name_here and 2 * 3 * 4' }]);
+  assert.equal(parseMarkdown('3. third\n4. fourth')[0].start, 3);
+  assert.deepEqual(parseMarkdown('Open **Wo')[0].inline, [{ kind: 'text', text: 'Open **Wo' }]);
+  assert.deepEqual(parseMarkdown('- a\n- b\n1. c').map(b => b.kind === 'list' && b.ordered), [false, true], 'a new kind of list starts a new list');
+  assert.deepEqual(parseMarkdown('```js\nconst a = 1;\n```')[0], { kind: 'code', text: 'const a = 1;\n' });
+});

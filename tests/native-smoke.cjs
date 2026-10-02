@@ -36,12 +36,26 @@ app.whenReady().then(() => {
     assert.equal(db.listReminders().length,1);assert.equal(db.listReminders()[0].id,reminder);
     assert.equal(db.claimReminder(reminder),true);assert.equal(db.claimReminder(reminder),false);assert.equal(db.listReminders().length,0);
     assert.equal(db.recentTools()[0].decision,'timeout');assert.equal(db.recentTools()[0].dry_run,1);assert.equal(db.recentTools()[0].message_id,row);
+    // Memory (ADR 015): values encrypted with the OS, never plain text on disk, readable again after a restart.
+    const { createMemory } = require('../src/main/memory/store.ts'), { osCipher } = require('../src/main/settings/secrets.ts');
+    let memory=createMemory(db.memory,osCipher,{enabled:()=>true});
+    assert.equal(memory.save({kind:'address',key:'home.pincode',label:'Home pincode',value:'411045',source:'smoke'}).ok,true);
+    assert.equal(memory.save({kind:'profile',key:'profile.phone',label:'Card number',value:'4111 1111 1111 1111',source:'smoke'}).ok,false);
+    db.close();
+    for(const file of fs.readdirSync(temporary).filter(f=>f.startsWith('kite.db')))assert.ok(!fs.readFileSync(path.join(temporary,file)).includes('411045'),file);
+    db=openDatabase(dbPath);memory=createMemory(db.memory,osCipher,{enabled:()=>true});
+    assert.equal(memory.lookup('home.pincode'),'411045');assert.equal(memory.redact('pin 411045'),'pin {{home.pincode}}');
+    assert.equal(memory.forget(memory.find('home.pincode').id),true);assert.equal(db.memory.list().length,0);
     db.annotate(row,{marks:[{markType:'tap',region:{x:-40,y:50,width:0,height:0}}]},35);
     db.attach(row,'fixture.jpg');
     assert.equal(db.recent().at(-1).capture_ms,35);assert.match(db.recent().at(-1).annotation_json,/tap/);
     assert.equal(db.listConversations('hello').length,1);
+    assert.match(db.listConversations('hello')[0].snippet,/\u0002hello\u0003/i,'search results carry the matched words for highlighting');
+    assert.equal(db.listConversations('')[0].snippet,undefined);
     assert.equal(db.listConversations('" OR injection').length,0);
     assert.ok(db.detail('test').messages.length>=3);
+    // History knows which question kept a screenshot, and finds its marked overview (UX-74).
+    assert.equal(db.detail('test').messages.find(m=>m.id===row).attachments,1);assert.equal(db.screenshot(row),'fixture.jpg');assert.equal(db.screenshot(row+999),null);
     assert.equal(db.voiceStats().voiceMedianMs, null); // interrupted voice sample is excluded
     const paths=db.deleteHistory('test');assert.deepEqual(paths,['fixture.jpg']);
     assert.equal(db.listConversations('hello').length,0);assert.equal(db.detail('test').messages.length,0);assert.equal(db.recentTools().length,0);
@@ -58,6 +72,14 @@ app.whenReady().then(() => {
     assert.ok(preferences.snapshot().models.some(m=>m.id==='custom-test'));
     assert.throws(()=>preferences.update({speed:10}));assert.throws(()=>preferences.update({model:{provider:'unknown',id:'x'}}));
     assert.equal(preferences.get().speed,1.2);
+    // Kite size (K-14) and sound cues (K-13): Standard and off by default, and only known values are kept.
+    assert.equal(preferences.get().kiteSize,'standard');assert.equal(preferences.get().earcons,false);
+    preferences.update({kiteSize:'extraLarge',earcons:true});assert.equal(preferences.get().kiteSize,'extraLarge');assert.equal(preferences.get().earcons,true);
+    assert.throws(()=>preferences.update({kiteSize:'huge'}));assert.throws(()=>preferences.update({earcons:'yes'}));
+    // Liveliness and kite color (K-15): Lively and rose by default; only the known values are kept.
+    assert.equal(preferences.get().liveliness,'lively');assert.equal(preferences.get().kiteSkin,'rose');
+    preferences.update({liveliness:'calm',kiteSkin:'teal'});assert.equal(preferences.get().liveliness,'calm');assert.equal(preferences.get().kiteSkin,'teal');
+    assert.throws(()=>preferences.update({liveliness:'wild'}));assert.throws(()=>preferences.update({kiteSkin:'white'}));
     const {createKiteTray}=require('../src/main/tray.ts');const tray=createKiteTray(preferences);tray.update();tray.destroy();
     console.log('PASS safeStorage, SQLite migration/metrics/audit/reminders across restart, settings persistence and native tray');
   } catch(error) { console.error(error);process.exitCode=1; }

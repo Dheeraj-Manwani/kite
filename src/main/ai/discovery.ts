@@ -20,7 +20,8 @@ async function json(url: string, headers: Record<string, string>) {
 }
 export async function listModels(provider: ProviderId, key: string): Promise<ModelEntry[]> {
   const urls: Record<ProviderId, string> = { openai: 'https://api.openai.com/v1/models', anthropic: 'https://api.anthropic.com/v1/models?limit=1000',
-    google: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', groq: 'https://api.groq.com/openai/v1/models', moonshot: 'https://api.moonshot.ai/v1/models' };
+    google: 'https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000', groq: 'https://api.groq.com/openai/v1/models', moonshot: 'https://api.moonshot.ai/v1/models',
+    deepseek: 'https://api.deepseek.com/models' };
   const headers: Record<string, string> = provider === 'anthropic' ? { 'x-api-key': key, 'anthropic-version': '2023-06-01' }
     : provider === 'google' ? { 'x-goog-api-key': key } : { Authorization: `Bearer ${key}` };
   const models: ModelEntry[] = []; let url = urls[provider];

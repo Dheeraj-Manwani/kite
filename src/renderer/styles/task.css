@@ -1,0 +1,50 @@
+/* Tasks: a progress card with a Stop button that is always there, and the guide's ring on the control in use. */
+.task-layer { position: fixed; inset: 0; pointer-events: none; }
+.task-card { position: absolute; left: 0; top: 0; width: 320px; padding: 12px 14px 10px; border: 1px solid var(--border); border-radius: var(--radius-l); background: var(--surface-overlay); color: var(--text);
+  box-shadow: var(--shadow-overlay); pointer-events: auto; font-size: var(--fs-body); line-height: 1.45; transition: transform .35s cubic-bezier(.3,.7,.4,1); }
+.task-card header { display: flex; align-items: center; gap: 7px; font-size: var(--fs-caption); color: var(--text-muted); }
+.task-progress { margin-left: auto; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); white-space: nowrap; }
+.task-meter { height: 3px; margin: 8px 0; border-radius: var(--radius-pill); background: var(--surface-subtle); overflow: hidden; }
+.task-meter span { display: block; height: 100%; background: var(--ink); transition: width .3s; }
+.task-goal { margin: 0 0 6px; color: var(--text); font-size: var(--fs-body); display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; }
+.task-action { display: flex; gap: 6px; margin: 0 0 6px; color: var(--text); font-size: var(--fs-lead); }
+.task-action span { flex: 0 0 auto; align-self: flex-start; margin-top: 2px; padding: 0 6px; border-radius: var(--radius-s); background: var(--surface-subtle); color: var(--text-muted); font-size: var(--fs-caption); }
+.task-message { margin: 0 0 6px; color: var(--text-muted); font-size: var(--fs-caption); }
+.task-card.approval { border-color: var(--sun); }
+.task-card.approval .task-message { color: var(--text); }
+.task-card.done { border-color: var(--success); }
+.task-card.failed, .task-card.stopped { border-color: var(--danger); }
+.task-approval, .task-actions { display: flex; gap: 6px; margin-top: 8px; }
+.task-approval button, .task-actions button { flex: 1; padding: 6px 4px; font-size: var(--fs-caption); }
+.task-actions .task-stop { font-weight: 600; }
+/* Always and Never (ADR 014): quieter than Yes and No, with where they apply. */
+.task-remember { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 6px; font-size: var(--fs-caption); color: var(--text-muted); }
+.task-remember-label { flex: 1 1 100%; }
+.task-remember select { flex: 1 1 auto; min-width: 0; padding: 3px 6px; border: 1px solid var(--border); border-radius: var(--radius-s); background: var(--surface); color: var(--text); font-size: var(--fs-caption); }
+.task-remember button { flex: 0 0 auto; padding: 4px 10px; font-size: var(--fs-caption); }
+.task-handsoff { margin-left: 4px; }
+.task-log { margin: 6px 0 0; padding-left: 18px; max-height: 110px; overflow: auto; font-size: var(--fs-caption); color: var(--text-muted); }
+.task-log li.ok::marker { content: '✓  '; color: var(--success); }
+.task-log li.bad::marker { content: '✗  '; color: var(--danger); }
+.job-phases { display: flex; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 8px; padding: 0; list-style: none; font-size: var(--fs-caption); color: var(--text-muted); }
+.job-phases li { display: flex; align-items: center; gap: 4px; }
+.job-phases li.active { color: var(--text); font-weight: 600; }
+.job-phases li.done .job-mark { color: var(--success); }
+.job-phases li.yours .job-mark { padding: 0 4px; border-radius: var(--radius-s); background: var(--surface-subtle); font-size: 0.85em; }
+.task-choices { display: grid; gap: 6px; margin: 6px 0 2px; }
+.task-choices button { display: flex; gap: 8px; align-items: flex-start; padding: 7px 9px; text-align: left; font-size: var(--fs-caption); }
+.task-choices button strong { display: block; font-weight: 600; color: var(--text); }
+.task-choices button small { display: block; color: var(--text-muted); }
+.choice-number { flex: 0 0 auto; min-width: 18px; padding: 0 5px; border-radius: var(--radius-pill); background: var(--surface-subtle); text-align: center; font-variant-numeric: tabular-nums; }
+.task-choices .choice-none { justify-content: center; color: var(--text-muted); }
+/* Checkout (phase 4): "Remember for this site" under the checkout question; the order as the page shows it, on the Place order card. */
+.choice-remember { display: flex; align-items: center; gap: 6px; margin: 2px 0 0; font-size: var(--fs-caption); color: var(--text-muted); font-weight: 400; }
+.choice-remember input { width: auto; margin: 0; accent-color: var(--ink); }
+.task-order { display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; margin: 0 0 6px; padding: 8px 10px; border-radius: var(--radius-m); background: var(--surface-subtle); font-size: var(--fs-caption); }
+.task-order dt { color: var(--text-muted); }
+.task-order dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
+.task-card.waiting { border-color: var(--sun); }
+.task-hint { display: block; margin-top: 7px; font-size: var(--fs-caption); color: var(--text-muted); }
+@media (forced-colors: active) {
+  .task-card { border-color: Highlight; }
+}

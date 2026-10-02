@@ -32,7 +32,19 @@ Bring keys for OpenAI, Anthropic, Google, Groq, or Moonshot. Switch models in Se
 
 ![Action illustration](assets/actions.gif)
 
-Open Start Menu apps, search, create notes, paste, and use the clipboard through validated tools. Code generates confirmation summaries from validated arguments. Approve by click or voice. `type_text`, `read_clipboard`, `write_clipboard`, and `read_screen` **always ask in v1**. Only open-app, web-search, date/time, and reminder-listing trust can be changed. For pasting, focus the destination first and use voice approval.
+Open Start Menu apps, search, create notes, paste, and use the clipboard through validated tools. Code generates confirmation summaries from validated arguments. Approve by click or voice. `type_text`, `read_clipboard`, `write_clipboard`, `read_screen`, `show_me_how`, and `do_task` **always ask**. Only open-app, web-search, date/time, and reminder-listing trust can be changed. For pasting, focus the destination first and use voice approval.
+
+### Show me how
+
+Ask “how do I add a footer in Word?” Kite plans the clicks and shows them for approval. Then the kite flies to each control, points at it with a hand-drawn ring, and speaks the step; click it yourself and Kite moves on. Say “wait”, “continue”, “next”, “back”, “repeat”, or “stop” anytime. Kite finds controls with Windows UI Automation on your PC and falls back to your vision model only when it can't. **It never clicks for you.** [Guide details](docs/guide.md).
+
+### Explain it on a whiteboard
+
+Ask Kite to explain something (“how does a TCP handshake work?”) and it opens a whiteboard. It sketches the idea in Excalidraw-style shapes, arrows, and handwriting one beat at a time while it narrates, and the kite holds the marker. Say “pause”, “next”, “replay”, or “close the board”; ask a follow-up and Kite adds to the same board; circle part of it while holding the shortcut to ask about that part. Copy or save the board as a PNG. [Whiteboard details](docs/whiteboard.md).
+
+### Do it for me
+
+Ask “write a shopping list in Notepad and save it as list.txt” and approve the task. Kite opens the app if needed and works through it step by step, clicking, selecting, and typing through Windows UI Automation and the keyboard. **It never moves your mouse pointer.** A card shows each step and a Stop button; the kite points at every control before using it. Anything that sends, deletes, buys, or submits asks again, even in an approved task. Touching your mouse or keyboard pauses it, and it stops after 15 steps. [Task details](docs/agent.md).
 
 ### Circle to ask
 
@@ -60,6 +72,8 @@ Cursor polling changes from 16 ms while moving to 100 ms after two stationary se
 - Provider calls go directly from main to chosen services. There is no Kite backend or telemetry. Transcripts, selected screen content, and relevant tool context go to those providers.
 - SQLite history and audits are **local plaintext** and may contain sensitive text. Raw audio is not saved. Screenshots stay in memory by default; optional history saves JPEGs in `userData/screens/`. Deletion removes associated files and search records; backups may retain copies.
 - Capture protection and overlay hiding are enabled briefly and restored in `finally`. Protection stays off during normal use so recordings can show Kite. Verify exclusion on your Windows/capture setup.
+- Guide mode reads control names and positions locally through a read-only UI Automation sidecar (inbox Windows PowerShell). It has no way to click, type, or invoke controls. Screens leave the PC only for an approved guide's vision fallback, with the capture indicator shown.
+- Tasks use a separate sidecar, started only for an approved task. It acts through UI Automation patterns and keyboard input to the task's own window, and has no mouse code. The task's control names and values (never password fields) go to your model while it runs; risky steps always ask; every step is audited.
 - Tools do not execute arbitrary shell commands. Main validates input and IPC sender/frame. Navigation and new windows are denied. Audio permissions are restricted to Kite recording/tutorial windows.
 - Logs contain event names, numeric timings/counts, and constrained error codes, never keys, transcripts, screenshots, or raw exception messages. Logs rotate at 5 MB with two archives. Problem reports include version and OS only.
 
@@ -82,10 +96,12 @@ npm run test:packaged
 npm run test:native
 npm run test:renderer
 npm run test:startup
+npm run test:uia
+npm run test:agent
 npm run perf
 ```
 
-Run renderer/startup checks after the build completes. Tests use temporary profiles and mocked or disabled provider traffic. `npm run perf` runs a roughly one-minute measurement and rewrites the raw report. Ctrl + Shift + D opens the development panel.
+Run renderer/startup checks after the build completes. `npm run test:uia` opens a small WinForms window and walks a real guide through it with the UI Automation sidecar. `npm run test:agent` operates another WinForms window through the task sidecar and checks that the pointer never moves. Tests use temporary profiles and mocked or disabled provider traffic. `npm run perf` runs a roughly one-minute measurement and rewrites the raw report. Ctrl + Shift + D opens the development panel.
 
 Forge uses one runtime-module list for Vite externals and copying production dependencies. Native modules are force-rebuilt for Electron and unpacked from ASAR. `Kite.exe --smoke-test` opens SQLite, starts/stops uiohook, writes `ok`, and exits. CI tests the packaged executable.
 
@@ -95,6 +111,10 @@ Signing can later use `WINDOWS_CERTIFICATE_FILE` and `WINDOWS_CERTIFICATE_PASSWO
 
 ## Limitations and roadmap
 
-Windows only, unsigned, no mouse automation. Voice intelligence requires provider accounts and network access. Live provider quality, mixed-DPI alignment, clean-machine installation, and upgrading an installed old version need manual checks. A packaged smoke test alone does not establish them. CI configuration is included; check GitHub for actual remote results.
+Windows only, unsigned, no mouse automation (tasks use UI Automation and the keyboard). Voice intelligence requires provider accounts and network access. Live provider quality, mixed-DPI alignment, clean-machine installation, and upgrading an installed old version need manual checks. A packaged smoke test alone does not establish them. CI configuration is included; check GitHub for actual remote results.
 
-Planned: a Rive renderer behind the existing rendering boundary and an explicitly confirmed computer-use mode. Neither is part of v1. [Architecture](docs/architecture.md) · [Ten ADRs](docs/adr/README.md) · [Demo script](docs/demo.md).
+Guide mode plans from the model's knowledge of each app; unusual labels rely on the vision fallback or “skip”. Mixed-DPI guide alignment and live Office/Chromium walkthroughs need manual checks.
+
+Tasks and whiteboard lessons are only as good as your model's plan; apps with poor accessibility give tasks less to work with, and elevated windows can't receive their keys. Live Office, Chromium, and UWP tasks need manual checks.
+
+Planned: a Rive renderer behind the existing rendering boundary. [Architecture](docs/architecture.md) · [Thirteen ADRs](docs/adr/README.md) · [Demo script](docs/demo.md).

@@ -36,14 +36,38 @@ test('chunker never speaks fenced code or details split across arbitrary token b
     assert.equal(spoken.join('').trim(),"Here's the snippet. More. Bye.");
   }
 });
-test('five provider adapters are fresh per call and missing keys are typed', () => {
-  const expected={openai:'openai',anthropic:'anthropic',google:'google',groq:'groq',moonshot:'moonshot'};
+test('six provider adapters are fresh per call and missing keys are typed', () => {
+  const expected={openai:'openai',anthropic:'anthropic',google:'google',groq:'groq',moonshot:'moonshot',deepseek:'deepseek'};
   for(const [provider,prefix] of Object.entries(expected)) {
     const secrets={getKey:p=>{assert.equal(p,provider);return 'test-key';}};
     const a=getModel(provider,'custom-id',secrets),b=getModel(provider,'custom-id',secrets);
     assert.equal(a.modelId,'custom-id');assert.ok(a.provider.startsWith(prefix));assert.notEqual(a,b);
     assert.throws(()=>getModel(provider,'x',{getKey:()=>undefined}),MissingKeyError);
   }
+});
+test('provider traits: every provider is described, and only Moonshot refuses a required tool choice', () => {
+  const { providerTraits, providerIds } = require('../src/main/ai/catalog.ts');
+  assert.deepEqual(Object.keys(providerTraits).sort(), [...providerIds].sort());
+  assert.deepEqual(providerIds.filter(p => !providerTraits[p].requiredToolChoice), ['moonshot']);
+  assert.deepEqual(providerIds.filter(p => providerTraits[p].imageToolResults).sort(), ['anthropic', 'google', 'openai']);
+});
+test('DeepSeek requests go to api.deepseek.com with thinking off, for any model id, and take images as user content', async () => {
+  const { generateText } = require('ai');
+  const original = global.fetch; const requests = [];
+  global.fetch = async (url, options) => {
+    requests.push({ url: String(url), body: JSON.parse(options.body), auth: new Headers(options.headers).get('authorization') });
+    return new Response(JSON.stringify({ id: 't', created: 1, model: 'deepseek-flash', choices: [{ index: 0, message: { role: 'assistant', content: 'Red' }, finish_reason: 'stop' }], usage: { prompt_tokens: 1, completion_tokens: 1 } }), { headers: { 'content-type': 'application/json' } });
+  };
+  try {
+    for (const id of ['deepseek-flash', 'deepseek-v4-pro', 'deepseek-someday']) {
+      await generateText({ model: getModel('deepseek', id, { getKey: () => 'mock-secret' }), maxRetries: 0,
+        messages: [{ role: 'user', content: [{ type: 'text', text: 'Colour?' }, { type: 'image', image: new Uint8Array([137, 80, 78, 71]), mediaType: 'image/png' }] }] });
+    }
+    assert.deepEqual(requests.map(r => r.url), Array(3).fill('https://api.deepseek.com/chat/completions'));
+    assert.deepEqual(requests.map(r => r.body.model), ['deepseek-flash', 'deepseek-v4-pro', 'deepseek-someday']);
+    assert.ok(requests.every(r => r.body.thinking.type === 'disabled' && r.auth === 'Bearer mock-secret'));
+    assert.match(requests[0].body.messages[0].content[1].image_url.url, /^data:image\/png;base64,/);
+  } finally { global.fetch = original; }
 });
 test('fallback only for network, 5xx and 429 before a token; never abort or auth', async () => {
   for(const error of [{statusCode:429},{statusCode:503},new TypeError('fetch failed'),{cause:{code:'ECONNRESET'}}]) assert.equal(retryableBeforeToken(error),true);
@@ -147,7 +171,7 @@ test('PCM playback uses jitter buffer, contiguous scheduling, actual RMS and ins
 });
 const {listModels,listVoices,testKey,keyErrorStatus}=require('../src/main/ai/discovery.ts');
 
-test('model discovery authenticates all five providers and follows model/voice pages',async()=>{
+test('model discovery authenticates all six providers and follows model/voice pages',async()=>{
   const original=global.fetch,requests=[];
   global.fetch=async(url,options)=>{
     requests.push({url:String(url),headers:options.headers});
@@ -159,7 +183,7 @@ test('model discovery authenticates all five providers and follows model/voice p
     return new Response(JSON.stringify(data),{headers:{'content-type':'application/json'}});
   };
   try{
-    for(const p of ['openai','anthropic','google','groq','moonshot']){
+    for(const p of ['openai','anthropic','google','groq','moonshot','deepseek']){
       const models=await listModels(p,'mock-secret');assert.ok(models.length);assert.ok(models.every(m=>m.provider===p));
       if(p==='google')assert.deepEqual(models.map(m=>m.id),['first','second']);
     }

@@ -136,11 +136,11 @@ test('new hold aborts old stream; late deltas and completion cannot affect new i
 test('missing key and provider 429 are friendly, sanitized failures', async () => {
   const missing=fixture({getKey:()=>undefined});
   const id=missing.controller.start();missing.controller.stop(); await missing.controller.submit(id,new ArrayBuffer(8));
-  assert.match(missing.events.at(-1).text,/Groq key/);
+  assert.match(missing.events.at(-1).title,/Groq key/);
   assert.equal(missing.events.at(-1).settings,true);
   const failed=fixture({transcribe:async()=>{throw {statusCode:429,headers:{authorization:'SECRET'}};}});
   const next=failed.controller.start();failed.controller.stop(); await failed.controller.submit(next,new ArrayBuffer(8));
-  assert.match(failed.events.at(-1).text,/rate-limited/);
+  assert.match(failed.events.at(-1).title,/rate-limited/);
   assert.ok(!JSON.stringify(failed.events).includes('SECRET'));
   assert.equal(failed.escape.at(-1),false);
 });
@@ -176,4 +176,48 @@ test('installed AI SDK sends WebM to Groq and streams Kimi instant-mode text', a
     emptyTranscript=true;
     assert.equal(await transcribeAudio(bytes,'mock-groq',new AbortController().signal),'');
   } finally { global.fetch=original; }
+});
+
+const { approvalAction } = require('../src/renderer/voice/approvalAction.ts');
+test('approval buttons name the action they approve', () => {
+  assert.equal(approvalAction({ toolName: 'open_app', summary: 'Open "Spotify"?' }), 'Open Spotify');
+  assert.equal(approvalAction({ toolName: 'open_app', summary: 'Open "Microsoft Visual Studio Code Insiders"?' }), 'Open app', 'long names fall back');
+  assert.equal(approvalAction({ toolName: 'open_app', summary: 'Find matching apps for "note"? No app will open until a match is chosen.' }), 'Find apps');
+  assert.equal(approvalAction({ toolName: 'open_url', summary: 'Open github.com?' }), 'Open github.com');
+  assert.equal(approvalAction({ toolName: 'type_text', summary: 'Paste "hi" into the currently focused app?' }), 'Paste text');
+  assert.equal(approvalAction({ toolName: 'show_me_how', summary: 'Guide you through "x" in Word?' }), 'Start guide');
+  assert.equal(approvalAction({ toolName: 'something_new', summary: 'Do a new thing?' }), 'Allow');
+});
+
+const { approvalRisk } = require('../src/renderer/voice/approvalAction.ts');
+test('sensitive approvals say what leaves the PC and which model receives it', () => {
+  const models = [{ provider: 'anthropic', id: 'sonnet', label: 'Claude Sonnet 5', supportsVision: false, supportsTools: true, tier: 'flagship' },
+    { provider: 'moonshot', id: 'k25', label: 'Kimi K2.5', supportsVision: true, supportsTools: true, tier: 'flagship' }];
+  const snapshot = { settings: { model: { provider: 'anthropic', id: 'sonnet' }, visionModel: { provider: 'moonshot', id: 'k25' } }, models, voices: [], keys: { anthropic: true, moonshot: true } };
+  assert.deepEqual(approvalRisk({ toolName: 'open_app', input: {} }, snapshot), { sensitive: false });
+  assert.equal(approvalRisk({ toolName: 'read_screen', input: {} }, snapshot).flow, 'A screenshot of this display will be sent to Kimi K2.5.');
+  assert.match(approvalRisk({ toolName: 'read_clipboard', input: {} }, snapshot).flow, /sent to Claude Sonnet 5\.$/);
+  assert.match(approvalRisk({ toolName: 'type_text', input: {} }, snapshot).flow, /Nothing leaves this PC\./);
+  assert.match(approvalRisk({ toolName: 'show_me_how', input: { app: 'Word' } }, snapshot).flow, /controls in Word on this PC.*screenshot of Word to Kimi K2\.5/);
+  assert.equal(approvalRisk({ toolName: 'do_task', input: { app: 'Notepad' } }, snapshot).flow, 'Each step sends Notepad’s controls and their text to Claude Sonnet 5.');
+  // Without any vision-capable model, the card still says something true.
+  const noVision = { ...snapshot, keys: { anthropic: true, moonshot: false } };
+  assert.match(approvalRisk({ toolName: 'read_screen', input: {} }, noVision).flow, /your vision model/);
+});
+
+const { dayLabel, duration, markLabel, snippetParts, toolLine } = require('../src/renderer/components/historyText.ts');
+test('history reads in people’s words: days, marks, tools, and matches', () => {
+  const now = new Date(2026, 9, 1, 15, 0).getTime(), hour = 3_600_000;
+  assert.equal(dayLabel(now - hour, now), 'Today');
+  assert.equal(dayLabel(now - 24 * hour, now), 'Yesterday');
+  assert.equal(dayLabel(now - 3 * 24 * hour, now), new Date(now - 3 * 24 * hour).toLocaleDateString(undefined, { weekday: 'long' }));
+  assert.doesNotMatch(dayLabel(now - 40 * 24 * hour, now), /\//, 'older dates are written out, not 9/1/2026');
+  assert.equal(duration(120), '120 ms'); assert.equal(duration(1440), '1.4 s');
+  assert.equal(markLabel(JSON.stringify({ marks: [{ markType: 'enclosure' }, { markType: 'tap' }, { markType: 'enclosure' }] })), 'Circled, Tapped');
+  assert.equal(markLabel(null), null); assert.equal(markLabel('not json'), 'Looked at your screen');
+  assert.equal(toolLine({ tool: 'create_note', decision: 'approved', error: null }), 'Saved a note · you approved');
+  assert.equal(toolLine({ tool: 'open_app', decision: 'denied', error: null }), 'Didn’t open an app · you declined');
+  assert.equal(toolLine({ tool: 'type_text', decision: 'approved', error: 'Focus lost' }), 'Tried to paste text · it didn’t work');
+  assert.equal(toolLine({ tool: 'get_datetime', decision: 'auto', error: null }), 'Checked the time · no approval needed');
+  assert.deepEqual(snippetParts('…the \u0002kite\u0003 flew \u0002high\u0003'), [{ text: '…the ', match: false }, { text: 'kite', match: true }, { text: ' flew ', match: false }, { text: 'high', match: true }]);
 });

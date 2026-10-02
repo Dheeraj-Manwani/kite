@@ -1,0 +1,17 @@
+/* The dev panel (Ctrl + Shift + D in development builds): the kite's dials and recent tool calls. */
+.dev-panel { position: absolute; width: 300px; max-height: calc(100vh - 40px); overflow: auto; padding: 18px; border: 1px solid var(--border); border-radius: var(--radius-l); background: var(--surface-overlay); color: var(--text); box-shadow: var(--shadow-overlay); pointer-events: auto; }
+.dev-panel header { display: flex; align-items: center; justify-content: space-between; }
+.dev-panel header button { padding: 4px 10px; }
+.dev-panel output { display: block; font: var(--fs-caption) var(--font-mono); color: var(--text-muted); margin: 12px 0; }
+.dev-buttons { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 14px; }
+.dev-buttons button { padding: 7px 9px; font-size: var(--fs-caption); background: var(--surface-subtle); color: var(--text); }
+.dev-buttons button[aria-pressed='true'] { background: var(--ink); color: var(--on-ink); }
+.dev-panel p { margin-bottom: 8px; }
+.dev-panel input[type='range'] { padding: 0; accent-color: var(--ink); }
+.dev-panel .dev-check { display: flex; align-items: center; gap: 8px; }
+.dev-check input { width: auto; margin: 0; }
+.dev-panel small { display: block; font-size: var(--fs-caption); line-height: 1.5; color: var(--text-muted); }
+.tool-audit > div { border-bottom: 1px solid var(--border); padding: 8px 0; font-size: var(--fs-caption); }
+@media (forced-colors: active) {
+  .dev-panel { border-color: Highlight; }
+}

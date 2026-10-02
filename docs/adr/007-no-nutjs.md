@@ -18,3 +18,5 @@ Use validated app paths, Electron shell/clipboard APIs, and a narrowly scoped pa
 
 Less dependency and permission surface, with clearer approvals. Broader computer-use belongs in a future explicitly designed and confirmed mode.
 
+Update (v1.3): [ADR 012](012-computer-use.md) is that mode. Approved tasks act through UI Automation patterns and keyboard input; there is still no mouse automation.
+

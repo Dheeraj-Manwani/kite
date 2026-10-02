@@ -8,8 +8,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { app, dialog, globalShortcut, nativeImage } from 'electron';
 import started from 'electron-squirrel-startup';
-import { createOverlayWindow, getOverlayWindow } from './main/window/overlay';
+import { createOverlayWindow, getOverlayWindow, registerKeyboardControlsShortcut } from './main/window/overlay';
 import { registerOverlayIPC } from './main/ipc/overlay';
+import { registerAboutIPC } from './main/ipc/about';
 import { startCursorTracking, stopCursorTracking } from './main/cursor';
 import { startVoiceService } from './main/voice/service';
 
@@ -20,8 +21,8 @@ if (smoke) {
   app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'kite-packaged-smoke-')));
   app.whenReady().then(() => {
     try { const db = openDatabase(path.join(app.getPath('userData'), 'smoke.db')); db.createConversation('smoke', Date.now()); db.close();
-      for (const icon of ['tray-light.png', 'tray-dark.png', 'tray-update.png']) {
-        if (nativeImage.createFromPath(path.join(app.getAppPath(), 'assets', icon)).isEmpty()) throw new Error('Missing tray asset');
+      for (const theme of ['light', 'dark']) for (const state of ['', '-paused', '-update', '-paused-update']) {
+        if (nativeImage.createFromPath(path.join(app.getAppPath(), 'assets', 'tray', `${theme}${state}.ico`)).isEmpty()) throw new Error('Missing tray asset');
       }
       uIOhook.start(); uIOhook.stop(); process.stdout.write('ok\n'); app.exit(0);
     } catch { process.stderr.write('smoke failed\n'); app.exit(1); }
@@ -35,7 +36,10 @@ else {
   app.whenReady().then(() => {
     if (process.platform === 'win32') app.setAppUserModelId('com.squirrel.kite.Kite');
     registerOverlayIPC();
+    registerAboutIPC();
     createOverlayWindow();
+    // Before the voice service builds the tray, so its menu can show the shortcut.
+    if (!registerKeyboardControlsShortcut()) logEvent('shortcut:unavailable');
     try { stopVoice = startVoiceService(); }
     catch { dialog.showErrorBox('Kite voice could not start', 'Check that the native keyboard and SQLite modules are built for this Electron version. Restart Kite after repairing the installation.'); }
     startCursorTracking();

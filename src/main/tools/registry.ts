@@ -6,7 +6,7 @@ export type { ToolDefinition, ToolResult, ToolContext } from './types';
 // An interrupted paste must finish restoring the clipboard before a new session uses it.
 let executionQueue: Promise<unknown> = Promise.resolve();
 export async function waitForTools() { await executionQueue; }
-interface Call { row: number; tool: string; input: unknown; summary: string; decision: ToolDecision; granted: boolean; finished: boolean; executing?: boolean; started: number }
+interface Call { row: number; tool: string; input: unknown; summary: string; decision: ToolDecision; granted: boolean; finished: boolean; executing?: boolean; started: number; scope?: import('../../shared/agent').TaskScope }
 export interface ToolSessionOptions {
   imageToolResults?: boolean;
   definitions: ToolDefinition[]; broker: ApprovalBroker; audit: AuditStore; messageId: number | null; context: ToolContext;
@@ -46,10 +46,10 @@ export class ToolSession {
       if (!call.finished) this.finish(call, null, budgetAvailable ? 'Action denied.' : 'Model-call budget exhausted.'); return false;
     }
     const pending = this.options.broker.request(name, call.summary, valid.data, this.options.context.dryRun, this.options.context.signal);
-    this.pendingApproval = this.options.broker.current?.approvalId;
+    const approvalId = this.pendingApproval = this.options.broker.current?.approvalId;
     const decision = await pending;
     this.pendingApproval = undefined;
-    call.decision = decision;
+    call.decision = decision; call.scope = this.options.broker.takeScope(approvalId);
     if (decision === 'approved' && !this.options.context.signal.aborted) {
       call.granted = true; this.approvedActions++;
       this.options.audit.finishTool(call.row, decision, null, 'Approved; awaiting execution', performance.now() - call.started); this.options.changed(); return true;
@@ -81,7 +81,7 @@ export class ToolSession {
           call.granted = false; // Single-use permission, never reusable by another call.
           this.options.event('tool:executing', def.name);
           try {
-            const result = await def.execute(parsed.data, this.options.context);
+            const result = await def.execute(parsed.data, call.scope ? { ...this.options.context, scope: call.scope } : this.options.context);
             if (result.image && !this.options.imageToolResults) this.images.push(result.image);
             this.finish(call, result, result.ok ? null : result.message); this.options.event('tool:result', def.name, result); return result;
           } catch (error) {

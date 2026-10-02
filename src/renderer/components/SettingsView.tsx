@@ -1,114 +1,185 @@
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { HotkeyRecorder } from './HotkeyRecorder';
-import { configurableTools } from '../../shared/release';
-import { useEffect, useState } from 'react';
-import type { AppSettings, ModelSelection, OperationResult, ProviderId, SecretId, SettingsSnapshot } from '../../shared/types';
-const providers: { id: ProviderId; label: string }[] = [
-  { id: 'openai', label: 'OpenAI' }, { id: 'anthropic', label: 'Anthropic' }, { id: 'google', label: 'Google Gemini' },
-  { id: 'groq', label: 'Groq · also speech recognition' }, { id: 'moonshot', label: 'Moonshot / Kimi' },
+import { Keycaps } from './Keycaps';
+import { sections, type Section } from './sections';
+import { configurableTools, kiteSkins, livelinessLevels, type ConfigurableTool, type KiteSize, type KiteSkin, type Liveliness } from '../../shared/release';
+import { SailMark } from '../kite/SailMark';
+import { routeVision } from '../../shared/vision';
+import type { AboutInfo, AppSettings, ModelSelection, OperationResult, ProviderId, SettingsSnapshot } from '../../shared/types';
+import { BusyDots, LockIcon, Working } from '../icons';
+import { ProviderRow } from './ProviderRow';
+import { ModelPicker } from './ModelPicker';
+import { previewEarcons } from '../voice/earcons';
+import { PermissionsSection } from './PermissionsSection';
+import { Group, Row, SwitchRow } from './SettingsParts';
+import { jobsModel } from '../../shared/agent';
+
+// Groq comes first: without it Kite can't hear you.
+const providers: { id: ProviderId; label: string; badge?: string }[] = [
+  { id: 'groq', label: 'Groq', badge: 'Required for voice' }, { id: 'openai', label: 'OpenAI' }, { id: 'anthropic', label: 'Anthropic' },
+  { id: 'google', label: 'Google Gemini' }, { id: 'moonshot', label: 'Moonshot / Kimi' },
+  { id: 'deepseek', label: 'DeepSeek' },
 ];
+// People reason about what Kite will do, not about tool ids (UX-54).
+const toolLabels: Record<ConfigurableTool, string> = { open_app: 'Open an app', web_search: 'Search the web', get_datetime: 'Check the date and time', list_reminders: 'Read your reminders' };
+const askByDefault = (name: ConfigurableTool) => !['get_datetime', 'list_reminders'].includes(name);
+const alwaysAsks = ['Type or paste into an app', 'Read or change your clipboard', 'Look at your screen', 'Start a guide', 'Do a task in an app'];
 const encode = (m: ModelSelection) => `${m.provider}:${m.id}`;
-const decode = (s: string): ModelSelection => ({ provider: s.slice(0, s.indexOf(':')) as ProviderId, id: s.slice(s.indexOf(':') + 1) });
-export function SettingsView({ onboarding = false }: { onboarding?: boolean } = {}) {
+const kiteSizeLabels: Record<KiteSize, string> = { standard: 'Standard', large: 'Large', extraLarge: 'Extra large' };
+const livelinessLabels: Record<Liveliness, string> = { lively: 'Lively', calm: 'Calm' };
+const skinLabels: Record<KiteSkin, string> = { rose: 'Rose', teal: 'Teal', violet: 'Violet', sky: 'Sky' };
+// The speed slider's range, and where 1.0× ("Normal") sits on it (UX-56).
+const SPEED = { min: .6, max: 1.5 };
+const speedAt = (value: number) => (value - SPEED.min) / (SPEED.max - SPEED.min);
+
+/** An action that takes a moment shows the kite tail's three dots while it runs (UX-06). */
+function BusyButton({ run, disabled, children }: { run(): Promise<unknown>; disabled?: boolean; children: ReactNode }) {
+  const [busy, setBusy] = useState(false);
+  return <button disabled={disabled || busy} aria-busy={busy || undefined} onClick={() => { setBusy(true); void run().finally(() => setBusy(false)); }}>{children}{busy && <BusyDots />}</button>;
+}
+
+/** One section of Settings at a time (UX-50). */
+export function SettingsView({ section = 'general' }: { section?: Section }) {
   const [snapshot, setSnapshot] = useState<SettingsSnapshot>();
-  const [keys, setKeys] = useState<Partial<Record<SecretId, string>>>({});
-  const [editing, setEditing] = useState<Partial<Record<SecretId, boolean>>>({});
-  const [chips, setChips] = useState<Partial<Record<SecretId, string>>>({});
-  const [busy, setBusy] = useState<Partial<Record<SecretId, boolean>>>({});
-  const [status, setStatus] = useState('Loading settings…');
-  const [customProvider, setCustomProvider] = useState<ProviderId>('moonshot');
-  const [customId, setCustomId] = useState('');
+  const [toast, setToast] = useState(''), [loadError, setLoadError] = useState(''), [about, setAbout] = useState<AboutInfo | null>(null);
+  const [customProvider, setCustomProvider] = useState<ProviderId>('moonshot'), [customId, setCustomId] = useState('');
   useEffect(() => {
     let active = true;
     const unsubscribe = window.kite.onSettingsChanged(s => { if (active) setSnapshot(s); });
-    void window.kite.getSettings().then(s => { if (active) { setSnapshot(s); setStatus('Changes apply immediately. Keys stay encrypted on this computer.'); } })
-      .catch(() => { if (active) setStatus('Could not load settings. Restart Kite.'); });
+    void window.kite.getSettings().then(s => { if (active) setSnapshot(s); }).catch(() => { if (active) setLoadError('Couldn’t load settings. Restart Kite.'); });
     return () => { active = false; unsubscribe(); };
   }, []);
-  async function operation(fn: () => Promise<OperationResult>, success = 'Saved.') {
-    try { const result = await fn(); setStatus(result.ok ? success : result.error ?? 'Could not complete the request.'); }
-    catch { setStatus('Could not contact Kite. Please restart the app.'); }
+  useEffect(() => { if (section === 'about') void window.kite.getAbout().then(setAbout); }, [section]);
+  // Global results are a short toast; results for one provider stay in its row (UX-53).
+  useEffect(() => { if (!toast) return; const timer = setTimeout(() => setToast(''), 3500); return () => clearTimeout(timer); }, [toast]);
+  async function operation(fn: () => Promise<OperationResult>, success?: string) {
+    try { const result = await fn(); if (!result.ok) setToast(result.error ?? 'Couldn’t complete that.'); else if (success) setToast(success); }
+    catch { setToast('Couldn’t reach Kite. Please restart the app.'); }
   }
   const update = (patch: Partial<AppSettings>) => { void operation(() => window.kite.updateSettings(patch)); };
-  async function rowAction(id: SecretId, action: 'save' | 'test' | 'refresh' | 'delete') {
-    setBusy(s => ({ ...s, [id]: true }));
-    try {
-      if (action === 'test') { setChips(s => ({ ...s, [id]: 'Testing…' })); const result = await window.kite.testKey(id); setChips(s => ({ ...s, [id]: result.status })); }
-      else if (action === 'save') {
-        const result = await window.kite.setKey(id, keys[id] ?? '');
-        if (!result.ok) { setStatus(result.error); return; }
-        setKeys(s => ({ ...s, [id]: '' })); setEditing(s => ({ ...s, [id]: false })); setChips(s => ({ ...s, [id]: 'Not tested' })); setStatus('Key saved securely.');
-        if (id === 'cartesia') await operation(() => window.kite.refreshVoices(), 'Key saved and voices refreshed.');
-      } else if (action === 'delete') { await operation(() => window.kite.deleteKey(id), 'Key removed.'); setChips(s => ({ ...s, [id]: '' })); }
-      else await operation(() => id === 'cartesia' ? window.kite.refreshVoices() : window.kite.refreshModels(id), 'Catalog refreshed.');
-    } catch { setStatus('Could not complete the provider request.'); }
-    finally { setBusy(s => ({ ...s, [id]: false })); }
+  function picker(label: string, value: ModelSelection, change: (model: ModelSelection) => void, options: { visionOnly?: boolean; disabled?: boolean } = {}) {
+    if (!snapshot) return null;
+    // Models from providers with a key, grouped by provider (UX-55).
+    const groups = providers.filter(p => snapshot.keys[p.id]).map(p => ({ provider: p.id, label: p.label,
+      models: snapshot.models.filter(m => m.provider === p.id && (!options.visionOnly || m.supportsVision)) })).filter(g => g.models.length);
+    return <ModelPicker label={label} value={value} groups={groups} change={change} disabled={options.disabled}
+      missing={snapshot.keys[value.provider] ? 'Custom' : 'Needs a key'} />;
   }
-  function keyRow(id: SecretId, label: string) {
-    const saved = snapshot?.keys[id];
-    return <div className="provider-row" key={id}>
-      <div className="provider-title"><strong>{label}</strong><span><span className="status-chip">{saved ? 'Saved ••••••••' : 'No key'}</span>{chips[id] && <span className="status-chip key-test" data-status={chips[id]}>{chips[id]}</span>}</span></div>
-      {(!saved || editing[id]) && <input aria-label={`${label} API key`} type="password" autoComplete="off" spellCheck={false} value={keys[id] ?? ''}
-        onChange={e => setKeys(s => ({ ...s, [id]: e.target.value }))} placeholder="Paste API key" />}
-      <div className="settings-actions">
-        {saved && !editing[id] ? <button disabled={busy[id]} onClick={() => setEditing(s => ({ ...s, [id]: true }))}>Replace</button>
-          : <button disabled={busy[id] || !keys[id]?.trim()} onClick={() => { void rowAction(id, 'save'); }}>Save</button>}
-        <button disabled={!saved || busy[id]} onClick={() => { void rowAction(id, 'test'); }}>Test</button>
-        <button disabled={!saved || busy[id]} onClick={() => { void rowAction(id, 'refresh'); }}>{id === 'cartesia' ? 'Refresh voices' : 'Refresh models'}</button>
-        {saved && <button disabled={busy[id]} onClick={() => { void rowAction(id, 'delete'); }}>Remove</button>}
-      </div>
-    </div>;
-  }
-  function picker(label: string, value: ModelSelection, change: (model: ModelSelection) => void, visionOnly = false) {
-    const models = snapshot.models.filter(m => snapshot.keys[m.provider]);
-    const selected = models.some(m => encode(m) === encode(value));
-    return <label className="setting-field">{label}<select value={encode(value)} onChange={e => change(decode(e.target.value))}>
-      {!selected && <option value={encode(value)}>{value.id} {snapshot.keys[value.provider] ? '(custom)' : '(save provider key)'}</option>}
-      {providers.filter(p => snapshot.keys[p.id]).map(p => <optgroup key={p.id} label={p.label}>
-        {models.filter(m => m.provider === p.id && (!visionOnly || m.supportsVision)).map(m => <option key={m.id} value={encode(m)}>{m.label} · {m.tier}{m.supportsVision ? ' · ◉ Vision' : ''}{m.supportsTools ? ' · Actions' : ' · Chat only'}</option>)}
-      </optgroup>)}
-    </select></label>;
-  }
-  return <main className="settings-view">
-    <header><h1>Kite</h1><p>A little company beside your cursor.</p></header>
-    <p className="settings-status" role="status">{status}</p>
-    <section><h2>Providers</h2><p className="settings-hint">Groq is also required for Ctrl + Win speech recognition.</p>{providers.map(p => keyRow(p.id, p.label))}</section>
-    {snapshot && <>
-      {!onboarding && <section><h2>Make Kite yours</h2>
-        <HotkeyRecorder value={snapshot.settings.hotkey ?? ['Control','Meta']} change={hotkey => update({ hotkey })}/>
-        <label className="settings-toggle"><input type="checkbox" checked={!!snapshot.settings.launchOnStartup} onChange={e=>update({launchOnStartup:e.target.checked})}/>Launch on startup</label>
-        <label className="settings-toggle"><input type="checkbox" checked={!!snapshot.settings.reducedMotion} onChange={e=>update({reducedMotion:e.target.checked})}/>Reduced motion</label>
-        <p>Use the tray to pause Kite, replay the tutorial, or open diagnostic logs.</p>
-      </section>}
-      <section><h2>Trust</h2>{configurableTools.map(name=><label className="setting-field" key={name}>{name.replaceAll('_',' ')}<select value={String(snapshot.settings.toolApprovals?.[name] ?? !['get_datetime','list_reminders'].includes(name))} onChange={e=>update({toolApprovals:{[name]:e.target.value==='true'}})}><option value="true">Always ask</option><option value="false">Don't ask</option></select></label>)}
-        <p>Typing, reading or writing the clipboard, and reading the screen always ask in v1.</p></section>
-      <section><h2>Actions</h2><label className="setting-field">Search engine<select value={snapshot.settings.searchEngine} onChange={e => update({ searchEngine: e.target.value as AppSettings['searchEngine'] })}><option value="google">Google</option><option value="bing">Bing</option><option value="duckduckgo">DuckDuckGo</option></select></label>
-        <button onClick={() => { void operation(() => window.kite.rescanApps(), 'App index ready. Scans are cached for 10 minutes.'); }}>Rescan apps</button>
-        <p>Sensitive actions always require confirmation. For typing, focus the destination app and say yes.</p></section>
-      <section><h2>Model</h2>{picker('Powered by', snapshot.settings.model, model => update({ model }))}
-        <div className="custom-model"><label>Custom provider<select value={customProvider} onChange={e => setCustomProvider(e.target.value as ProviderId)}>
-          {providers.map(p => <option key={p.id} value={p.id} disabled={!snapshot.keys[p.id]}>{p.label}</option>)}
-        </select></label><label>Custom model ID<input value={customId} onChange={e => setCustomId(e.target.value)} placeholder="Exact API model ID" /></label>
-        <button disabled={!customId.trim() || !snapshot.keys[customProvider]} onClick={() => update({ model: { provider: customProvider, id: customId.trim() } })}>Use model</button>
-        <button disabled={!customId.trim() || !snapshot.keys[customProvider]} onClick={() => update({ fallback: { provider: customProvider, id: customId.trim() } })}>Use as fallback</button></div>
-        <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.fallbackEnabled} onChange={e => update({ fallbackEnabled: e.target.checked })} />Retry once on a fallback model</label>
-        {picker('Fallback model', snapshot.settings.fallback, fallback => update({ fallback }))}
-        <small>Only connection errors, server errors, or rate limits before the first token trigger fallback.</small>
-      </section>
-      <section><h2>Screen vision</h2>
-        {picker('Vision model', snapshot.settings.visionModel, visionModel => update({ visionModel }), true)}
-        <p>Screen access always asks for confirmation in v1.</p>
-        <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.keepScreenshots} onChange={e => update({ keepScreenshots: e.target.checked })} />Keep screenshots in history</label>
-        <small>Hold Ctrl + Win and draw to ask about a mark. Kite is looking appears on every capture. Screenshots stay in memory unless history is enabled.</small>
-      </section>
-      <section><h2>Voice</h2>{keyRow('cartesia', 'Cartesia')}
-        <label className="settings-toggle"><input type="checkbox" checked={snapshot.settings.ttsEnabled} onChange={e => update({ ttsEnabled: e.target.checked })} />Speak replies</label>
-        <label className="setting-field">Voice<select value={snapshot.settings.voiceId} onChange={e => update({ voiceId: e.target.value })}>
-          <option value="">Choose a voice</option>{snapshot.voices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}
-        </select></label>
-        <label className="setting-field">Speed · {snapshot.settings.speed.toFixed(2)}×<input type="range" min="0.6" max="1.5" step="0.05" value={snapshot.settings.speed} onChange={e => update({ speed: Number(e.target.value) })} /></label>
-        <button disabled={!snapshot.settings.ttsEnabled} onClick={() => { void operation(() => window.kite.previewVoice(), 'Playing voice preview.'); }}>Preview</button>
-      </section>
-    </>}
-    <footer>Hold Ctrl + Win to speak. Press again to interrupt. Escape stops an active interaction.</footer>
+  const title = sections.find(s => s.id === section)?.label ?? 'Settings';
+  const shell = (content: ReactNode) => <main className="settings-view">
+    <h1>{title}</h1>
+    {loadError && <p className="field-error" role="alert">{loadError}</p>}
+    {content}
+    {toast && <div className="toast" role="status">{toast}</div>}
   </main>;
+  if (!snapshot) return shell(!loadError && <p className="loading"><Working text="Loading…" /></p>);
+  const s = snapshot.settings, hotkey = s.hotkey ?? ['Control', 'Meta'];
+  const mainModel = snapshot.models.find(m => encode(m) === encode(s.model));
+  let visionName = 'your vision model';
+  try { if (mainModel) visionName = routeVision(mainModel, s.visionModel, snapshot.models, p => !!snapshot.keys[p]).label; } catch { /* none configured yet */ }
+
+  switch (section) {
+    case 'general': return shell(<Group>
+      <div className="setting-row stacked"><HotkeyRecorder value={hotkey} change={value => update({ hotkey: value })} /></div>
+      <SwitchRow label="Launch at startup" description="Start Kite when you sign in to Windows." checked={!!s.launchOnStartup} change={v => update({ launchOnStartup: v })} />
+      <SwitchRow label="Reduce motion" description="Calmer motion for the kite and the overlay, even if Windows animations are on." checked={!!s.reducedMotion} change={v => update({ reducedMotion: v })} />
+      <Row label="Kite size" description="Larger is easier to see on high-resolution screens.">
+        <select aria-label="Kite size" value={s.kiteSize ?? 'standard'} onChange={e => update({ kiteSize: e.target.value as KiteSize })}>
+          {(Object.keys(kiteSizeLabels) as KiteSize[]).map(size => <option key={size} value={size}>{kiteSizeLabels[size]}</option>)}</select></Row>
+      {/* The kite's character, within its rules (docs/design.md K-15): how much it moves, and what it wears. */}
+      <Row label="Liveliness" description="How much the kite moves on its own. Calm halves its idle motion; it still shows what it's doing.">
+        <select aria-label="Liveliness" value={s.liveliness ?? 'lively'} onChange={e => update({ liveliness: e.target.value as Liveliness })}>
+          {[...livelinessLevels].reverse().map(level => <option key={level} value={level}>{livelinessLabels[level]}</option>)}</select></Row>
+      <Row label="Kite color" description="The logo stays rose.">
+        <span className="kite-color-preview" data-skin={s.kiteSkin ?? 'rose'} aria-hidden="true"><SailMark size={22} live /></span>
+        <select aria-label="Kite color" value={s.kiteSkin ?? 'rose'} onChange={e => update({ kiteSkin: e.target.value as KiteSkin })}>
+          {kiteSkins.map(skin => <option key={skin} value={skin}>{skinLabels[skin]}</option>)}</select></Row>
+    </Group>);
+    case 'models': return shell(<>
+      <Group title="Providers" hint="Groq turns your voice into text. Add at least one more provider for answers. Keys stay encrypted on this computer.">
+        {providers.map(p => <ProviderRow key={p.id} id={p.id} label={p.label} badge={p.badge} snapshot={snapshot} toast={setToast} />)}</Group>
+      <Group title="Models">
+        <Row label="Main model" description="Answers every question.">{picker('Main model', s.model, model => update({ model }))}</Row>
+        <Row label="Vision model" description="Looks at your screen when you circle something or approve a look.">{picker('Vision model', s.visionModel, visionModel => update({ visionModel }), { visionOnly: true })}</Row>
+        <Row label="Jobs model" description={<>Does tasks and errands for you, one step at a time. {s.jobsModel
+          ? <button type="button" className="link" onClick={() => update({ jobsModel: null })}>Choose automatically</button>
+          : 'Automatic: DeepSeek Flash when its key is saved, else the main model.'}</>}>
+          {picker('Jobs model', s.jobsModel ?? jobsModel(s, snapshot.models, p => !!snapshot.keys[p]), model => update({ jobsModel: model }))}</Row>
+      </Group>
+      {/* The backup model and custom IDs are for when the defaults don't fit (UX-55). */}
+      <details className="advanced"><summary>Advanced</summary>
+        <div className="group-card">
+          <SwitchRow label="Retry on a backup model" description="Only after a connection error, server error, or rate limit, before the first word arrives."
+            checked={s.fallbackEnabled} change={v => update({ fallbackEnabled: v })} />
+          <Row label="Backup model">{picker('Backup model', s.fallback, fallback => update({ fallback }), { disabled: !s.fallbackEnabled })}</Row>
+        </div>
+        <div className="custom-model"><strong>Use a custom model ID</strong><label>Provider<select value={customProvider} onChange={e => setCustomProvider(e.target.value as ProviderId)}>
+          {providers.map(p => <option key={p.id} value={p.id} disabled={!snapshot.keys[p.id]}>{p.label}</option>)}</select></label>
+          <label>Model ID<input value={customId} onChange={e => setCustomId(e.target.value)} placeholder="Exact API model ID" /></label>
+          <div className="custom-actions"><button disabled={!customId.trim() || !snapshot.keys[customProvider]} onClick={() => update({ model: { provider: customProvider, id: customId.trim() } })}>Use as main model</button>
+            <button disabled={!customId.trim() || !snapshot.keys[customProvider]} onClick={() => update({ fallback: { provider: customProvider, id: customId.trim() } })}>Use as backup</button></div></div>
+      </details>
+    </>);
+    case 'voice': return shell(<>
+      <Group title="Cartesia" hint="Optional. Gives Kite a voice; without it, answers are text only."><ProviderRow id="cartesia" label="Cartesia" snapshot={snapshot} toast={setToast} /></Group>
+      {/* Without a key the voice controls can't do anything, so one line says what would turn them on (UX-56). */}
+      <Group>{snapshot.keys.cartesia ? <>
+        <SwitchRow label="Speak replies" checked={s.ttsEnabled} change={v => update({ ttsEnabled: v })} />
+        <Row label="Voice"><select aria-label="Voice" value={s.voiceId} onChange={e => update({ voiceId: e.target.value })}>
+          <option value="">Choose a voice</option>{snapshot.voices.map(v => <option key={v.id} value={v.id}>{v.name}</option>)}</select>
+          <BusyButton disabled={!s.ttsEnabled} run={() => operation(() => window.kite.previewVoice(), 'Playing a preview.')}>Preview</BusyButton></Row>
+        <Row label="Speed" description={s.speed === 1 ? 'Normal' : `${s.speed.toFixed(2)}×`}>
+          <span className="range-field" style={{ '--normal': speedAt(1) } as CSSProperties}>
+            <input className="range" aria-label="Speed" aria-valuetext={s.speed === 1 ? 'Normal' : `${s.speed.toFixed(2)} times`} type="range" min={SPEED.min} max={SPEED.max} step="0.05" value={s.speed}
+              style={{ '--fill': `${speedAt(s.speed) * 100}%` } as CSSProperties} onChange={e => update({ speed: Number(e.target.value) })} />
+            <button type="button" className="range-tick" onClick={() => update({ speed: 1 })}>Normal</button></span></Row>
+      </> : <div className="setting-row"><span className="row-text"><span className="row-label">Add a Cartesia key to hear Kite speak.</span>
+        <small>Until then, answers are text only.</small></span></div>}</Group>
+      <Group title="Sounds">
+        <SwitchRow label="Sound cues" checked={!!s.earcons} change={v => { update({ earcons: v }); if (v) previewEarcons(); }}
+          description="A short chirp when Kite starts listening, a soft note when you let go, and a chime when Kite needs your OK." />
+      </Group>
+    </>);
+    case 'privacy': return shell(<>
+      <Group title="Screenshots" hint={<>Hold <Keycaps keys={hotkey} /> and draw to ask about something on screen. “Kite is looking” appears every time Kite captures your screen.</>}>
+        <SwitchRow label="Keep screenshots in history" description="Off: screenshots stay in memory and are gone after the answer." checked={s.keepScreenshots} change={v => update({ keepScreenshots: v })} />
+      </Group>
+      <Group title="What leaves this PC"><ul className="flow-list">
+        <li>Your voice goes to Groq to become text.</li>
+        <li>Your questions, and anything you let Kite read, go to {mainModel?.label ?? 'your main model'}.</li>
+        <li>Screenshots go to {visionName}, only when you circle something or approve a look.</li>
+        <li>With a voice turned on, answers go to Cartesia to be spoken.</li>
+        <li>Guides and tasks say on their approval card what they send.</li>
+        <li>Your keys and history stay on this computer. Keys are encrypted.</li>
+      </ul></Group>
+    </>);
+    case 'actions': return shell(<>
+      <Group title="Actions">
+        <Row label="Search engine"><select aria-label="Search engine" value={s.searchEngine} onChange={e => update({ searchEngine: e.target.value as AppSettings['searchEngine'] })}>
+          <option value="google">Google</option><option value="bing">Bing</option><option value="duckduckgo">DuckDuckGo</option></select></Row>
+        <Row label="Apps" description="Kite finds apps in your Start menu."><BusyButton run={() => operation(() => window.kite.rescanApps(), 'Apps rescanned.')}>Rescan apps</BusyButton></Row>
+        <SwitchRow label="Show me how" checked={s.guideMode ?? true} change={v => update({ guideMode: v })}
+          description="Ask “how do I…?” and Kite points at each control, step by step. It reads control names with Windows UI Automation and never clicks for you." />
+        <SwitchRow label="Whiteboard" checked={s.whiteboard ?? true} change={v => update({ whiteboard: v })}
+          description="Kite explains ideas with hand-drawn diagrams, one piece at a time, while it talks." />
+        <SwitchRow label="Do it for me" checked={s.computerUse ?? true} change={v => update({ computerUse: v })}
+          description="After you approve a task, Kite clicks and types in one app or website. It never moves your pointer, asks when your Permissions say so, and stops after 15 steps (45 for errands)." />
+      </Group>
+      <Group title="Ask before I…">
+        {configurableTools.map(name => <SwitchRow key={name} label={toolLabels[name]} checked={s.toolApprovals?.[name] ?? askByDefault(name)} change={v => update({ toolApprovals: { [name]: v } })} />)}
+        <div className="setting-row always-ask"><LockIcon /><span className="row-text"><span className="row-label">Always asks in this version</span><small>{alwaysAsks.join(' · ')}</small></span></div>
+      </Group>
+    </>);
+    case 'permissions': return shell(<PermissionsSection settings={s} update={update} />);
+    case 'about': return shell(<>
+      <Group>
+        <Row label={`Kite ${about?.version ?? ''}`.trim()} description={about ? `Updates: ${about.updateStatus}` : undefined}>
+          {about?.updateReady && <button className="primary" onClick={() => window.kite.aboutAction('restart')}>Restart to update</button>}</Row>
+        <Row label="Tutorial" description="Walk through setup again."><button onClick={() => window.kite.openView('onboarding')}>Replay tutorial</button></Row>
+        <Row label="Logs" description="Diagnostic logs never include what you say or ask."><button onClick={() => window.kite.aboutAction('logs')}>Open logs folder</button></Row>
+        <Row label="Report a problem" description="Opens a GitHub issue with your Kite and Windows versions filled in."><button onClick={() => window.kite.aboutAction('report')}>Report a problem</button></Row>
+      </Group>
+      <p className="group-hint">Hold <Keycaps keys={hotkey} /> to speak. Press it again to interrupt. Esc stops whatever Kite is doing.</p>
+    </>);
+  }
 }

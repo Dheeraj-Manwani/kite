@@ -1,0 +1,32 @@
+/* Whiteboard: paper, hand-drawn ink, and the kite holding the marker. Ink styles live on the SVG itself so exports match.
+   The paper stays white (dark mode inverts it below); the chrome around it uses the UI tokens. */
+.board { position: absolute; left: 0; top: 0; display: flex; flex-direction: column; border: 1px solid var(--border); border-radius: var(--radius-l); background: #fff; color: #1e1e1e;
+  box-shadow: var(--shadow-overlay); overflow: hidden; pointer-events: auto; animation: board-in .3s ease-out; }
+@keyframes board-in { from { opacity: 0; } }
+.board header { flex: 0 0 46px; display: flex; align-items: center; gap: 10px; padding: 0 8px 0 16px; border-bottom: 1px solid var(--border); background: var(--surface); color: var(--text); cursor: grab; user-select: none; }
+.board header:active { cursor: grabbing; }
+.board-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: 600 18px 'Ink Free', 'Segoe Print', cursive; }
+.board-progress { flex: 0 0 auto; font-size: var(--fs-caption); font-variant-numeric: tabular-nums; color: var(--text-muted); }
+.board-tools { display: flex; gap: 4px; margin-left: auto; }
+.board-tools button { padding: 5px 10px; border-radius: var(--radius-m); border-color: transparent; background: var(--surface-subtle); color: var(--text); font-size: var(--fs-caption); }
+.board-tools button:hover { background: color-mix(in srgb, var(--surface-subtle) 90%, var(--text)); }
+.board-tools .board-close { padding: 1px 9px; background: transparent; font-size: 19px; line-height: 1; }
+.board-canvas { position: relative; flex: 1; overflow: hidden; cursor: grab; touch-action: none; }
+.board-canvas:active { cursor: grabbing; }
+.board-svg { display: block; }
+.board-caption { flex: 0 0 auto; display: flex; align-items: center; min-height: 58px; padding: 10px 18px; border-top: 1px solid var(--border); background: var(--surface); color: var(--text); font-size: var(--fs-lead); line-height: 1.45; }
+.board.paused .board-caption, .board.done .board-caption { color: var(--text-muted); }
+.board-ring path { fill: none; stroke: var(--sun); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: guide-draw .6s cubic-bezier(.3,.7,.4,1) backwards; }
+.board-ring path.pass-1 { stroke-width: 1.8; opacity: .7; animation-delay: .15s; }
+.board-resize { position: absolute; right: 3px; bottom: 3px; width: 14px; height: 14px; cursor: nwse-resize;
+  background: linear-gradient(135deg, transparent 55%, var(--border) 55%, var(--border) 65%, transparent 65%, transparent 78%, var(--border) 78%, var(--border) 88%, transparent 88%); }
+@media (prefers-color-scheme: dark) {
+  .board { background: #121212; color: #e9ecef; }
+  /* Excalidraw's dark theme: invert the paper and ink, then rotate hues back. */
+  .board-svg { filter: invert(93%) hue-rotate(180deg); }
+}
+@media (forced-colors: active) {
+  .board-ring path { stroke: Highlight; filter: none; }
+  /* The whiteboard's drawing is content: keep its paper and ink as drawn. */
+  .board-svg { forced-color-adjust: none; }
+}

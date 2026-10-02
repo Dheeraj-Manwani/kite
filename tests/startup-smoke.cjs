@@ -31,6 +31,7 @@ try {
       assert.equal(result.settings.model.provider, 'moonshot');
       assert.equal(result.models.length >= 15, true);
       assert.equal(result.keys.cartesia, false);
+      assert.equal(await win.webContents.executeJavaScript('typeof window.kite.releaseOverlay'), 'function', 'Esc can hand focus back');
       console.log('PASS bundled main loads, native voice service/tray starts, renderer/preload loads, settings IPC responds');
       clearTimeout(timeout); app.quit();
     } catch (error) { console.error(error); clearTimeout(timeout); app.exit(1); }

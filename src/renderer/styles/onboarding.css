@@ -1,0 +1,48 @@
+/* Onboarding (UX-60): the stage carries the character (kite.css); the step below it is a plain form. */
+.onboarding { min-height: 100%; }
+.kite-stage { position: relative; overflow: hidden; background: var(--stage); border-bottom: 1px solid var(--border); transition: height .3s ease; }
+.onboarding-body { max-width: 620px; margin: 0 auto; padding: 24px 28px 36px; }
+.onboarding-body > p { font-size: var(--fs-lead); line-height: 1.6; }
+.onboarding-progress { display: flex; align-items: center; gap: 10px; font-size: var(--fs-caption); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.progress-dots { display: flex; gap: 5px; }
+.progress-dots i { width: 7px; height: 7px; border-radius: 50%; background: var(--border); }
+.progress-dots .done { background: var(--text); }
+.progress-dots .current { background: var(--accent); }
+.onboarding footer { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 30px; }
+.onboarding footer .spacer { flex: 1; }
+.onboarding .settings-view { padding: 0; }
+/* Onboarding steps (UX-61 to UX-63). */
+.keys-step { margin-top: 8px; }
+.brain-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.brain-card { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--surface); color: var(--text); text-align: left; }
+.brain-card small { font-size: var(--fs-caption); color: var(--text-muted); }
+.brain-card.chosen { border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink); }
+.big-keys { display: flex; align-items: center; gap: 10px; margin: 8px 0 12px; }
+.big-key { min-width: 64px; padding: 10px 16px; border: 1px solid var(--border); border-bottom-width: 3px; border-radius: var(--radius-m); background: var(--surface); color: var(--text-muted); font: 600 var(--fs-title) var(--font-display); text-align: center; transition: background .12s, color .12s, transform .12s; }
+.big-key.lit { border-color: var(--ink); background: var(--ink); color: var(--on-ink); transform: translateY(1px); }
+.big-check { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: color-mix(in srgb, var(--success) 16%, transparent); color: var(--success); }
+.big-check .icon { width: 20px; height: 20px; }
+.onboarding-body > .step-status { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; color: var(--text-muted); }
+.step-status small { flex-basis: 100%; font-size: var(--fs-caption); font-weight: 400; color: var(--text-muted); }
+.onboarding-body > .step-status.heard { color: var(--success); font-weight: 600; }
+.onboarding-body > .step-status.blocked, .onboarding-body > .step-status.failed { color: var(--danger); }
+.onboarding-body > .step-missing { margin: 16px 0 0; font-size: var(--fs-caption); color: var(--text-muted); }
+.tutorial-canvas { width: 100%; touch-action: none; cursor: crosshair; }
+/* The finish (UX-65): what you'll need tomorrow, as a plain card in the window register. */
+.cheat-sheet { display: grid; grid-template-columns: max-content 1fr; margin: 4px 0 20px; border: 1px solid var(--border); border-radius: var(--radius-m); background: var(--surface); }
+.cheat-sheet > div { display: contents; }
+.cheat-sheet dt, .cheat-sheet dd { margin: 0; padding: 10px 14px; border-top: 1px solid var(--border); }
+.cheat-sheet > div:first-child > * { border-top: 0; }
+.cheat-sheet dt { font-weight: 600; white-space: nowrap; }
+.cheat-sheet dd { color: var(--text-muted); }
+.onboarding blockquote { background: var(--surface-subtle); padding: 24px; border-left: 4px solid var(--border); min-height: 90px; }
+.hotkey-recorder small { display: block; margin: 10px 0; color: var(--text-muted); }
+@media (prefers-reduced-motion: reduce) { .kite-stage { transition: none; } }
+@media (forced-colors: active) {
+  .progress-dots i { border: 1px solid GrayText; background: Canvas; }
+  .progress-dots .done { background: CanvasText; border-color: CanvasText; }
+  .progress-dots .current { background: Highlight; border-color: Highlight; }
+  .big-key.lit, .brain-card.chosen { outline: 2px solid Highlight; }
+  .big-key.lit { background: Highlight; color: HighlightText; }
+  .step-status { color: CanvasText; }
+}

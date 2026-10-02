@@ -1,7 +1,8 @@
 import type { z } from 'zod';
 import type { Reminder, ToolAudit, ToolDecision } from '../../shared/types';
 export interface ToolResult { ok: boolean; message: string; data?: unknown; dryRun?: boolean; image?: Uint8Array }
-export interface ToolContext { dryRun: boolean; signal: AbortSignal }
+/** `scope`: how far the user's approval reaches, for tools that start a multi-step task. */
+export interface ToolContext { dryRun: boolean; signal: AbortSignal; scope?: import('../../shared/agent').TaskScope }
 export interface ToolDefinition<T = unknown> {
   name: string; description: string; inputSchema: z.ZodType<T>; kind: 'info' | 'action' | 'sensitive-read'; approvalRequired?: boolean;
   summarize(input: T): string; execute(input: T, ctx: ToolContext): Promise<ToolResult>;

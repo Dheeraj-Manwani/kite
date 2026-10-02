@@ -1,17 +1,19 @@
-import { validateHotkey, configurableTools } from '../../shared/release';
+import { validateHotkey, configurableTools, kiteSizes, kiteSkins, livelinessLevels } from '../../shared/release';
 import Store from 'electron-store';
 import type { AppSettings, ModelEntry, SettingsSnapshot, SecretId, VoiceChoice, ModelSelection } from '../../shared/types';
 import { catalog, mergeCatalog, providerIds } from '../ai/catalog';
+import { defaultPermissions, validPermissions, type NudgeRecord } from '../../shared/permissions';
 export const defaultSettings: AppSettings = { onboardingComplete: false, hotkey: ['Control','Meta'], launchOnStartup: false, reducedMotion: false, toolApprovals: { get_datetime: false, list_reminders: false, open_app: true, web_search: true }, visionModel: { provider: 'moonshot', id: 'kimi-k2.5' }, screenWithoutAsking: false, keepScreenshots: false, model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
-  fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google' };
+  fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google', guideMode: true, whiteboard: true, computerUse: true, kiteSize: 'standard', earcons: false, liveliness: 'lively', kiteSkin: 'rose',
+  permissions: defaultPermissions, jobsModel: null, memory: true };
 export function validModel(value: unknown): value is ModelSelection {
   if (!value || typeof value !== 'object') return false;
   const m = value as ModelSelection;
   return providerIds.includes(m.provider) && typeof m.id === 'string' && m.id.length > 0 && m.id.length <= 200 && /^[a-zA-Z0-9._:/-]+$/.test(m.id);
 }
 export function openPreferences(hasKey: (id: SecretId) => boolean) {
-  const store = new Store<{ preferences: AppSettings; models: ModelEntry[]; voices: VoiceChoice[] }>({ name: 'preferences',
-    defaults: { preferences: defaultSettings, models: [], voices: [] } });
+  const store = new Store<{ preferences: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; nudges: NudgeRecord[] }>({ name: 'preferences',
+    defaults: { preferences: defaultSettings, models: [], voices: [], nudges: [] } });
   const listeners = new Set<(snapshot: SettingsSnapshot, old: AppSettings) => void>();
   const get = () => ({ ...defaultSettings, ...store.get('preferences'), screenWithoutAsking: false });
   const snapshot = (): SettingsSnapshot => ({ settings: get(), models: mergeCatalog(catalog, store.get('models')), voices: store.get('voices'),
@@ -24,7 +26,7 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
       const old = get(); const next = { ...old };
       for (const [key, value] of Object.entries(patch)) {
         if (key === 'model' || key === 'fallback' || key === 'visionModel') { if (!validModel(value) || !hasKey(value.provider)) throw new Error('Save a key for this provider first.'); next[key] = value; }
-        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun' || key === 'keepScreenshots' || key === 'onboardingComplete' || key === 'launchOnStartup' || key === 'reducedMotion') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
+        else if (key === 'ttsEnabled' || key === 'fallbackEnabled' || key === 'dryRun' || key === 'keepScreenshots' || key === 'onboardingComplete' || key === 'launchOnStartup' || key === 'reducedMotion' || key === 'guideMode' || key === 'whiteboard' || key === 'computerUse' || key === 'earcons' || key === 'memory') { if (typeof value !== 'boolean') throw new Error('Invalid setting'); next[key] = value; }
         else if (key === 'hotkey') { if (!validateHotkey(value)) throw new Error('Use two or more modifiers only; other keys would type into the focused app.'); next.hotkey = [...value]; }
         else if (key === 'screenWithoutAsking') { if (value !== false) throw new Error('Screen access always requires confirmation in v1.'); }
         else if (key === 'toolApprovals') {
@@ -33,6 +35,15 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
         }
         else if (key === 'searchEngine') { if (!['google', 'bing', 'duckduckgo'].includes(value as string)) throw new Error('Invalid search engine'); next.searchEngine = value as AppSettings['searchEngine']; }
         else if (key === 'speed') { if (typeof value !== 'number' || !Number.isFinite(value) || value < 0.6 || value > 1.5) throw new Error('Invalid speed'); next.speed = value; }
+        else if (key === 'kiteSize') { if (typeof value !== 'string' || !Object.hasOwn(kiteSizes, value)) throw new Error('Invalid kite size'); next.kiteSize = value as AppSettings['kiteSize']; }
+        else if (key === 'liveliness') { if (!livelinessLevels.includes(value as AppSettings['liveliness'])) throw new Error('Invalid liveliness'); next.liveliness = value as AppSettings['liveliness']; }
+        else if (key === 'kiteSkin') { if (!kiteSkins.includes(value as AppSettings['kiteSkin'])) throw new Error('Invalid kite color'); next.kiteSkin = value as AppSettings['kiteSkin']; }
+        else if (key === 'permissions') { const valid = validPermissions(value); if (!valid) throw new Error('Invalid permissions'); next.permissions = valid; }
+        else if (key === 'jobsModel') {
+          if (value === null) next.jobsModel = null;
+          else if (!validModel(value) || !hasKey(value.provider)) throw new Error('Save a key for this provider first.');
+          else next.jobsModel = { provider: value.provider, id: value.id };
+        }
         else if (key === 'voiceId') { if (typeof value !== 'string' || value.length > 200) throw new Error('Invalid voice'); next.voiceId = value; }
         else throw new Error('Unknown setting');
       }
@@ -45,5 +56,8 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
     },
     cacheModels(models: ModelEntry[]) { store.set('models', mergeCatalog(store.get('models'), models)); notify(); },
     cacheVoices(voices: VoiceChoice[]) { store.set('voices', voices); notify(); },
+    /** Yes-counts for "stop asking?" (permissions.ts `countYes`): Kite's own bookkeeping, not a setting. */
+    nudges: () => store.get('nudges') ?? [],
+    setNudges(records: NudgeRecord[]) { store.set('nudges', records); },
   };
 }

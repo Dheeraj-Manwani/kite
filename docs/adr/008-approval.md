@@ -1,6 +1,6 @@
 # Deterministic approval summaries
 
-Status: Accepted for v1.
+Status: Accepted for v1. Amended by [ADR 014](014-permissions.md) for steps inside an approved task.
 
 ## Context
 

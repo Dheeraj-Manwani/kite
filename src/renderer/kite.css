@@ -1,0 +1,64 @@
+/* The kite itself (docs/design.md §K2). Sail pink is a rose (346°): never red, never coral.
+   The 1 px halo keeps the sail legible on any desktop: ink on light systems, a light rim on dark ones. */
+:root {
+  --kite-body: #ff426f;
+  --kite-shade: #e92c59;
+  --kite-tail: var(--kite-shade);
+  --kite-halo: rgb(27 33 42 / .45);
+  /* A muted tail: a mid slate that reads on light and dark desktops alike (K-10). */
+  --kite-muted: #8b93a0;
+}
+@media (prefers-color-scheme: dark) { :root { --kite-halo: rgb(255 255 255 / .35); } }
+/* Kite colors (K-15): the sail and tail only. Each clears 3:1 on white, the window backgrounds, and the onboarding stage,
+   and stays clear of the error red, the gold "look here" color, and success green. --kite-tail follows the shade. */
+[data-skin='teal'] { --kite-body: #0e9a91; --kite-shade: #0a8279; --kite-tail: var(--kite-shade); }
+[data-skin='violet'] { --kite-body: #9a6bff; --kite-shade: #8452f5; --kite-tail: var(--kite-shade); }
+[data-skin='sky'] { --kite-body: #2a8fdf; --kite-shade: #1d79c4; --kite-tail: var(--kite-shade); }
+/* The logo stays rose whatever the kite wears; a live mark (the Settings preview) shows the kite's own color. */
+:root { --brand-body: #ff426f; --brand-shade: #e92c59; }
+
+.kite-canvas { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; visibility: hidden; }
+.kite-sail { fill: url(#kite-sail); stroke: var(--kite-halo); stroke-width: 2; stroke-linejoin: round; paint-order: stroke; vector-effect: non-scaling-stroke; }
+.kite-tail rect { fill: var(--kite-tail); stroke: var(--kite-halo); stroke-width: 1; paint-order: stroke; vector-effect: non-scaling-stroke; }
+/* The sail's gradient. Under reduced motion the colour ripple lifts its own colours toward white for a moment
+   (--kite-glint, 0–1, set by the loop); nothing filters the kite (design.md K-10). */
+.kite-glint-body { stop-color: color-mix(in srgb, var(--kite-body), #fff calc(var(--kite-glint, 0) * 35%)); }
+.kite-glint-shade { stop-color: color-mix(in srgb, var(--kite-shade), #fff calc(var(--kite-glint, 0) * 35%)); }
+/* Sail-native cues (design.md §K5.3, K-10): a capture's thin gold shutter ring; a muted tail, grey with a slash. */
+.kite-shutter { fill: none; stroke: var(--sun); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+.kite-tail.muted rect { fill: var(--kite-muted); }
+.kite-mute-slash path { fill: none; stroke: var(--kite-muted); stroke-width: 1.6; stroke-linecap: round; }
+.kite-mute-slash .halo { stroke: var(--kite-halo); stroke-width: 3.2; }
+.kite-handsoff { fill: none; stroke: var(--kite-shade); stroke-width: 1.4; vector-effect: non-scaling-stroke; paint-order: stroke; filter: drop-shadow(0 0 1px var(--kite-halo)); }
+/* The colour ripple (design.md §K5.4, K-09): a soft white band that the loop slides across the sail. */
+.kite-sheen { fill: url(#kite-sheen); pointer-events: none; }
+.kite-sheen-edge { stop-color: #fff; stop-opacity: 0; }
+.kite-sheen-band { stop-color: #fff; stop-opacity: .7; }
+.sail-mark { flex: none; display: inline-block; vertical-align: -.2em; }
+.sail-mark path { fill: var(--brand-body); }
+.sail-mark rect { fill: var(--brand-shade); }
+.sail-mark.live path { fill: var(--kite-body); }
+.sail-mark.live rect { fill: var(--kite-shade); }
+/* The live kite on onboarding's stage (design.md §K5.7, K-07). It draws in one layer over the window so it can fly
+   down to the practice canvas. On the stage it is always on deep ink, so it takes the light halo; the stage loop
+   places everything, including the tail dots, which are the microphone step's level meter (UX-62). */
+.kite-stage-layer { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2; visibility: hidden; }
+.kite-stage-string { fill: none; stroke: rgb(255 255 255 / .3); stroke-width: 1.2; stroke-dasharray: 1.5 6; stroke-linecap: round; transition: opacity .2s; }
+.kite-stage-sail { fill: url(#kite-stage-sail); stroke: rgb(255 255 255 / .35); stroke-width: 2; stroke-linejoin: round; paint-order: stroke; vector-effect: non-scaling-stroke; }
+.kite-stage-tail rect { fill: var(--kite-tail); }
+/* Off the stage, over the practice canvas, it takes the overlay kite's halo, and the string fades. */
+.kite-stage-layer.off-stage .kite-stage-sail { stroke: var(--kite-halo); }
+.kite-stage-layer.off-stage .kite-stage-string { opacity: 0; }
+/* The kite in High Contrast (docs/design.md §K5.8, K-16): the sail in CanvasText with a Highlight halo, the tail in CanvasText. */
+@media (forced-colors: active) {
+  .kite-sail, .kite-stage-sail { fill: CanvasText; stroke: Highlight; }
+  .kite-tail rect, .kite-stage-tail rect { fill: CanvasText; stroke: Highlight; }
+  .kite-tail.muted rect, .kite-mute-slash path { fill: GrayText; stroke: GrayText; }
+  .kite-mute-slash .halo { stroke: Canvas; }
+  .kite-shutter { stroke: Highlight; }
+  .kite-handsoff { stroke: Highlight; filter: none; }
+  .kite-sheen { display: none; }
+  .sail-mark path, .sail-mark rect, .sail-mark.live path, .sail-mark.live rect { fill: CanvasText; }
+  .kite-stage { background: Canvas; }
+  .kite-stage-string { stroke: GrayText; }
+}

@@ -1,8 +1,9 @@
 import { randomUUID } from 'node:crypto';
 import type { ApprovalCard, ToolDecision } from '../../shared/types';
+import type { TaskScope } from '../../shared/agent';
 export type ApprovalPolicy = { defaults: { info: boolean; action: boolean; 'sensitive-read': boolean }; tools: Record<string, boolean> };
 export const approvalPolicy: ApprovalPolicy = { defaults: { info: false, action: true, 'sensitive-read': true }, tools: { read_clipboard: true } };
-export function needsApproval(tool: { name: string; kind: 'info' | 'action' | 'sensitive-read'; approvalRequired?: boolean }, config = approvalPolicy) { if (['type_text', 'read_clipboard', 'write_clipboard', 'read_screen'].includes(tool.name)) return true; return tool.approvalRequired ?? config.tools[tool.name] ?? config.defaults[tool.kind]; }
+export function needsApproval(tool: { name: string; kind: 'info' | 'action' | 'sensitive-read'; approvalRequired?: boolean }, config = approvalPolicy) { if (['type_text', 'read_clipboard', 'write_clipboard', 'read_screen', 'show_me_how', 'do_task'].includes(tool.name)) return true; return tool.approvalRequired ?? config.tools[tool.name] ?? config.defaults[tool.kind]; }
 export function classifyApproval(text: string): 'approve' | 'deny' | 'new-request' {
   const s = text.toLowerCase().trim().replace(/[.!?,]+$/g, '').replace(/’/g, "'").replace(/\s+/g, ' ');
   if (/^(yes|yeah|yep|sure|do it|go ahead|okay|ok)( please)?$/.test(s)) return 'approve';
@@ -12,6 +13,8 @@ export function classifyApproval(text: string): 'approve' | 'deny' | 'new-reques
 interface Pending { card: ApprovalCard; settle: (decision: ToolDecision) => void }
 export class ApprovalBroker {
   private pending?: Pending;
+  /** The scope chosen with an approval ("this task" or "step by step"), read once by the tool session. */
+  private scopes = new Map<string, TaskScope>();
   constructor(private present: (card: ApprovalCard) => void, private decided: (card: ApprovalCard, decision: ToolDecision) => void, private timeoutMs = 30000) {}
   get current() { return this.pending?.card; }
   request(toolName: string, summary: string, input: unknown, dryRun: boolean, signal: AbortSignal): Promise<ToolDecision> {
@@ -29,9 +32,11 @@ export class ApprovalBroker {
       this.pending = { card, settle }; signal.addEventListener('abort', abort, { once: true }); this.present(card);
     });
   }
-  decide(id: string, approved: boolean) {
+  decide(id: string, approved: boolean, scope?: TaskScope) {
     if (!this.pending || this.pending.card.approvalId !== id) return false;
+    if (approved && scope) this.scopes.set(id, scope);
     this.pending.settle(Date.now() >= this.pending.card.expiresAt ? 'timeout' : approved ? 'approved' : 'denied'); return true;
   }
   deny() { this.pending?.settle('denied'); }
+  takeScope(id: string | undefined) { const scope = id ? this.scopes.get(id) : undefined; if (id) this.scopes.delete(id); return scope; }
 }
