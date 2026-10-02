@@ -75,22 +75,27 @@ export function memoryContext(facts: MemoryFact[]): string {
 }
 
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-/** A pattern that finds a saved value as people write it: phone digits with spaces, dashes or +91; words with any spacing. */
-function valuePattern(fact: Pick<MemoryFact, 'key' | 'value'>): RegExp | null {
+/**
+ * Patterns that find a saved value as people write it: phone digits with spaces, dashes or +91; words with any spacing.
+ * `whole` also takes back-to-back copies (a field typed into twice: "Baner RoadBaner Road"), which `one` then replaces
+ * one by one; the edges still can't touch a longer word or number.
+ */
+function valuePattern(fact: Pick<MemoryFact, 'key' | 'value'>): { whole: RegExp; one: RegExp } | null {
   const value = fact.value.trim();
   const digits = value.replace(/^\+?91[\s-]*(?=\d{10}$)/, '').replace(/[\s-]/g, '');
   if (/^\d{4,}$/.test(digits)) {
-    const body = digits.split('').join('[\\s-]?');
-    return new RegExp(`(?<!\\d)${digits.length === 10 ? '(?:\\+?91[\\s-]?)?' : ''}${body}(?!\\d)`, 'g');
+    const body = `${digits.length === 10 ? '(?:\\+?91[\\s-]?)?' : ''}${digits.split('').join('[\\s-]?')}`;
+    return { whole: new RegExp(`(?<!\\d)(?:${body})+(?!\\d)`, 'g'), one: new RegExp(body, 'g') };
   }
   if (value.length < 4) return null;
-  return new RegExp(`(?<![\\p{L}\\p{N}])${value.split(/\s+/).map(escape).join('[\\s,]+')}(?![\\p{L}\\p{N}])`, 'giu');
+  const body = value.split(/\s+/).map(escape).join('[\\s,]+');
+  return { whole: new RegExp(`(?<![\\p{L}\\p{N}])(?:${body})+(?![\\p{L}\\p{N}])`, 'giu'), one: new RegExp(body, 'giu') };
 }
 /** Replace every sensitive saved value in text with its placeholder. Longest values first, so a line isn't half-replaced. */
 export function redactor(facts: MemoryFact[]): (text: string) => string {
   const patterns = facts.filter(sensitive).sort((a, b) => b.value.length - a.value.length)
-    .map(f => ({ key: f.key, pattern: valuePattern(f) })).filter((p): p is { key: string; pattern: RegExp } => !!p.pattern);
-  return text => patterns.reduce((out, { key, pattern }) => out.replace(pattern, `{{${key}}}`), text);
+    .map(f => ({ key: f.key, pattern: valuePattern(f) })).filter((p): p is { key: string; pattern: { whole: RegExp; one: RegExp } } => !!p.pattern);
+  return text => patterns.reduce((out, { key, pattern }) => out.replace(pattern.whole, copies => copies.replace(pattern.one, `{{${key}}}`)), text);
 }
 /** Placeholders replaced by their saved values, when the step runs; any that aren't saved are listed. */
 export function fillPlaceholders(text: string, lookup: (key: string) => string | null): { text: string; missing: string[] } {

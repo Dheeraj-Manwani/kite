@@ -41,6 +41,11 @@ test('redaction finds saved values as people write them, and nothing else', () =
   assert.equal(redact('order 14110459 and ₹411045000'), 'order 14110459 and ₹411045000', 'not inside longer numbers');
   assert.equal(redact('Email asha.k@example.com'), 'Email {{profile.email}}');
   assert.equal(redact('Pune is lovely'), 'Pune is lovely');
+  // A field typed into twice (seen live: the area field held "Baner RoadBaner Road", and both copies reached the model).
+  const typedTwice = redactor([...me(), fact('home.line2', 'Baner Road')]);
+  assert.equal(typedTwice('Area: Baner RoadBaner Road'), 'Area: {{home.line2}}{{home.line2}}');
+  assert.equal(typedTwice('Pincode: 411045411045, phone 98765432109876543210'), 'Pincode: {{home.pincode}}{{home.pincode}}, phone {{profile.phone}}{{profile.phone}}');
+  assert.equal(typedTwice('Baner Roadside and 4110451'), 'Baner Roadside and 4110451', 'still not inside longer words or numbers');
 });
 
 test('placeholders are filled by code and described in words on the card', () => {
