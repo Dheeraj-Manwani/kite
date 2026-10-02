@@ -98,6 +98,11 @@ for(const decision of ['approved','denied','timeout']) test(`AI SDK approval loo
   assert.equal(h.effects,decision==='approved'?1:0);assert.equal(h.cards.length,1);assert.equal(h.rows.length,1);assert.equal(h.rows[0].decision,decision);assert.equal(result.calls.length,2);
   assert.ok(JSON.stringify(result.calls[1].prompt).includes(decision==='approved'?'Copied the text':'denied'));
 });
+test('AI SDK loop reports each model call: tools called, invalid inputs, output tokens',async()=>{
+  const h=harness();const steps=[];h.session.options.step=s=>steps.push(s);
+  await run(h,[[call('1','get_datetime',{}),call('2','write_clipboard',{wrong:true})],textParts('Okay.')]);
+  assert.deepEqual(steps,[{tools:['get_datetime','write_clipboard'],invalid:['write_clipboard'],outputTokens:1},{tools:[],invalid:[],outputTokens:1}]);
+});
 test('AI SDK action budget is global for parallel and subsequent calls',async()=>{
   const h=harness();const r=await run(h,[[call('1'),call('2'),call('3'),call('4')],textParts('Done.')]);
   assert.equal(h.effects,3);assert.equal(h.cards.length,3);assert.equal(h.rows[3].decision,'denied');assert.match(r.result,/action limit/);

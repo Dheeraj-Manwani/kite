@@ -1,6 +1,8 @@
 import { streamText, stepCountIs, type ModelMessage, type LanguageModel } from 'ai';
 import type { ToolSession } from '../tools/registry';
 class BudgetError extends Error {}
+/** Output budget per voice-turn model call: whiteboard lessons and task plans are tool arguments; spoken replies stay short by instruction. */
+export const voiceOutputTokens = 4096;
 export async function runAgentLoop(options: {
   model: LanguageModel; system: string; messages: ModelMessage[]; signal: AbortSignal; onDelta(text: string): void;
   session: ToolSession; providerOptions?: Parameters<typeof streamText>[0]['providerOptions'];
@@ -12,16 +14,17 @@ export async function runAgentLoop(options: {
     while (calls < 4 && !options.signal.aborted) {
       const requests: { approvalId: string; toolCall: { toolCallId: string; toolName: string; input: unknown } }[] = [];
       const result = streamText({ model: options.model, system: options.system, messages, tools, maxRetries: 0, abortSignal: options.signal,
-        // Whiteboard lessons and task plans are tool arguments; spoken replies stay short by instruction.
-        maxOutputTokens: 4096, providerOptions: options.providerOptions, onError: () => undefined,
+        maxOutputTokens: voiceOutputTokens, providerOptions: options.providerOptions, onError: () => undefined,
         stopWhen: [stepCountIs(4), () => calls >= 4, () => options.session.hasImages],
         prepareStep: () => { if (calls >= 4) throw new BudgetError(); calls++; options.session.modelCalls = calls; return {}; },
       });
+      let step = { tools: [] as string[], invalid: [] as string[] };
       for await (const part of result.fullStream) {
         if (part.type === 'error') throw part.error;
         if (part.type === 'text-delta') append(part.text);
-        if (part.type === 'tool-call') options.session.observe(part.toolCallId, part.toolName, part.input);
-        if (part.type === 'tool-error') options.session.invalid(part.toolCallId, part.toolName, part.input);
+        if (part.type === 'tool-call') { options.session.observe(part.toolCallId, part.toolName, part.input); step.tools.push(part.toolName); }
+        if (part.type === 'tool-error') { options.session.invalid(part.toolCallId, part.toolName, part.input); step.invalid.push(part.toolName); }
+        if (part.type === 'finish-step') { options.session.stepDone({ ...step, outputTokens: part.usage.outputTokens }); step = { tools: [], invalid: [] }; }
         if (part.type === 'tool-approval-request') requests.push(part);
       }
       options.signal.throwIfAborted(); messages.push(...(await result.response).messages);

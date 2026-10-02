@@ -264,6 +264,33 @@ test('the service owns one lesson, answers commands locally, and gives the model
   assert.equal(service.start(demoLesson).ok, false); assert.equal(service.context(), undefined);
 });
 
+test('the lesson log: time to first stroke from the model request, lint counts, and token use; no lesson content', () => {
+  const views = [], spoken = [], logs = []; let now = 1000;
+  const service = new BoardService({ enabled: () => true, speed: () => 1, silence: () => {}, now: () => now, log: (event, data) => logs.push([event, data]),
+    speak: (text, hooks) => { spoken.push(hooks); return true; }, emit: v => views.push(v) });
+  service.start(demoLesson, { requestedAt: 400 });
+  const first = views.at(-1).stats;
+  assert.equal(first.firstStrokeMs, undefined, 'nothing drawn until the first beat is heard');
+  assert.equal(first.beats, demoLesson.beats.length); assert.ok(first.elements > 0);
+  assert.deepEqual(Object.keys(first.lint), ['overlaps', 'overflow', 'through', 'crossings', 'textOnLines', 'minTextPx']);
+  now = 3400; spoken.at(-1).started();
+  assert.equal(views.at(-1).stats.firstStrokeMs, 3000);
+  now = 9000; spoken.at(-1).done('spoken');
+  assert.equal(views.at(-1).stats.firstStrokeMs, 3000, 'measured once per lesson');
+  service.usage(1234, 1);
+  assert.equal(views.at(-1).stats.outputTokens, 1234); assert.equal(views.at(-1).stats.repairs, 1);
+  const logged = logs.filter(([event]) => event === 'board:lesson');
+  assert.equal(logged.length, 2);
+  assert.ok(!JSON.stringify(logged).includes('kite'), 'the log holds numbers, never board text');
+  // A follow-up is measured on its own, against the board it adds to.
+  service.start({ title: 'More', mode: 'add', beats: [{ say: 'Extra.', draw: [{ id: 'note', type: 'text', x: 60, y: 840, text: 'Extra' }] }] }, { requestedAt: 9000 });
+  now = 9500; spoken.at(-1).started();
+  const follow = views.at(-1).stats;
+  assert.equal(follow.firstStrokeMs, 500); assert.equal(follow.beats, 1); assert.ok(follow.elements > first.elements, 'lint covers the whole board');
+  assert.equal(follow.outputTokens, undefined); assert.equal(follow.repairs, 0);
+  service.close();
+});
+
 test('explain_on_whiteboard validates elements, summarizes deterministically, never asks, and honors dry run', async () => {
   let started;
   const tool = explainOnWhiteboard(l => { started = l; return { ok: true, message: 'open' }; });

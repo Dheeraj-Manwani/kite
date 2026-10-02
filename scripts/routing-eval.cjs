@@ -3,15 +3,13 @@
 // One model call per request with Kite's real system prompt, idle context and tool definitions; nothing runs.
 // Usage: npm run eval:routing -- [provider:model] [--runs N] [--concurrency N]
 // Key: <PROVIDER>_API_KEY in the environment or in .env (KIMI_, GEMINI_ and GROK_ are accepted too).
-require('../tests/register.cjs');
-const fs = require('node:fs'), path = require('node:path');
+const { envNames, keyFor, voiceDefinitions, pool } = require('./eval-common.cjs');
 const { generateText, tool, stepCountIs } = require('ai');
 const { describeModel } = require('../src/main/ai/catalog.ts');
 const { getModel } = require('../src/main/ai/providers.ts');
 const { providerOptionsFor } = require('../src/main/ai/ask.ts');
 const { buildSystemPrompt } = require('../src/main/ai/systemPrompt.ts');
 const { routingHints } = require('../src/main/ai/routing.ts');
-const impl = name => require(`../src/main/tools/impl/${name}.ts`);
 
 // Errands Kite should start as a task in the browser, stopping wherever the user must take over. `needs`: the request
 // lacks something only the user knows (until memory exists), so one short question instead of a task also passes.
@@ -38,11 +36,8 @@ function arg(name, fallback) { const i = process.argv.indexOf(name); return i > 
 const [provider, ...rest] = (process.argv.slice(2).find(a => a.includes(':')) ?? 'deepseek:deepseek-flash').split(':');
 const model = describeModel({ provider, id: rest.join(':') });
 const runs = Number(arg('--runs', 1)), concurrency = Number(arg('--concurrency', 8));
-const envNames = { deepseek: ['DEEPSEEK_API_KEY'], moonshot: ['MOONSHOT_API_KEY', 'KIMI_API_KEY'], google: ['GOOGLE_API_KEY', 'GEMINI_API_KEY'],
-  groq: ['GROQ_API_KEY', 'GROK_API_KEY'], openai: ['OPENAI_API_KEY'], anthropic: ['ANTHROPIC_API_KEY'] }[provider] ?? [];
-const dotenv = (() => { try { return fs.readFileSync(path.join(__dirname, '..', '.env'), 'utf8'); } catch { return ''; } })();
-const key = envNames.map(n => process.env[n] ?? dotenv.match(new RegExp(`^${n}=(.*)$`, 'm'))?.[1]?.trim()).find(Boolean);
-if (!key) { console.error(`No key: set ${envNames.join(' or ')}.`); process.exit(2); }
+const key = keyFor(provider);
+if (!key) { console.error(`No key: set ${(envNames[provider] ?? []).join(' or ')}.`); process.exit(2); }
 
 // One remembered order, as memory holds it after phase 4, so "again" has something to repeat.
 const { orderValue, pastOrders } = require('../src/shared/orders.ts');
@@ -51,14 +46,7 @@ const orderFact = { id: 1, kind: 'order', key: 'order.shop-amul-com-a1', label: 
   value: orderValue({ items: ['Amul Whey Protein, 60 sachets, Unflavoured'], total: '₹2,149', site: 'shop.amul.com', payment: 'Cash on delivery', number: 'A1-2290', when: 'Friday' }) };
 const past = pastOrders([orderFact]);
 // The tool set and context of an idle voice turn with guide, whiteboard and computer use on (voice/service.ts).
-const ok = { ok: true, message: '' }, noop = async () => '';
-const store = {}, definitions = [impl('get_datetime').getDatetime, impl('open_app').openApp([], noop), impl('open_url').openUrl(noop),
-  impl('web_search').webSearch('google', noop), impl('type_text').typeText({}, () => {}), impl('read_clipboard').readClipboard(noop),
-  impl('write_clipboard').writeClipboard(noop), impl('set_timer').setTimer(store), impl('set_reminder').setReminder(store),
-  impl('list_reminders').listReminders(store), impl('cancel_reminder').cancelReminder(store), impl('create_note').createNote('', noop),
-  impl('show_me_how').showMeHow(() => ok), impl('explain_on_whiteboard').explainOnWhiteboard(() => ok),
-  impl('do_task').doTask(() => ok, model.supportsVision), impl('reorder').reorder({ orders: () => past, handsOver: () => false, address: () => null, start: () => ok }),
-  ...(model.supportsVision ? [impl('read_screen').readScreen(false, async () => ok)] : [])];
+const definitions = voiceDefinitions(model, { orders: past });
 // get_datetime needs no approval, so the real loop runs it and carries on; every other call ends the turn here.
 const tools = Object.fromEntries(definitions.map(d => [d.name, tool({ description: d.description, inputSchema: d.inputSchema,
   ...(d.name === 'get_datetime' ? { execute: async () => (await d.execute({}, { signal: new AbortController().signal })).data ?? {} } : {}) })]));
@@ -75,12 +63,9 @@ async function route(text) {
 }
 (async () => {
   const cases = [...jobs.map(c => ({ ...c, job: true })), ...repeats.map(text => ({ text, job: true, repeat: true })), ...questions.map(text => ({ text, job: false }))].flatMap(c => Array.from({ length: runs }, () => c));
-  const results = new Array(cases.length); let next = 0;
-  await Promise.all(Array.from({ length: Math.min(concurrency, cases.length) }, async () => {
-    for (let i = next++; i < cases.length; i = next++) {
-      try { results[i] = { ...cases[i], ...(await route(cases[i].text)) }; } catch (error) { results[i] = { ...cases[i], error: String(error?.statusCode ?? error?.message ?? error).slice(0, 120) }; }
-    }
-  }));
+  const results = await pool(cases, concurrency, async c => {
+    try { return { ...c, ...(await route(c.text)) }; } catch (error) { return { ...c, error: String(error?.statusCode ?? error?.message ?? error).slice(0, 120) }; }
+  });
   const started = r => (r.tool === 'do_task' || r.tool === 'reorder') && !r.invalid;
   const verdict = r => r.error ? false : r.repeat ? r.tool === 'reorder' && !r.invalid : r.job ? started(r) || (!!r.needs && r.asked && !r.refused) : !started(r);
   for (const r of results) {

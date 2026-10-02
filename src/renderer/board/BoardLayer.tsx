@@ -1,6 +1,6 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { SailMark } from '../kite/SailMark';
-import { boardColors, canvas, elementBounds, elementsAt, fitView, lineHeight, sceneBounds, type BoardAction, type BoardView, type LaidElement, type TextBlock } from '../../shared/board';
+import { boardColors, canvas, elementBounds, elementsAt, fitView, lineHeight, panelChrome, panelSize, panelViewport, sceneBounds, type BoardAction, type BoardView, type LaidElement, type TextBlock } from '../../shared/board';
 import type { ScreenBounds } from '../../shared/types';
 import { cursorInput } from '../kite/useKiteLoop';
 import { runtime } from '../kite/runtime';
@@ -11,7 +11,6 @@ import { BoardPlayer } from './player';
 import { boardRuntime } from './runtime';
 import { exportPng } from './export';
 export const boardFont = `'Ink Free', 'Segoe Print', 'Comic Sans MS', cursive`;
-const header = 46, footer = 58;
 type Camera = { scale: number; x: number; y: number };
 /** Written line by line; the player clips each line while it is being "handwritten". */
 function Lines({ block, color, clip, order }: { block: TextBlock; color: string; clip: string; order: number }) {
@@ -45,7 +44,7 @@ const Element = memo(function Element({ e, prefix }: { e: LaidElement; prefix: s
 function initialFrame(): ScreenBounds {
   const g = cursorInput.geometry, origin = g?.origin ?? { x: 0, y: 0 };
   const d = g ? { x: g.display.x - origin.x, y: g.display.y - origin.y, width: g.display.width, height: g.display.height } : { x: 0, y: 0, width: innerWidth, height: innerHeight };
-  const width = Math.round(Math.min(1180, d.width * 0.74)), height = Math.round(Math.min(760, d.height * 0.78));
+  const { width, height } = panelSize(d);
   return { x: Math.round(d.x + (d.width - width) / 2), y: Math.round(d.y + Math.max(24, (d.height - height) / 2 - 16)), width, height };
 }
 const onScreen = (f: ScreenBounds) => f.x + f.width > 40 && f.y + 20 > 0 && f.x < innerWidth - 40 && f.y < innerHeight - 40;
@@ -63,6 +62,7 @@ export function BoardLayer() {
   useEffect(() => {
     const off = window.kite.onBoardEvent(next => {
       const before = current.current; current.current = next;
+      if (next?.stats) boardRuntime.stats = next.stats;
       if (next && before?.id !== next.id) { react('perk'); setFrame(f => f && onScreen(f) ? f : initialFrame()); setCamera(null); }
       if (next?.status === 'done' && before?.status !== 'done') react('success');
       if (!next) player.current.cancel();
@@ -76,8 +76,8 @@ export function BoardLayer() {
     };
     return () => { off(); player.current.cancel(); boardRuntime.tick = null; boardRuntime.pen = null; boardRuntime.rest = null; boardRuntime.hit = null; boardRuntime.frame = null; window.kite.setBoardBounds(null); };
   }, []);
-  const restPoint = () => { const f = boardRuntime.frame; return f ? { x: f.x + 60, y: f.y + header + 40 } : null; };
-  const viewport = frame ? { width: frame.width, height: Math.max(80, frame.height - header - footer) } : { width: 1, height: 1 };
+  const restPoint = () => { const f = boardRuntime.frame; return f ? { x: f.x + 60, y: f.y + panelChrome.header + 40 } : null; };
+  const viewport = frame ? panelViewport(frame) : { width: 1, height: 1 };
   const elements = view?.elements ?? [];
   const auto = useMemo(() => fitView(sceneBounds(elements), viewport, 40), [elements, viewport.width, viewport.height]);
   const cam = camera ?? auto;

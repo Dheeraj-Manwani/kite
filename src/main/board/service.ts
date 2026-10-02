@@ -1,4 +1,5 @@
-import { classifyBoardCommand, describeScene, layoutScene, markLabel, type BoardAction, type BoardView, type LessonInput } from '../../shared/board';
+import { classifyBoardCommand, describeScene, layoutScene, markLabel, type BoardAction, type BoardView, type ElementInput, type LessonInput, type LessonStats } from '../../shared/board';
+import { lessonMetrics } from '../../shared/boardMetrics';
 import type { ToolResult } from '../tools/types';
 import { BoardSession, type BoardSessionDeps } from './session';
 import { routingHints } from '../ai/routing';
@@ -7,16 +8,23 @@ export interface BoardServiceDeps extends Omit<BoardSessionDeps, 'emit'> {
   enabled(): boolean;
   /** Called when a lesson opens, so a guide or task that also moves the kite can yield. */
   opened?(): void;
+  now?(): number;
 }
 /** Owns the one whiteboard lesson on screen and answers its voice commands locally. */
 export class BoardService {
   private session?: BoardSession;
   private sequence = 0;
+  /** The latest lesson's numbers for the dev panel, and when its model request began (until the first stroke). */
+  private stats?: LessonStats;
+  private requestedAt?: number;
   constructor(private deps: BoardServiceDeps) {}
+  private now() { return this.deps.now?.() ?? performance.now(); }
   get active() { return !!this.session && !this.session.ended; }
-  start(lesson: LessonInput): ToolResult {
+  /** `requestedAt`: when the model request that wrote this lesson began (performance.now()), for the time to first stroke. */
+  start(lesson: LessonInput, meta: { requestedAt?: number } = {}): ToolResult {
     if (!this.deps.enabled()) return { ok: false, message: 'The whiteboard is turned off in Settings.' };
     const current = this.active ? this.session : undefined;
+    this.measure(lesson, lesson.mode === 'add' && current ? current.inputs() : [], meta.requestedAt);
     if (lesson.mode === 'add' && current) {
       current.insert(lesson.beats);
       this.deps.log?.('board:add', { count: lesson.beats.length });
@@ -28,7 +36,7 @@ export class BoardService {
       emit: view => {
         if (this.session !== session) return;
         if (view === null) this.session = undefined;
-        this.deps.emit(view);
+        this.deps.emit(view && this.annotate(view));
       },
       speak: (text, hooks) => this.session === session && this.deps.speak(text, hooks),
       silence: () => { if (this.session === session) this.deps.silence(); },
@@ -38,6 +46,28 @@ export class BoardService {
     this.deps.log?.('board:start', { count: lesson.beats.length });
     session.start();
     return { ok: true, message: 'The whiteboard is open. Kite is drawing each beat and narrating it itself. Reply with one short sentence such as "Let me sketch it out." Do not repeat or list the narration.' };
+  }
+  private measure(lesson: LessonInput, base: ElementInput[], requestedAt: number | undefined) {
+    const m = lessonMetrics(lesson.beats, base);
+    this.stats = { repairs: 0, beats: m.beats, elements: m.elements,
+      lint: { overlaps: m.overlaps, overflow: m.overflow, through: m.through, crossings: m.crossings, textOnLines: m.textOnLines, minTextPx: m.minTextPx } };
+    this.requestedAt = requestedAt;
+  }
+  /** Every view carries the lesson's stats; the first one that draws stops the first-stroke clock. */
+  private annotate(view: BoardView): BoardView {
+    if (!this.stats) return view;
+    if (view.drawing && this.requestedAt !== undefined) {
+      this.stats = { ...this.stats, firstStrokeMs: Math.round(this.now() - this.requestedAt) }; this.requestedAt = undefined;
+      this.deps.log?.('board:lesson', { ...this.stats });
+    }
+    return { ...view, stats: this.stats };
+  }
+  /** Token use of the model calls that wrote the latest lesson, known once its call has finished. */
+  usage(outputTokens: number | undefined, repairs: number) {
+    if (!this.stats) return;
+    this.stats = { ...this.stats, outputTokens, repairs };
+    this.deps.log?.('board:lesson', { ...this.stats });
+    this.refresh();
   }
   /** A voice utterance while a board is open. Returns the spoken reply, or undefined to use the model. */
   command(text: string): string | undefined {

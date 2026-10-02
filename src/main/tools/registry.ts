@@ -11,7 +11,10 @@ export interface ToolSessionOptions {
   imageToolResults?: boolean;
   definitions: ToolDefinition[]; broker: ApprovalBroker; audit: AuditStore; messageId: number | null; context: ToolContext;
   activity(): void; changed(): void; event(type: 'tool:executing' | 'tool:result', toolName: string, result?: ToolResult): void;
+  /** After each model call: the tools it called, those whose input was invalid, and its output tokens. */
+  step?(step: ModelStep): void;
 }
+export interface ModelStep { tools: string[]; invalid: string[]; outputTokens?: number }
 export class ToolSession {
   private images: Uint8Array[] = [];
   get hasImages() { return this.images.length > 0; }
@@ -37,6 +40,7 @@ export class ToolSession {
     call.finished = true;
     this.options.audit.finishTool(call.row, call.decision, result ? { ...result, image: undefined } : null, error, performance.now() - call.started); this.options.changed();
   }
+  stepDone(step: ModelStep) { this.options.step?.(step); }
   invalid(id: string, name: string, input: unknown) { const call = this.observe(id, name, input); if (!call.finished) this.finish(call, null, 'Invalid tool name or arguments; nothing ran.'); }
   async approve(id: string, name: string, input: unknown, budgetAvailable: boolean) {
     const call = this.observe(id, name, input); const def = this.options.definitions.find(d => d.name === name);

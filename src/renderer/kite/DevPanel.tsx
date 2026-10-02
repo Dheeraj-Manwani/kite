@@ -6,7 +6,16 @@ import { runtime } from './runtime';
 import { cursorInput } from './useKiteLoop';
 import type { OneShot } from './behaviors';
 import { voiceRuntime } from '../voice/runtime';
+import { boardRuntime } from '../board/runtime';
+import type { LessonStats } from '../../shared/board';
 
+/** One line per whiteboard lesson: how fast and how tidy it was. Numbers only, never lesson content. */
+export function lessonLine(s: LessonStats | null) {
+  if (!s) return 'No whiteboard lesson yet';
+  const l = s.lint, n = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
+  return `Lesson: first stroke ${s.firstStrokeMs === undefined ? '—' : (s.firstStrokeMs / 1000).toFixed(1) + ' s'} · ${s.outputTokens === undefined ? '—' : s.outputTokens.toLocaleString('en-US')} tokens · ${n(s.repairs, 'repair')} · ${n(s.beats, 'beat')}, ${n(s.elements, 'element')}`
+    + ` · lint: ${n(l.overlaps, 'overlap')}, ${l.overflow} overflow, ${l.through} through, ${n(l.crossings, 'crossing')}, ${l.textOnLines} on lines · smallest text ${l.minTextPx === null ? '—' : l.minTextPx + ' px'}`;
+}
 const sliders = [
   { key: 'stiffness', label: 'Spring stiffness', min: 100, max: 700, step: 10 },
   { key: 'damping', label: 'Damping', min: 10, max: 50, step: 1 },
@@ -37,7 +46,7 @@ export default function DevPanel() {
   const [captureResult, setCaptureResult] = useState('');
   const [position, setPosition] = useState({ x: 20, y: 20 });
   const panel = useRef<HTMLElement>(null), stats = useRef<HTMLOutputElement>(null);
-  const timing = useRef<HTMLOutputElement>(null);
+  const timing = useRef<HTMLOutputElement>(null), lesson = useRef<HTMLOutputElement>(null);
   const mood = useKiteStore(state => state.mood);
   useEffect(() => window.kite.onDevPanelToggle(() => {
     const geometry = cursorInput.geometry;
@@ -64,6 +73,7 @@ export default function DevPanel() {
     window.addEventListener('resize', report);
     const timer = setInterval(() => {
       if (stats.current) stats.current.textContent = `${runtime.fps} FPS · ${runtime.behavior}`;
+      if (lesson.current) lesson.current.textContent = lessonLine(boardRuntime.stats);
       if (timing.current) {
         const t = voiceRuntime.timing;
         timing.current.textContent = t ? `Capture ${Math.round(t.captureMs ?? 0)}ms · STT ${Math.round(t.transcribeMs)}ms · first token ${Math.round(t.firstTokenMs)}ms · total ${Math.round(t.totalMs)}ms · first audio ${t.ttsFirstAudioMs === undefined ? '—' : Math.round(t.ttsFirstAudioMs) + 'ms'} · voice-to-voice ${t.voiceToVoiceMs === undefined ? '—' : Math.round(t.voiceToVoiceMs) + 'ms'} · avg (20) ${voiceRuntime.voiceAverageMs === undefined ? '—' : Math.round(voiceRuntime.voiceAverageMs) + 'ms'}` : 'Hold Ctrl + Win to speak';
@@ -83,6 +93,7 @@ export default function DevPanel() {
     <details><summary>Perf</summary>{perf&&<output>Main {perf.mainMB.toFixed(1)} MB · renderer {perf.rendererMB.toFixed(1)} MB · all processes {perf.totalMB.toFixed(1)} MB · CPU {perf.cpu.toFixed(2)}% · frame work {runtime.frameMs.toFixed(2)} ms · voice median {perf.voiceMedianMs===null?'no samples':Math.round(perf.voiceMedianMs)+' ms'} ({perf.voiceSamples})</output>}</details>
     <output ref={stats}>Measuring FPS…</output>
     <output ref={timing}>Hold Ctrl + Win to speak</output>
+    <output ref={lesson}>{lessonLine(boardRuntime.stats)}</output>
     <div className="dev-buttons">
       <button onClick={() => window.kite.openSettings()}>API keys</button>
       <button onClick={() => { void window.kite.testCapture().then(result => { setCaptureResult(result.ok ? `Saved test capture: ${result.path}` : result.error); }); }}>Test capture (save PNG)</button>

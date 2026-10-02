@@ -26,7 +26,15 @@ The model plans the whole lesson in one `explain_on_whiteboard` call: a title an
 
 The lesson text goes only to your configured model, as part of the conversation. The board is excluded from Kite's own screen captures. Nothing is saved unless you press Save.
 
+## Measuring
+
+`src/shared/boardMetrics.ts` scores a board as numbers: colliding elements, labels that don't fit their shape (or had a word split), arrows and lines through shapes they don't connect, crossing arrows, free text lying on a line, and the smallest text on screen in the default panel on a 1080p display. The harness and the dev panel both use it.
+
+- **Harness:** `npm run eval:board` runs the 60 golden prompts in `scripts/board-eval/prompts.json`, with their follow-ups, through a real voice turn on each model with a key. It records parse success, repairs, time to the first token, to the first complete beat (when streaming could start drawing), and to the valid lesson call (when today's Kite starts drawing), plus output tokens and the metrics. Results go to `docs/performance/whiteboard/latest.json`, merged by model. Then `npm run eval:board:gallery` renders every finished board through the overlay renderer and writes `docs/performance/whiteboard/index.html`. See [the baseline](performance/whiteboard/README.md).
+- **Dev panel:** one line for the latest lesson, with the time from the model request to the first stroke, output tokens, repairs, and lint counts. It holds numbers only, never lesson text; the same numbers are logged as `board:lesson`.
+
 ## Verification
 
+- `npm test` (`tests/board-metrics.test.cjs`): each metric on small boards, nesting and containers, the 1080p text size, and per-beat counts for follow-ups.
 - `npm test` (`tests/board.test.cjs`): layout, text wrapping, arrow binding and label placement at every angle, parallel arrows, beats that add, replace, and erase, deterministic rough strokes and hatching, commands, the lesson state machine (speech and drawing sync, no voice, cut and failed speech, next/repeat/replay, follow-up insertion), the service's model context and marks, tool validation, and announcement hooks.
 - `npm run test:renderer` (after a build): drawing stroke by stroke, the kite flying to the pen, highlight rings, nothing left half drawn, PNG export, and the board controls.

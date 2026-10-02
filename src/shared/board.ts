@@ -225,6 +225,16 @@ export function sceneBounds(elements: LaidElement[]): ScreenBounds | null {
   const x = Math.min(...boxes.map(b => b.x)), y = Math.min(...boxes.map(b => b.y));
   return { x, y, width: Math.max(...boxes.map(b => b.x + b.width)) - x, height: Math.max(...boxes.map(b => b.y + b.height)) - y };
 }
+/** The board panel's chrome (header and caption footer) in screen px. */
+export const panelChrome = { header: 46, footer: 58 };
+/** Default panel size on a display: what a new lesson opens at. */
+export function panelSize(display: { width: number; height: number }) {
+  return { width: Math.round(Math.min(1180, display.width * 0.74)), height: Math.round(Math.min(760, display.height * 0.78)) };
+}
+/** The drawing area inside a panel of this size. */
+export function panelViewport(panel: { width: number; height: number }) {
+  return { width: panel.width, height: Math.max(80, panel.height - panelChrome.header - panelChrome.footer) };
+}
 /**
  * The camera: board units shown in a viewport, always including the full canvas so early beats do not
  * zoom in wildly, and growing to include anything drawn outside it.
@@ -278,6 +288,18 @@ export interface BoardView {
   highlight: string[];
   /** A prompt shown instead of the caption, e.g. while paused. */
   note: string | null;
+  /** Numbers about how this lesson was made (dev panel); never lesson content. */
+  stats?: LessonStats;
+}
+export interface LessonStats {
+  /** From the model request to the first stroke on the board. */
+  firstStrokeMs?: number;
+  /** Output tokens of the model calls that wrote the lesson, including rejected attempts. */
+  outputTokens?: number;
+  /** Lesson calls rejected as invalid before this one. */
+  repairs: number;
+  beats: number; elements: number;
+  lint: { overlaps: number; overflow: number; through: number; crossings: number; textOnLines: number; minTextPx: number | null };
 }
 export const boardActions = ['pause', 'resume', 'next', 'repeat', 'replay', 'close'] as const;
 export type BoardAction = typeof boardActions[number];
