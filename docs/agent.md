@@ -41,6 +41,8 @@ A task in a browser ("buy me 60 sachets of protein") is a **job** ([end-to-end-j
 - **Kite checks out** when you say "you do it": address (from memory, or it asks), delivery, and the payment method you name, without asking at each step. The button that places the order always gets a card with the total, address and payment read from the page, unless Spend money is Allow and the total is within your limit.
 - **You pay.** Kite never types passwords, card numbers, CVVs, OTPs or PINs. When the page waits for your UPI or OTP approval, the card says **Your turn** and Kite watches the page (say "I've paid" to make it look now). It says "Ordered" only when it reads an order number, and saves the order to Memory.
 - **In the background.** The site opens in a new tab, leaving your tab alone. Fields are filled and buttons clicked through UI Automation, which works while you use another app; only Enter and shortcuts need the browser in front.
+- **Again.** "Order my protein again" shows the remembered order on one card ("Same as last time: …, about ₹2,149, …?"). Yes covers the rest unless the cart differs or the price moved by more than 10%, and then Kite asks and says why ([ADR 017](adr/017-repeat-orders.md)). Any order costing more than 1.5× the last time asks before it's placed.
+- **Learning.** After you've said yes three times to the same kind of step on the same site, Kite offers once to stop asking there.
 - **Budgets.** About 12 steps to find, 6 to choose, 6 for the cart; past a phase's budget Kite asks "keep going?". At most 45 steps and 20 minutes.
 
 ## Memory
@@ -61,6 +63,7 @@ Kite remembers your details so the next errand needs fewer questions ([ADR 015](
 
 ## Verification
 
+- `npm test` (`tests/repeat.test.cjs`): order history read back, finding the order a phrase means, the reorder card, a repeat with exactly one question end to end, a moved price or different cart asking again, the 1.5× price check, and "stop asking?" once after three yeses. `npm run test:job -- N --repeat` repeats an order live.
 - `npm test` (`tests/checkout.test.cjs`): who checks out under each setting, "you do it" without a question per step, the Place order card, hands-off within and above the limit, the payment wait and its timeout, the order read back, and the readers. `npm run test:job -- [runs] --checkout [--upi]` places whole orders on Kite Test Mart live.
 - `npm test` (`tests/memory.test.cjs`): never-save patterns, masks, redaction, placeholders, facts from answers, matching, the encrypted store with Undo and the switch, the chat tools, and a scripted checkout where no prompt carries a saved value. `npm run test:job -- 2 --memory` does it live.
 - `npm test` (`tests/permissions.test.cjs`): every category × mode, the floor, rules per site and app, validation, the checkout corpus (no money step allowed with the default limit), the page total, the jobs model, and hands-off, "always", "never" and Don't allow through the real session.

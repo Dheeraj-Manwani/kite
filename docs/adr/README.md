@@ -18,3 +18,4 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [Permission categories and modes for tasks and jobs](014-permissions.md)
 - [Memory keeps personal values away from models](015-memory.md)
 - [Kite checks out, and the person pays](016-checkout.md)
+- [Repeat orders take one question, and Kite learns when to stop asking](017-repeat-orders.md)

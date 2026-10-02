@@ -48,9 +48,11 @@ import { decideStep } from '../agent/model';
 import { planJob } from '../agent/planner';
 import { doTask } from '../tools/impl/do_task';
 import { jobsModel, taskActions, taskScopes, type TaskAction, type TaskScope } from '../../shared/agent';
-import { remember } from '../../shared/permissions';
+import { countYes, permissionTable, remember, ruleFor } from '../../shared/permissions';
 import { createMemory } from '../memory/store';
 import { factsFromAnswer, slug } from '../../shared/memory';
+import { orderValue, pastOrders } from '../../shared/orders';
+import { reorder } from '../tools/impl/reorder';
 import { memoryTools } from '../tools/impl/memory';
 import { registerMemoryIPC } from '../ipc/memory';
 const validProvider = (value: unknown): value is SecretId => [...providerIds, 'cartesia'].includes(value as SecretId);
@@ -76,12 +78,12 @@ export function startVoiceService() {
       for (const fact of factsFromAnswer(question, answer, `From the ${where} task, ${today()}`)) { const r = memory.save(fact); if (r.ok && r.token) savedNotice(r); }
     },
     // A confirmed order joins the order history (phase 5 repeats it). The number and total come from the page, read by code.
-    ordered: (order: { number: string; items: string[]; total: string | null; site: string; when: string | null }) => {
+    ordered: (order: { number: string; items: string[]; total: string | null; site: string; when: string | null; payment: string | null }) => {
       const items = order.items.join('; ') || 'Order';
-      const r = memory.save({ kind: 'order', key: `order.${slug(`${order.site}-${order.number}`)}`, label: items.slice(0, 80),
-        value: [items, order.total, order.site, `order ${order.number}`, order.when && `arriving ${order.when}`].filter(Boolean).join(' · '), source: `Ordered on ${order.site}, ${today()}` });
+      const r = memory.save({ kind: 'order', key: `order.${slug(`${order.site}-${order.number}`)}`, label: items.slice(0, 80), value: orderValue(order), source: `Ordered on ${order.site}, ${today()}` });
       if (r.ok && r.token) appEvent({ type: 'memory:saved', token: r.token, text: 'Saved the order to your history' });
     },
+    orders: () => memory.enabled() ? pastOrders(memory.facts()) : [],
     chose: (topic: string, choice: string, where: string) => {
       const label = topic.trim().slice(0, 60); if (!label) return;
       const r = memory.save({ kind: 'preference', key: `pref.${slug(label)}`, label: label.charAt(0).toUpperCase() + label.slice(1), value: choice, source: `Chosen on ${where}, ${today()}` });
@@ -151,6 +153,8 @@ export function startVoiceService() {
     planner: (model, key) => (goal, app, signal) => planJob({ model: getModel(model.provider, model.id, { getKey: () => key }), goal, app, signal,
       toolChoice: providerTraits[model.provider].requiredToolChoice ? 'required' : 'auto', providerOptions: providerOptionsFor(model) }),
     permissions: () => preferences.get().permissions, memory: taskMemory,
+    // "Stop asking?" after three yeses for the same kind of step on the same site (phase 5).
+    nudge: { yes: (category, place) => { const r = countYes(preferences.nudges(), category, place); preferences.setNudges(r.records); return r.offer; }, offered: () => undefined },
     remember: (category, permission, place) => {
       try { preferences.update({ permissions: remember(preferences.get().permissions, category, permission, place) }); }
       catch { logEvent('permissions:remember', { ok: false }); }
@@ -183,7 +187,12 @@ export function startVoiceService() {
       definitions: [...createTools(apps, history, preferences.get()),
         ...memoryTools({ store: memory, show: text => appEvent({ type: 'memory:show', text }), saved: savedNotice, source: () => `From what you said, ${today()}` }), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
         ...(preferences.get().whiteboard ? [explainOnWhiteboard(lesson => board.start(lesson))] : []),
-        ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions)] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
+        ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions),
+          reorder({ orders: () => taskMemory.orders(),
+            handsOver: site => { const p = preferences.get().permissions; return (ruleFor(p, 'money', site)?.permission ?? permissionTable(p).money) === 'never'; },
+            address: () => { const home = memory.facts().find(f => f.kind === 'address'); return home ? `your ${home.key.split('.')[0].replace(/^./, c => c.toUpperCase())} address` : null; },
+            start: (order, scope) => { const jobs = taskModel(); return agent.start({ goal: `Buy ${order.items.join(' and ')} on ${order.site}${order.payment ? `, paying by ${order.payment}` : ''}, the same as last time`, app: 'Microsoft Edge' },
+              scope, jobs, secrets.getKey(jobs.provider), messageId, { site: order.site, items: order.items, total: order.total, payment: order.payment }); } })] : []), ...(model?.supportsVision ? [readScreen(false, async captureSignal => {
         captureSignal.throwIfAborted(); const captured = await captureUnderCursor(captureSignal); captureSignal.throwIfAborted();
         captureTiming?.(captured.captureMs);
         const images = await prepareImages(captured, [], captureSignal);

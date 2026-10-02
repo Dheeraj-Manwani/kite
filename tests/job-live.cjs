@@ -6,6 +6,9 @@
 // --checkout (phase 4) places the whole order: signed in, nothing saved at the shop; Kite's memory holds the address, so the
 // form is filled from placeholders; the scripted user says "you do it" and yes to Place order. Cash on delivery, or with --upi
 // a UPI payment that the scripted user approves through the shop's test hook while Kite waits. Implies --memory.
+// --repeat (phase 5) is "order my protein again": the order history holds a past order of the item, and the job starts as the
+// reorder tool starts it, after its one question (the card, approved here). Passes only with no question inside the job.
+// Implies --checkout.
 // --memory starts with a saved name and pincode (phase 3): the pincode prompt can be filled from memory, and the run fails
 // if any prompt sent to the model carries a saved value.
 // Edge comes to the front while a job runs; keys are only sent while it is in front.
@@ -16,6 +19,8 @@ const { ActClient } = require('../src/main/agent/sidecar.ts');
 const { TaskSession } = require('../src/main/agent/session.ts');
 const { decideStep, agentSystem, agentPrompt } = require('../src/main/agent/model.ts');
 const { createMemory } = require('../src/main/memory/store.ts');
+const { orderValue, pastOrders } = require('../src/shared/orders.ts');
+const { buildPlan } = require('../src/shared/job.ts');
 const { factsFromAnswer, placeholderLabel, sensitive } = require('../src/shared/memory.ts');
 const { planJob } = require('../src/main/agent/planner.ts');
 const { getModel } = require('../src/main/ai/providers.ts');
@@ -28,11 +33,12 @@ const delay = ms => new Promise(r => setTimeout(r, ms));
 const runs = Number(process.argv.slice(2).find(a => /^\d+$/.test(a)) ?? 1);
 const [provider, ...rest] = (process.argv.slice(2).find(a => a.includes(':')) ?? 'deepseek:deepseek-flash').split(':');
 const entry = describeModel({ provider, id: rest.join(':') });
-const envNames = { deepseek: ['DEEPSEEK_API_KEY'], moonshot: ['MOONSHOT_API_KEY', 'KIMI_API_KEY'], google: ['GOOGLE_API_KEY', 'GEMINI_API_KEY'], openai: ['OPENAI_API_KEY'], anthropic: ['ANTHROPIC_API_KEY'] }[provider] ?? [];
+const envNames = { deepseek: ['DEEPSEEK_API_KEY'], moonshot: ['MOONSHOT_API_KEY', 'KIMI_API_KEY'], google: ['GOOGLE_API_KEY', 'GEMINI_API_KEY'], openai: ['OPENAI_API_KEY'], anthropic: ['ANTHROPIC_API_KEY'], groq: ['GROQ_API_KEY', 'GROK_API_KEY'] }[provider] ?? [];
 const dotenv = (() => { try { return fs.readFileSync(path.join(__dirname, '..', '.env'), 'utf8'); } catch { return ''; } })();
 const key = envNames.map(n => process.env[n] ?? dotenv.match(new RegExp(`^${n}=(.*)$`, 'm'))?.[1]?.trim()).find(Boolean);
-const checkout = process.argv.includes('--checkout'), upi = process.argv.includes('--upi');
-const goal = checkout ? `Buy Sunfold Whey Protein, 60 sachets, unflavoured, from Kite Test Mart and pay ${upi ? 'by UPI' : 'cash on delivery'}`
+const repeatRun = process.argv.includes('--repeat'), checkout = process.argv.includes('--checkout') || repeatRun, upi = process.argv.includes('--upi');
+const pastItem = 'Sunfold Whey Protein, 60 sachets, Unflavoured';
+const goal = repeatRun ? `Buy ${pastItem} on 127.0.0.1, paying by ${upi ? 'UPI' : 'Cash on delivery'}, the same as last time` : checkout ? `Buy Sunfold Whey Protein, 60 sachets, unflavoured, from Kite Test Mart and pay ${upi ? 'by UPI' : 'cash on delivery'}`
   : process.argv.includes('--ambiguous') ? 'Buy me 60 sachets of Sunfold protein from Kite Test Mart'
   : 'Find Sunfold Whey Protein, 60 sachets, unflavoured, on Kite Test Mart and add one pack to the cart';
 const wanted = 'sunfold-whey~60-sachets~unflavoured';
@@ -59,7 +65,10 @@ async function job(shop, run) {
       remove: i => rows.delete(i), removeAll: () => { rows.clear(); return 0; }, touch: () => {} },
     { isEncryptionAvailable: () => true, encryptString: v => Buffer.from(v), decryptString: b => b.toString() }, { enabled: () => true });
     for (const [key, value] of Object.entries(saved)) store.save({ kind: key.startsWith('profile.') ? 'profile' : 'address', key, label: placeholderLabel(key), value, source: 'live test' });
-    memory = { context: () => store.context(), redact: t => store.redact(t), fill: t => store.fill(t), chose: () => {},
+    // The order being repeated, as phase 4 saved it.
+    if (repeatRun) store.save({ kind: 'order', key: 'order.127-0-0-1-ktm-480001', label: pastItem, source: 'live test',
+      value: orderValue({ items: [pastItem], total: '₹2,149', site: '127.0.0.1', payment: upi ? 'UPI' : 'Cash on delivery', number: 'KTM-480001', when: 'in 3 days' }) });
+    memory = { context: () => store.context(), redact: t => store.redact(t), fill: t => store.fill(t), chose: () => {}, orders: () => pastOrders(store.facts()),
       learn: (q, a, where) => { for (const f of factsFromAnswer(q, a, where)) store.save(f); } };
   }
   try {
@@ -71,7 +80,8 @@ async function job(shop, run) {
         act: (q, r, a, e, s) => client.act(q, r, a, e, s), keys: (t, q, f, i, s) => client.keys(t, q, f, i, s), launch: async () => false,
         // As TaskService does for Edge, but into this InPrivate instance (without --inprivate it would open a signed-in window).
         openUrl: async url => { spawn(edge, [`--user-data-dir=${path.join(dir, 'profile')}`, '--inprivate', url], { stdio: 'ignore' }); record.log.push(`opened ${url} without the keyboard`); return true; },
-        plan: async signal => {
+        repeat: repeatRun ? { site: '127.0.0.1', items: [pastItem], total: 2149, payment: upi ? 'UPI' : 'Cash on delivery' } : null,
+        plan: repeatRun ? async () => ({ ...buildPlan('store', '127.0.0.1', pastItem), start: shop.url }) : async signal => {
           const plan = await planJob({ model, goal, app: 'Microsoft Edge', signal, toolChoice, providerOptions: providerOptionsFor(entry) });
           record.planned = { kind: plan.kind, site: plan.site, search: plan.search };
           // The fictional store lives on this machine: point the plan at it, keeping the model's kind and search words.
@@ -122,7 +132,10 @@ async function job(shop, run) {
     if (result.status === 'timeout') session.control('stop');
     const state = shop.state();
     Object.assign(record, result, { steps: session.steps, ms: Date.now() - record.started, cart: state.cart, orders: state.orders.length,
-      orderList: state.orders.map(o => `${o.id} ${o.status} ${o.payment} → ${o.address.pincode}`), history: session.view().log, pincode: state.pincode ?? null, pass: record.leaks.length === 0 && result.status === 'done' && (checkout ? checkoutPassed(state, result)
+      orderList: state.orders.map(o => `${o.id} ${o.status} ${o.payment} → ${o.address.pincode}`), history: session.view().log, pincode: state.pincode ?? null, pass: record.leaks.length === 0 && result.status === 'done'
+        // A repeat: one question in all, the reorder card, which comes before the job; none inside it.
+        && (!repeatRun || (record.questions.length === 0 && record.approvals.every(a => a === 'paid' || /^paused/.test(a))))
+        && (checkout ? checkoutPassed(state, result)
         : state.orders.length === 0 && state.cart.length === 1 && state.cart[0].sku === wanted && state.cart[0].qty === 1 && /60 sachets/.test(result.message))
         // A vague request must be asked about, not settled by the page's defaults.
         && (!process.argv.includes('--ambiguous') || record.questions.length >= 1) });

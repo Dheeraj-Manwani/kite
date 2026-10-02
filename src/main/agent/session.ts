@@ -1,7 +1,8 @@
 import { classifyStep, classifyTaskCommand, describeAction, formatSnapshot, maxTaskSteps, modifierVk, parseKeys, type AgentAction, type AgentElement, type AgentSnapshot, type AgentWindow, type TaskAction, type TaskLogEntry, type TaskScope, type TaskStatus, type TaskView } from '../../shared/agent';
 import type { ScreenBounds } from '../../shared/types';
 import { addToCart, cartSentence, hostOf, inScope, jobLimits, matchCheckout, matchChoice, orderSummary, pageTotal, pageUrl, paymentPending, placesOrder, readCart, readOrder, unconfirmedVariant, type CartLine, type ChoiceOption, type JobPlan, type JobView, type OrderSummary, type PlacedOrder } from '../../shared/job';
-import { categories, categoryInfo, defaultPermissions, jobCategories, permissionTable, placeLabel, placeOf, resolve, ruleFor, type Category, type Permission, type PermissionSettings, type Resolution, type StepClass } from '../../shared/permissions';
+import { priceJump, repeatTolerance, sameItems, lastOrderOf, type PastOrder, type RepeatOrder } from '../../shared/orders';
+import { categories, categoryInfo, defaultPermissions, jobCategories, nudgeAfter, permissionTable, placeLabel, placeOf, resolve, ruleFor, rupees, type Category, type Permission, type PermissionSettings, type Resolution, type StepClass } from '../../shared/permissions';
 import { labelScore } from '../guide/grounding';
 import type { Decision, StepPrompt } from './model';
 import type { ActResult, KeyItem, Target } from './sidecar';
@@ -37,6 +38,13 @@ export interface TaskDeps {
   remember?(category: Category, permission: Permission, place: string | null): void;
   /** What Kite remembers about the user (docs/end-to-end-jobs.md §3.4). Absent: no memory. */
   memory?: TaskMemory;
+  /** A repeat order the user confirmed before the job started ("same as last time"): the one question it needs (phase 5). */
+  repeat?: RepeatOrder | null;
+  /**
+   * "Stop asking?" (phase 5): count a yes for this kind of step here; true when Kite should now offer, once, to stop asking.
+   * `offered` records the answer.
+   */
+  nudge?: { yes(category: Category, place: string): boolean; offered(category: Category, place: string, accepted: boolean): void };
 }
 export interface TaskMemory {
   /** The memory as the model may see it: placeholders and masks, for the system prompt. */
@@ -50,7 +58,9 @@ export interface TaskMemory {
   /** The user chose an option in a store job: saved as a preference for what was searched. */
   chose(topic: string, choice: string, where: string): void;
   /** An order Kite placed and saw confirmed: saved to the order history. */
-  ordered?(order: { number: string; items: string[]; total: string | null; site: string; when: string | null }): void;
+  ordered?(order: { number: string; items: string[]; total: string | null; site: string; when: string | null; payment: string | null }): void;
+  /** Past orders, newest first: for the price check. */
+  orders?(): PastOrder[];
 }
 type Answer = Exclude<TaskAction, 'pause' | 'resume'>;
 const yes = (answer: Answer) => answer === 'allow' || answer === 'allowAll' || answer === 'always' || answer === 'alwaysEverywhere';
@@ -141,6 +151,8 @@ export class TaskSession {
   private rememberChoice = false;
   private checkoutAsked = false;
   private orderView: OrderSummary | null = null;
+  private paidBy: string | null = null;
+  private pendingNudge: { category: Category; place: string } | null = null;
   private nudge?: () => void;
   private variantQuestions = 0;
   private lookNext = false;
@@ -441,7 +453,11 @@ export class TaskSession {
     const base = this.resolve({ category: 'money', reason: '' }, snapshot).base;
     if (at < 0 || base === 'never') { this.end('done', `${said} Check out whenever you’re ready; I’ll leave that to you.`); return; }
     let asked = false;
-    if (this.scope !== 'handsOff' && base !== 'allow') {
+    // A repeat order was confirmed before the job ("I'll check out like last time"): no second question if the cart is what was ordered then.
+    const repeat = this.deps.repeat;
+    const confirmed = !!repeat && sameItems(lines.map(l => `${l.quantity && l.quantity > 1 ? `${l.quantity} × ` : ''}${l.name}`), repeat.items);
+    if (repeat && !confirmed) this.note('The cart doesn’t match the order being repeated, so the user is asked who checks out.', false, 'The cart differs from last time');
+    if (this.scope !== 'handsOff' && base !== 'allow' && !confirmed) {
       asked = true;
       const place = this.place;
       this.choices = [{ label: 'I’ll do it', detail: 'I stop here and leave the cart on screen' }, { label: 'You do it', detail: 'I fill in checkout and ask you before placing the order' }];
@@ -460,8 +476,14 @@ export class TaskSession {
     // A first order is 25–45 steps; checking out gets room of its own on top of what finding it used.
     this.budget = Math.max(this.budget, this.step + 30);
     this.note('The user asked Kite to check out. Go to checkout now: the cart phase is complete.', true, 'Checking out');
-    this.deps.say(asked ? 'Okay, I’ll check out. I’ll ask you before I place the order.' : `${said} Checking out now.`);
+    this.deps.say(asked ? 'Okay, I’ll check out. I’ll ask you before I place the order.' : confirmed ? `${said} Checking out like last time.` : `${said} Checking out now.`);
     this.emit();
+  }
+  private cartNames() { return this.cartLines.map(l => `${l.quantity && l.quantity > 1 ? `${l.quantity} × ` : ''}${l.name}`); }
+  /** The last time these items were ordered, for the price check: the same items, or the same single item. */
+  private lastTime(): PastOrder | null {
+    const orders = this.deps.memory?.orders?.() ?? [], names = this.cartNames();
+    return orders.find(o => sameItems(names, o.items)) ?? (this.cartLines.length === 1 ? lastOrderOf(orders, this.cartLines[0].name) : null);
   }
   /** The button that places the order or pays: the one money step Kite confirms even after "you do it". */
   private placesOrder(action: AgentAction, element: AgentElement | undefined, focused: AgentElement | undefined) {
@@ -478,7 +500,7 @@ export class TaskSession {
   }
   private ordered(order: PlacedOrder) {
     const site = this.plan?.site ?? hostOf(this.url) ?? this.app;
-    this.deps.memory?.ordered?.({ number: order.number, items: this.cartLines.map(l => `${l.quantity && l.quantity > 1 ? `${l.quantity} × ` : ''}${l.name}`), total: order.total, site, when: order.when });
+    this.deps.memory?.ordered?.({ number: order.number, items: this.cartNames(), total: order.total, site, when: order.when, payment: this.paidBy });
     for (const p of this.plan?.phases ?? []) p.kite = true;
     this.end('done', `Ordered. Order number ${order.number}${order.total ? `, ${order.total}` : ''}${order.when ? `, arriving ${order.when}` : ''}.`);
   }
@@ -571,6 +593,8 @@ export class TaskSession {
     const answer = await waitFor<Answer>(signal, resolve => { this.approval = resolve; });
     this.approval = undefined; this.ask = null; this.risk = null;
     if ((answer === 'always' || answer === 'alwaysEverywhere') && always) this.deps.remember?.(category, 'allow', answer === 'always' ? place : null);
+    // A plain yes where "Always" would have helped counts toward offering to stop asking here.
+    if (answer === 'allow' && always && place && this.deps.nudge?.yes(category, place)) this.pendingNudge = { category, place };
     if (answer === 'never' || answer === 'neverEverywhere') this.deps.remember?.(category, 'never', answer === 'never' ? place : null);
     return answer;
   }
@@ -588,14 +612,23 @@ export class TaskSession {
     // "You do it" covers checkout's steps (address, delivery, payment method) but not the one that places the order.
     if (this.checkout && step.category === 'money' && !commit && resolution.permission === 'ask') resolution = { ...resolution, permission: 'allow' };
     if (commit) {
-      if (resolution.permission === 'allow') { const total = pageTotal(snapshot); this.deps.say(`Placing the order${total !== null ? ` for ₹${total.toLocaleString('en-IN')}` : ''}.`); }
+      const total = pageTotal(snapshot), shown = total === null ? null : rupees(total), summaryNow = orderSummary(snapshot);
+      this.paidBy = summaryNow.payment;
+      // The price check: far above the last order of the same thing asks, in every mode. A repeat's own yes covers its amount.
+      const last = this.lastTime(), repeat = this.deps.repeat;
+      const jump = total !== null && last?.total ? total > last.total * priceJump : false;
+      const covered = !!repeat?.total && total !== null && total <= repeatTolerance(repeat.total) && this.checkout && sameItems(this.cartNames(), repeat.items);
+      if (jump) resolution = { ...resolution, permission: 'ask', floor: true, reason: `That’s ${shown}, more than 1.5 times last time (${rupees(last.total)}).` };
+      else if (covered) resolution = { ...resolution, permission: 'allow' };
+      else if (repeat?.total && total !== null && resolution.permission === 'ask') resolution = { ...resolution, reason: `That’s ${shown}; you said yes to about ${rupees(repeat.total)}.` };
+      if (resolution.permission === 'allow') this.deps.say(`Placing the order${shown ? ` for ${shown}` : ''}${covered ? ', as you said' : ''}.`);
       else {
         // The order card: total, address, payment and delivery as code read them from the page. The address is shown, not spoken.
         const order = orderSummary(snapshot);
         this.orderView = order; this.ask = null; this.risk = resolution.reason;
         // The card lists the address, payment and delivery under the question.
-        this.set('approval', `Place the order${order.total ? ` for ${order.total}` : ''}?`);
-        this.deps.say(`Place the order${order.total ? ` for ${order.total}` : ''}${order.payment ? `, paying by ${order.payment}` : ''}? The address is on the card. Say yes or no.`);
+        this.set('approval', `${jump || repeat?.total ? `${resolution.reason} ` : ''}Place the order${order.total ? ` for ${order.total}` : ''}?`);
+        this.deps.say(`${jump || repeat?.total ? `${resolution.reason} ` : ''}Place the order${order.total ? ` for ${order.total}` : ''}${order.payment ? `, paying by ${order.payment}` : ''}? The address is on the card. Say yes or no.`);
         const answer = await waitFor<Answer>(signal, resolve => { this.approval = resolve; });
         this.approval = undefined; this.orderView = null; this.risk = null;
         if (answer === 'stop') { this.end('stopped', 'Okay, I stopped. Nothing was ordered.'); return; }
@@ -632,6 +665,14 @@ export class TaskSession {
     const result = await this.execute(run, element, snapshot, signal);
     const message = result.ok ? result.message : result.message || 'That didn’t work.';
     if (commit && result.ok) this.placed = true;
+    const nudge = this.pendingNudge; this.pendingNudge = null;
+    if (nudge && result.ok) {
+      const what = categoryInfo[nudge.category].label, where = placeLabel(nudge.place);
+      const accepted = await this.confirm(`Stop asking about “${what}” on ${where}`, `That’s ${nudgeAfter} times you’ve said yes to “${what}” on ${where}. Stop asking about those there?`, signal);
+      if (accepted) this.deps.remember?.(nudge.category, 'allow', nudge.place);
+      this.deps.nudge?.offered(nudge.category, nudge.place, accepted);
+      this.note(accepted ? `The user said Kite can stop asking about “${what}” on ${where}.` : `The user wants to keep being asked about “${what}”.`, true, accepted ? `Won’t ask about “${what}” here again` : 'Will keep asking');
+    }
     this.deps.audit(action.type, summary, decision, { ok: result.ok, message });
     this.note(`${summary} → ${message}`, result.ok, summary);
     this.failed = result.ok ? 0 : this.failed + 1;

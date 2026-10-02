@@ -2,7 +2,7 @@ import { validateHotkey, configurableTools, kiteSizes, kiteSkins, livelinessLeve
 import Store from 'electron-store';
 import type { AppSettings, ModelEntry, SettingsSnapshot, SecretId, VoiceChoice, ModelSelection } from '../../shared/types';
 import { catalog, mergeCatalog, providerIds } from '../ai/catalog';
-import { defaultPermissions, validPermissions } from '../../shared/permissions';
+import { defaultPermissions, validPermissions, type NudgeRecord } from '../../shared/permissions';
 export const defaultSettings: AppSettings = { onboardingComplete: false, hotkey: ['Control','Meta'], launchOnStartup: false, reducedMotion: false, toolApprovals: { get_datetime: false, list_reminders: false, open_app: true, web_search: true }, visionModel: { provider: 'moonshot', id: 'kimi-k2.5' }, screenWithoutAsking: false, keepScreenshots: false, model: { provider: 'moonshot', id: 'kimi-k2.6' }, fallbackEnabled: false,
   fallback: { provider: 'groq', id: 'openai/gpt-oss-20b' }, ttsEnabled: false, voiceId: '', speed: 1, dryRun: false, searchEngine: 'google', guideMode: true, whiteboard: true, computerUse: true, kiteSize: 'standard', earcons: false, liveliness: 'lively', kiteSkin: 'rose',
   permissions: defaultPermissions, jobsModel: null, memory: true };
@@ -12,8 +12,8 @@ export function validModel(value: unknown): value is ModelSelection {
   return providerIds.includes(m.provider) && typeof m.id === 'string' && m.id.length > 0 && m.id.length <= 200 && /^[a-zA-Z0-9._:/-]+$/.test(m.id);
 }
 export function openPreferences(hasKey: (id: SecretId) => boolean) {
-  const store = new Store<{ preferences: AppSettings; models: ModelEntry[]; voices: VoiceChoice[] }>({ name: 'preferences',
-    defaults: { preferences: defaultSettings, models: [], voices: [] } });
+  const store = new Store<{ preferences: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; nudges: NudgeRecord[] }>({ name: 'preferences',
+    defaults: { preferences: defaultSettings, models: [], voices: [], nudges: [] } });
   const listeners = new Set<(snapshot: SettingsSnapshot, old: AppSettings) => void>();
   const get = () => ({ ...defaultSettings, ...store.get('preferences'), screenWithoutAsking: false });
   const snapshot = (): SettingsSnapshot => ({ settings: get(), models: mergeCatalog(catalog, store.get('models')), voices: store.get('voices'),
@@ -56,5 +56,8 @@ export function openPreferences(hasKey: (id: SecretId) => boolean) {
     },
     cacheModels(models: ModelEntry[]) { store.set('models', mergeCatalog(store.get('models'), models)); notify(); },
     cacheVoices(voices: VoiceChoice[]) { store.set('voices', voices); notify(); },
+    /** Yes-counts for "stop asking?" (permissions.ts `countYes`): Kite's own bookkeeping, not a setting. */
+    nudges: () => store.get('nudges') ?? [],
+    setNudges(records: NudgeRecord[]) { store.set('nudges', records); },
   };
 }

@@ -10,7 +10,8 @@ import type { Decision, StepPrompt } from './model';
 import { TaskSession, type TaskMemory } from './session';
 import { routingHints } from '../ai/routing';
 import { ActClient } from './sidecar';
-import { browserApp, type JobPlan } from '../../shared/job';
+import { browserApp, buildPlan, type JobPlan } from '../../shared/job';
+import type { RepeatOrder } from '../../shared/orders';
 import type { Category, Permission, PermissionSettings } from '../../shared/permissions';
 export interface TaskServiceDeps {
   directory: string;
@@ -33,6 +34,7 @@ export interface TaskServiceDeps {
   permissions?(): PermissionSettings;
   remember?(category: Category, permission: Permission, place: string | null): void;
   memory?: TaskMemory;
+  nudge?: import('./session').TaskDeps['nudge'];
 }
 // Browsers whose executable, given a URL, opens it as a new tab of the last active window. Nothing else is launched.
 const browsers: { app: RegExp; exe: string[] }[] = [
@@ -72,7 +74,8 @@ export class TaskService {
     if (!session || this.injecting > 0 || modifiers.has(event.keycode)) return;
     if (event.keycode === UiohookKey.Escape) session.control('stop'); else session.userTookOver();
   };
-  start(task: { goal: string; app: string }, scope: TaskScope, model: ModelEntry, key: string | undefined, messageId: number | null): ToolResult {
+  /** `repeat`: an order the user confirmed again ("same as last time"); its job is planned by code from that order. */
+  start(task: { goal: string; app: string }, scope: TaskScope, model: ModelEntry, key: string | undefined, messageId: number | null, repeat: RepeatOrder | null = null): ToolResult {
     if (!this.deps.enabled()) return { ok: false, message: 'Doing tasks is turned off in Settings.' };
     if (process.platform !== 'win32' || !this.client.supported) return { ok: false, message: 'Doing tasks needs Windows UI Automation, which is not available here.' };
     if (!key) return { ok: false, message: 'No key is saved for the jobs model.' };
@@ -86,7 +89,8 @@ export class TaskService {
       snapshot: (target, signal) => this.client.snapshot(target, signal),
       find: (target, text, signal) => this.client.find(target, text, signal),
       openUrl: async url => openInBrowser(task.app, url),
-      plan: planner ? signal => planner(task.goal, task.app, signal) : undefined,
+      plan: repeat ? async () => buildPlan('store', repeat.site, repeat.items[0]?.replace(/^\d+\s*×\s*/, '') ?? null) : planner ? signal => planner(task.goal, task.app, signal) : undefined,
+      repeat, nudge: this.deps.nudge,
       act: (seq, ref, action, extra, signal) => this.client.act(seq, ref, action, extra, signal),
       keys: async (target, seq, focus, items, signal) => {
         this.injecting++;

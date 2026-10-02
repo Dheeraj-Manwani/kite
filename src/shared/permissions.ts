@@ -155,3 +155,17 @@ export function resolve(step: StepClass, settings: PermissionSettings, context: 
   if (permission === 'allow' && !floor) return { permission, category, reason: step.reason, floor: false, base };
   return { permission: 'ask', category, reason: floor ?? step.reason, floor: !!floor, base };
 }
+
+/**
+ * "Stop asking?" (phase 5): after the user says yes three times to the same kind of step on the same site or app, Kite
+ * offers once to stop asking there. A "no" is remembered too, so it is never offered again for that pair.
+ */
+export interface NudgeRecord { key: string; yes: number; offered: boolean }
+export const nudgeAfter = 3;
+export function countYes(records: NudgeRecord[], category: Category, place: string): { records: NudgeRecord[]; offer: boolean } {
+  const key = `${place}|${category}`, old = records.find(r => r.key === key);
+  const next: NudgeRecord = { key, yes: (old?.yes ?? 0) + 1, offered: old?.offered ?? false };
+  const offer = !next.offered && next.yes >= nudgeAfter;
+  if (offer) next.offered = true;
+  return { records: [...records.filter(r => r.key !== key), next].slice(-300), offer };
+}

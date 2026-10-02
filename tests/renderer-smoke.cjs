@@ -503,6 +503,16 @@ app.whenReady().then(async()=>{
     await js("[...document.querySelectorAll('.approval-buttons button')].find(b=>b.textContent==='Step by step').click()");await delay(100);
     assert.deepEqual(decisions.at(-1),{id:'task-approval',approved:true,scope:'once'});
     overlay.webContents.send('test:voice',{id:300,type:'tool:decision',approval:taskCard,decision:'approved'});overlay.webContents.send('test:voice',{id:300,type:'voice:aborted'});await delay(100);
+    // "Order my protein again" (phase 5): the reorder card is the one question; it names the order, its price and the checkout plan.
+    const reorderCard={approvalId:'reorder-approval',toolName:'reorder',summary:'Same as last time: Sunfold Whey Protein, 60 sachets, Unflavoured, about ₹2,149, from shop.example.in, to your Home address? I’ll check out like last time, paying by Cash on delivery, and ask again only if the cart or the price has changed.',input:{about:'my protein'},expiresAt:Date.now()+30000,dryRun:false};
+    overlay.webContents.send('test:voice',{id:301,type:'model:changed',text:'Preview'});await delay(50);
+    overlay.webContents.send('test:voice',{id:301,type:'tool:approvalRequired',approval:reorderCard});await delay(100);
+    assert.deepEqual(await js("[...document.querySelectorAll('.approval-buttons button')].map(b=>b.textContent)"),['Order again','Not now']);
+    assert.match(await js("document.querySelector('.approval-flow').textContent"),/store’s pages to .*Your saved details stay on this PC\./);
+    fs.writeFileSync(path.join(temporary,'reorder.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("document.querySelector('.approval-buttons button').click()");await delay(100);
+    assert.deepEqual(decisions.at(-1),{id:'reorder-approval',approved:true});
+    overlay.webContents.send('test:voice',{id:301,type:'tool:decision',approval:reorderCard,decision:'approved'});overlay.webContents.send('test:voice',{id:301,type:'voice:aborted'});await delay(100);
     const taskView={id:5,goal:'Write a haiku in Notepad and save it',app:'Notepad',status:'approval',step:3,budget:15,scope:'once',action:'Click “Save” button',risk:null,message:'Okay to do this step?',
       target:{x:200,y:300,width:60,height:24},display:{x:0,y:0,width:760,height:960},log:[{text:'Click “File” menu item',ok:true},{text:'Type into “Text editor” document: “An old pond…”',ok:true}]};
     overlay.webContents.send('task:state',taskView);await delay(900);

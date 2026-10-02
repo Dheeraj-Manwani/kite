@@ -7,7 +7,7 @@ const verbs: Record<string, string> = {
   type_text: 'Paste text', write_clipboard: 'Copy to clipboard', read_clipboard: 'Read clipboard', read_screen: 'Look at screen',
   create_note: 'Create note', set_reminder: 'Set reminder', set_timer: 'Start timer', cancel_reminder: 'Cancel reminder',
   web_search: 'Search', show_me_how: 'Start guide', explain_on_whiteboard: 'Draw it', get_datetime: 'Check the time',
-  list_reminders: 'Show reminders', do_task: 'Start',
+  list_reminders: 'Show reminders', do_task: 'Start', reorder: 'Order again',
 };
 
 export function approvalAction({ toolName, summary }: Pick<ApprovalCard, 'toolName' | 'summary'>): string {
@@ -20,7 +20,7 @@ export function approvalAction({ toolName, summary }: Pick<ApprovalCard, 'toolNa
 }
 
 // Sensitive approvals type, touch the clipboard, read the screen, or act inside an app (UX-21).
-const sensitiveTools = new Set(['type_text', 'write_clipboard', 'read_clipboard', 'read_screen', 'show_me_how', 'do_task']);
+const sensitiveTools = new Set(['type_text', 'write_clipboard', 'read_clipboard', 'read_screen', 'show_me_how', 'do_task', 'reorder']);
 
 /**
  * Low-risk approvals stay compact. Sensitive ones say, in one line, what leaves this PC and which model receives it,
@@ -47,6 +47,7 @@ export function approvalRisk(card: Pick<ApprovalCard, 'toolName' | 'input'>, sna
     type_text: 'Pastes into whichever app has focus. Nothing leaves this PC.',
     show_me_how: `Kite reads the controls in ${app} on this PC. If it can’t find one, it may send a screenshot of ${app} to ${visionName}.`,
     do_task: `Each step sends ${app}’s controls and their text to ${jobs?.label ?? mainName}${(jobs ?? main)?.supportsVision ? ', sometimes with a screenshot' : ''}.`,
+    reorder: `Each step sends the store’s pages to ${jobs?.label ?? mainName}. Your saved details stay on this PC.`,
   };
   return { sensitive: true, flow: flows[card.toolName] };
 }
