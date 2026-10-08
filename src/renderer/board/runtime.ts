@@ -7,6 +7,7 @@ import type { LessonStats } from '../../shared/board';
 export const boardRuntime = {
   pen: null as CursorPoint | null,
   rest: null as CursorPoint | null,
+  aim: null as CursorPoint | null,
   /** Advances the drawing animation; called once per frame by the kite loop. */
   tick: null as ((now: number) => void) | null,
   /** Board elements under user marks (overlay-local strokes), for "what is this?" questions. */

@@ -6,10 +6,15 @@ const assert = require('node:assert/strict');
 const temporary = fs.mkdtempSync(path.join(os.tmpdir(),'kite-voice-test-'));
 app.setPath('userData',temporary);
 require(path.join(__dirname,'../tests/register.cjs'));
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   try {
     const { openSecrets } = require('../src/main/settings/secrets.ts');
     const { openDatabase } = require('../src/main/storage/database.ts');
+    const { elkLayout,closeElkWorker } = require('../src/main/board/elk.ts');
+    const laid=await elkLayout({id:'root',layoutOptions:{'elk.algorithm':'layered'},children:[{id:'a',width:160,height:80},{id:'b',width:160,height:80}],edges:[{id:'e',sources:['a'],targets:['b']}]});
+    assert.ok(laid.children.every(n=>Number.isFinite(n.x)));closeElkWorker();
+    const {formulaPaths,closeMathWorker}=require('../src/main/board/math.ts');
+    try{const formula=await formulaPaths('\\frac{x^2}{2}=3');assert.ok(formula.paths.length>3);assert.ok(formula.box.width>0);}finally{closeMathWorker();}
     const key = 'smoke-test-key-not-a-provider-credential';
     const secrets = openSecrets();
     assert.equal(safeStorage.isEncryptionAvailable(),true);
@@ -82,6 +87,9 @@ app.whenReady().then(() => {
     assert.ok(preferences.snapshot().models.some(m=>m.id==='custom-test'));
     assert.throws(()=>preferences.update({speed:10}));assert.throws(()=>preferences.update({model:{provider:'unknown',id:'x'}}));
     assert.equal(preferences.get().speed,1.2);
+    assert.equal(preferences.get().boardModel,null);preferences.update({boardModel:{provider:'deepseek',id:'deepseek-flash'}});
+    assert.equal(openPreferences(()=>true).get().boardModel.id,'deepseek-flash');preferences.update({boardModel:null});
+    assert.throws(()=>preferences.update({boardModel:{provider:'unknown',id:'bad'}}));
     // Kite size (K-14) and sound cues (K-13): Standard and off by default, and only known values are kept.
     assert.equal(preferences.get().kiteSize,'standard');assert.equal(preferences.get().earcons,false);
     preferences.update({kiteSize:'extraLarge',earcons:true});assert.equal(preferences.get().kiteSize,'extraLarge');assert.equal(preferences.get().earcons,true);

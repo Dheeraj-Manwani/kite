@@ -1,4 +1,5 @@
 import { applyBeat, boardLimits, layoutScene, readingMs, repairBeats, speechMs, type BeatInput, type BoardStatus, type BoardView, type ElementInput, type LaidElement, type LessonInput } from '../../shared/board';
+import { cueTimings, type WordTiming } from '../../shared/boardTeaching';
 /** How a spoken beat ended: heard in full, cut off (the user took over), or the voice failed. */
 export type SpeechEnd = 'spoken' | 'cut' | 'failed';
 export interface BoardSessionDeps {
@@ -7,10 +8,13 @@ export interface BoardSessionDeps {
    * Speak a beat quietly. `started` fires when its audio begins (drawing starts then, so the pen matches
    * the words); `done` fires once. Returns false when voice is off: the caption is read instead.
    */
-  speak(text: string, hooks: { started(): void; done(end: SpeechEnd): void }): boolean;
+  speak(text: string, hooks: { started(audioId?: number): void; done(end: SpeechEnd): void; timestamps?(words: WordTiming, audioId: number): void; speed?: number }): boolean;
   /** Cancel queued or playing lesson speech. */
   silence(): void;
   speed(): number;
+  teaching?(): boolean;
+  prefetch?(text: string, speed: number): void;
+  cancelPrefetch?(): void;
   log?(event: string, data?: Record<string, unknown>): void;
 }
 export interface BoardTiming { gapMs: number; drawSlackMs: number; idleMs: number }
@@ -45,8 +49,14 @@ export class BoardSession {
   private open = false;
   private waiting = false;
   private tail: number;
-  constructor(readonly id: number, private title: string, beats: BeatInput[], private deps: BoardSessionDeps, private base: ElementInput[] = [], private timing: BoardTiming = boardTiming) {
-    this.beats = repairBeats(beats.slice(0, boardLimits.beats * 2), base);
+  private playbackSpeed = 1;
+  private words?: WordTiming;
+  private audioId?: number;
+  private prepared = '';
+  private answered = new Set<number>();
+  private answerText?: string;
+  constructor(readonly id: number, private title: string, beats: BeatInput[], private deps: BoardSessionDeps, private base: ElementInput[] = [], private timing: BoardTiming = boardTiming, private planned = false) {
+    this.beats = planned ? beats.slice(0, boardLimits.beats * 2) : repairBeats(beats.slice(0, boardLimits.beats * 2), base);
     this.tail = this.beats.length;
   }
   get ended() { return this.finished; }
@@ -56,6 +66,10 @@ export class BoardSession {
   get name() { return this.title; }
   /** Still being written: see `open`. */
   get streaming() { return this.open; }
+  get question() { return this.status === 'asking' ? this.current().ask : undefined; }
+  get answer() { return this.answerText; }
+  private speed() { return this.deps.teaching?.() ? this.playbackSpeed : this.deps.speed(); }
+  private line() { const beat = this.current(); return beat.ask ? `${beat.say} ${beat.ask}` : beat.say; }
   stream() { this.open = true; }
   rename(title: string) { if (title && title !== this.title) { this.title = title; this.emit(); } }
   private applied(through: number) { return this.beats.slice(0, through).reduce(applyBeat, this.base); }
@@ -63,15 +77,19 @@ export class BoardSession {
   scene(): LaidElement[] { return layoutScene(this.applied(this.through)); }
   /** The board as it will look when the whole lesson has played (for follow-up questions). */
   inputs(): ElementInput[] { return this.applied(this.beats.length); }
+  visibleInputs(): ElementInput[] { return this.applied(this.through); }
   script(): LessonInput { return { title: this.title, mode: 'new', beats: [...this.beats] }; }
   private current() { return this.beats[Math.min(this.index, this.beats.length - 1)]; }
   view(): BoardView {
     const beat = this.current(), drawing = this.status === 'playing' && this.started && !this.drawn;
-    const elements = this.scene(), present = new Set(elements.map(e => e.id));
+    const elements = this.scene(), present = new Set(elements.map(e => e.id)), teaching = this.deps.teaching?.() ?? false;
+    const before = teaching ? layoutScene(this.applied(this.index)) : [], changed = (beat.draw ?? []).filter(e => before.some(old => old.id === e.id)).map(e => e.id);
     return { id: this.id, title: this.title, status: this.status, beat: this.index, total: this.beats.length,
-      caption: this.status === 'done' ? '' : beat.say, note: this.note, elements,
-      drawing: drawing ? { key: this.drawKey, beat: this.index, ids: (beat.draw ?? []).map(e => e.id).filter(id => present.has(id)), durationMs: speechMs(beat.say, this.deps.speed()) } : null,
-      highlight: this.status === 'playing' && this.started ? (beat.highlight ?? []).filter(id => present.has(id)) : [] };
+      caption: this.status === 'done' ? '' : this.line(), note: this.note, elements,
+      drawing: drawing ? { key: this.drawKey, beat: this.index, ids: (beat.draw ?? []).map(e => e.id).filter(id => present.has(id)), durationMs: speechMs(this.line(), this.speed()),
+        ...(teaching ? { cues: cueTimings(beat.draw ?? [], this.line(), beat.cues, this.words, this.speed()), audioId: this.audioId } : {}) } : null,
+      highlight: this.status === 'playing' && this.started ? (beat.highlight ?? []).filter(id => present.has(id)) : [],
+      ...(teaching ? { teaching, speed: this.playbackSpeed, effects: beat.effects, recap: beat.recap, transition: drawing ? { before, erased: beat.erase ?? [], changed } : undefined } : {}) };
   }
   private emit() { if (!this.finished) this.deps.emit(this.view()); }
   private later(fn: () => void, ms: number) {
@@ -85,20 +103,24 @@ export class BoardSession {
     const generation = this.generation, stale = () => generation !== this.generation || this.finished;
     this.index = index; this.through = index; this.status = 'playing'; this.note = null;
     this.started = false; this.spoken = false; this.drawn = false;
+    this.words = undefined; this.audioId = undefined; this.prepared = '';
     const beat = this.current();
     this.emit();
-    const onStarted = () => {
+    const onStarted = (audioId?: number) => {
       if (stale() || this.started) return;
+      this.audioId ??= audioId;
       this.started = true; this.through = index + 1; this.drawKey++;
       const view = this.view(), key = this.drawKey;
       this.deps.emit(view);
       // Nothing to draw, or the overlay never answers: never wait forever.
-      if (!view.drawing?.ids.length) this.drew(key);
+      if (!view.drawing?.ids.length && !view.transition?.erased.length && !view.transition?.changed.length && !beat.effects?.length) this.drew(key);
       else this.later(() => this.drew(key), view.drawing.durationMs * 1.5 + this.timing.drawSlackMs);
     };
-    const reading = () => this.later(() => { if (!stale()) { this.spoken = true; this.advance(); } }, readingMs(beat.say));
-    const voiced = this.deps.speak(beat.say, {
+    const reading = () => this.later(() => { if (!stale()) { this.spoken = true; this.advance(); } }, readingMs(this.line()) / (this.deps.teaching?.() ? this.playbackSpeed : 1));
+    const voiced = this.deps.speak(this.line(), {
       started: onStarted,
+      ...(this.deps.teaching?.() ? { speed: this.speed(), timestamps: (words: WordTiming, audioId: number) => { if (stale()) return;
+        this.words = { words: [...(this.words?.words ?? []), ...words.words], start: [...(this.words?.start ?? []), ...words.start], end: [...(this.words?.end ?? []), ...words.end] }; this.audioId = audioId; this.emit(); } } : {}),
       done: end => {
         if (stale()) return;
         if (end === 'cut') { this.pause(); return; }
@@ -111,6 +133,13 @@ export class BoardSession {
     });
     this.deps.log?.('board:beat', { count: index + 1 });
     if (!voiced) { onStarted(); reading(); }
+    this.prepareNext();
+  }
+  private prepareNext() {
+    if (!this.deps.teaching?.() || this.current().ask || this.status !== 'playing') return;
+    const next = this.beats[this.index + 1]; if (!next) return;
+    const line = next.ask ? `${next.say} ${next.ask}` : next.say;
+    if (line !== this.prepared) { this.prepared = line; this.deps.prefetch?.(line, this.speed()); }
   }
   /** The overlay finished animating a beat (or its slack timer fired). */
   drew(key: number) {
@@ -120,10 +149,13 @@ export class BoardSession {
   private advance() {
     if (!this.spoken || !this.drawn || this.status !== 'playing') return;
     const generation = this.generation;
-    this.later(() => { if (generation === this.generation && !this.finished) this.proceed(); }, this.timing.gapMs);
+    this.later(() => { if (generation === this.generation && !this.finished) this.proceed(); }, this.deps.teaching?.() ? Math.min(150, this.timing.gapMs) : this.timing.gapMs);
   }
   /** After a beat: the next one, a pause before the rest of the original lesson, the end, or (streaming) a wait. */
   private proceed() {
+    if (this.deps.teaching?.() && this.current().ask && !this.answered.has(this.index)) {
+      this.cancelWork(); this.status = 'asking'; this.note = this.current().ask; this.deps.cancelPrefetch?.(); this.emit(); return;
+    }
     if (this.open && this.index >= this.tail - 1) { this.waiting = true; return; }
     if (this.index === this.pauseAfter && this.index < this.beats.length - 1) {
       // Follow-up answered: wait before the rest of the original lesson.
@@ -133,13 +165,14 @@ export class BoardSession {
     if (this.index < this.beats.length - 1) this.begin(this.index + 1); else this.finish();
   }
   /** Streamed beats, placed after the last ones that arrived. A lesson waiting for them carries on at once. */
-  append(beats: BeatInput[]) {
+  append(beats: BeatInput[], planned = this.planned) {
     if (this.finished || !beats.length) return;
     const added = beats.slice(0, Math.max(0, boardLimits.beats * 2 - this.beats.length));
     if (!added.length) return;
-    this.beats.splice(this.tail, 0, ...repairBeats(added, this.applied(this.tail)));
+    this.beats.splice(this.tail, 0, ...(planned ? added : repairBeats(added, this.applied(this.tail))));
     if (this.pauseAfter >= 0) this.pauseAfter = this.tail + added.length - 1;
     this.tail += added.length;
+    this.prepareNext();
     if (this.waiting && this.status === 'playing') { this.waiting = false; this.begin(this.index + 1); } else this.emit();
   }
   /** The lesson is complete: no more beats will arrive. */
@@ -157,19 +190,21 @@ export class BoardSession {
   /** Pausing mid-beat shows that beat fully drawn; resuming says it again. */
   pause() {
     if (this.finished || this.status !== 'playing') return;
-    this.cancelWork(); this.touch(); this.deps.silence();
+    this.cancelWork(); this.touch(); this.deps.silence(); this.deps.cancelPrefetch?.();
     this.status = 'paused'; this.note = 'Paused. Say “continue” when you’re ready.';
     this.emit();
   }
   resume() {
     if (this.finished) return '';
     if (this.status === 'done') return 'We’re at the end. Say “replay” to watch it again.';
+    if (this.status === 'asking') return this.next();
     if (this.status === 'paused') this.begin(this.index);
     return '';
   }
   next() {
     if (this.finished || this.status === 'done') return '';
-    this.deps.silence();
+    this.deps.silence(); this.deps.cancelPrefetch?.();
+    if (this.status === 'asking') this.answered.add(this.index);
     // The newest beat while more are being written: show it whole and wait for the next.
     if (this.open && this.index >= this.tail - 1 && this.status === 'playing') {
       this.cancelWork(); this.started = true; this.spoken = true; this.drawn = true; this.through = this.index + 1; this.waiting = true; this.emit(); return '';
@@ -183,17 +218,22 @@ export class BoardSession {
     if (this.finished) return '';
     this.deps.silence(); this.begin(this.index); return '';
   }
-  replay() { if (this.finished) return ''; this.deps.silence(); this.pauseAfter = -1; this.begin(0); return ''; }
+  previous() { return this.jump(Math.max(0, this.index - 1)); }
+  jump(index: number) { if (this.finished || !Number.isInteger(index) || index < 0 || index >= this.beats.length) return ''; this.deps.cancelPrefetch?.(); this.deps.silence(); this.answered = new Set([...this.answered].filter(i => i < index)); this.pauseAfter = -1; this.begin(index); return ''; }
+  setSpeed(speed: number) { if (!Number.isFinite(speed) || speed < 0.75 || speed > 1.5) return; this.playbackSpeed = speed; this.deps.cancelPrefetch?.(); if (this.status === 'playing') { this.deps.silence(); this.begin(this.index); } else this.emit(); }
+  answerQuestion(text: string) { if (this.status !== 'asking') return; this.answerText = text.slice(0, 1200); this.answered.add(this.index); this.status = 'paused'; this.note = 'Let’s look at your answer.'; this.emit(); }
+  replay() { if (this.finished) return ''; this.deps.cancelPrefetch?.(); this.answered.clear(); this.answerText = undefined; this.deps.silence(); this.pauseAfter = -1; this.begin(0); return ''; }
   /** Follow-up beats: drawn right after what is on the board, keeping everything already drawn. */
-  insert(beats: BeatInput[]) {
+  insert(beats: BeatInput[], planned = this.planned) {
     if (this.finished || !beats.length) return;
     const added = beats.slice(0, Math.max(0, boardLimits.beats * 2 - this.beats.length));
     if (!added.length) return;
+    this.answerText = undefined;
     const at = this.status === 'done' ? this.beats.length : this.through;
     const remaining = this.beats.length - at;
-    this.beats.splice(at, 0, ...repairBeats(added, this.applied(at)));
+    this.beats.splice(at, 0, ...(planned ? added : repairBeats(added, this.applied(at))));
     // Repair the remaining original beats around the inserted follow-up, without moving the prefix.
-    this.beats.splice(at + added.length, remaining, ...repairBeats(this.beats.slice(at + added.length), this.applied(at + added.length)));
+    if (!planned) this.beats.splice(at + added.length, remaining, ...repairBeats(this.beats.slice(at + added.length), this.applied(at + added.length)));
     this.pauseAfter = remaining > 0 ? at + added.length - 1 : -1;
     this.tail = at + added.length;
     this.deps.silence(); this.begin(at);
@@ -203,6 +243,7 @@ export class BoardSession {
   stop() {
     if (this.finished) return;
     this.cancelWork(); this.finished = true; clearTimeout(this.idle);
+    this.deps.cancelPrefetch?.();
     this.deps.silence(); this.deps.emit(null); this.deps.log?.('board:closed');
   }
 }

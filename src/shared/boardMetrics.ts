@@ -96,7 +96,7 @@ export function sceneMetrics(elements: LaidElement[], display = referenceDisplay
   const shapes = elements.filter((e): e is LaidShape => e.kind === 'shape');
   const texts: { owner: string; box: ScreenBounds; size: number; words: number; free: boolean }[] = [];
   for (const e of elements) {
-    const block = e.kind === 'text' ? e.text : e.kind === 'shape' || e.kind === 'arrow' ? e.label : null;
+    const block = textOf(e);
     // `free`: text placed by the model or beside an arrow, rather than inside its own shape.
     if (block && block.lines.some(Boolean)) texts.push({ owner: e.id, box: blockBox(block), size: block.size, words: words(block.lines.join(' ')), free: e.kind !== 'shape' });
   }

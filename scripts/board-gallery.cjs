@@ -67,7 +67,7 @@ app.whenReady().then(async () => {
           inputs = t.lesson.beats.reduce(applyBeat, t.base === 'previous' ? inputs : []);
           const elements = layoutScene(inputs);
           send('board:state', null); await delay(60);
-          send('board:state', { id: ++id, title: t.lesson.title, status: 'done', beat: t.lesson.beats.length - 1, total: t.lesson.beats.length, caption: '', note: null, elements, drawing: null, highlight: [] });
+          send('board:state', { id: ++id, title: t.lesson.title, status: 'done', beat: t.lesson.beats.length - 1, total: t.lesson.beats.length, caption: '', note: null, elements, drawing: null, highlight: [], teaching: data.phase === 3, speed: 1 });
           let rect = null;
           for (let i = 0; i < 60 && !rect; i++) {
             await delay(50);
@@ -94,7 +94,7 @@ const pct = v => v === null || v === undefined ? '—' : `${Math.round(v * 100)}
 const sec = v => v === null || v === undefined ? '—' : `${(v / 1000).toFixed(1)} s`;
 function page(data) {
   const prompts = [...new Map(data.models.flatMap(m => m.runs.map(r => [r.id, r]))).values()];
-  const summary = data.models.map(m => { const s = m.summary; return `<tr><th scope="row">${escape(m.label)}<small>${escape(m.model)}${m.complete === false ? ` · partial, ${m.runs.length} of ${m.prompts} prompts` : ''}</small></th>
+  const summary = data.models.map(m => { const s = { prompts: m.runs.length, medianMs: {}, mean: {}, minTextPx: {}, ...m.summary }; return `<tr><th scope="row">${escape(m.label)}<small>${escape(m.model)}${m.complete === false ? ` · partial, ${m.runs.length} of ${m.prompts} prompts` : ''}</small></th>
     <td>${s.drew}/${s.prompts}</td><td>${pct(s.validFirstTry)}</td><td>${s.repairs}</td><td>${sec(s.medianMs.firstToken)}</td><td>${sec(s.medianMs.firstBeat)}</td><td>${sec(s.medianMs.firstStroke)}</td>
     <td>${s.medianOutputTokens ?? '—'}</td><td>${pct(s.lintClean)}</td><td>${s.mean.overlaps ?? '—'}</td><td>${s.mean.through ?? '—'}</td><td>${s.mean.crossings ?? '—'}</td><td>${s.minTextPx.median ?? '—'} px</td><td>${pct(s.smallTextShare)}</td></tr>`; }).join('\n');
   const cell = t => {
@@ -136,7 +136,7 @@ th small { display: block; color: var(--muted); font-weight: normal; }
 </style></head><body>
 <h1>Whiteboard gallery</h1>
 <p class="lede">Each lesson from <code>latest.json</code>, finished and rendered by Kite's overlay in the default ${data.panel.width} × ${data.panel.height} panel on a ${data.display.width} × ${data.display.height} display. ${escape(data.about)} Click a board to open it at full size.</p>
-<p class="lede">Provider generations: ${escape(data.updated)}. ${data.revalidatedAt ? `Repairs/readability revalidated: ${escape(data.revalidatedAt)}. Model timings and tokens below remain historical.` : 'The model-only harness cannot measure an actual drawing frame.'} See <a href="phase1-live.json">fresh overlay first-stroke samples and conditions</a>.</p>
+<p class="lede">${data.phase === 3 ? `Teaching fixtures and targeted provider probes: ${escape(data.updated)}. Finished-board images do not measure live voice timing or teaching clarity. See <a href="../phase3-renderer.json">synthetic renderer checks</a> and <a href="../phase3-live.json">real Cartesia cue/gap measurements and conditions</a>. A scored human clarity comparison remains pending.` : `Provider generations: ${escape(data.updated)}. ${data.revalidatedAt ? `Layout revalidated: ${escape(data.revalidatedAt)}. Model timings and tokens describe the original generations.` : 'The model-only harness cannot measure an actual drawing frame.'} See <a href="${data.phase === 2 ? '../phase2-live.json' : 'phase1-live.json'}">fresh overlay first-stroke samples and conditions</a>.`}</p>
 <h2>Summary</h2>
 <div class="scroll"><table class="summary"><thead><tr><th>Model</th><th>Drew</th><th>Valid first try</th><th>Repairs</th><th>First token</th><th>First beat (streamed)</th><th>First stroke</th><th>Output tokens</th><th>Lint-clean</th><th>Overlaps</th><th>Through shapes</th><th>Crossings</th><th>Text (median)</th><th>Text under 14 px</th></tr></thead>
 <tbody>${summary}</tbody></table></div>

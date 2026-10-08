@@ -25,7 +25,8 @@ interface Dependencies {
   setEscape(active: boolean, abort: () => void): void;
   settings?(): AppSettings;
   describe?(model: ModelSelection): ModelEntry;
-  tts?: { start(id: number, settings: AppSettings): void; push(id: number, text: string): void; finish(id: number): void; cancel(): void };
+  tts?: { start(id: number, settings: AppSettings): void; push(id: number, text: string): void; finish(id: number): void; cancel(): void;
+    speak?(id: number, settings: AppSettings, text: string): void; prefetch?(text: string, settings: AppSettings): void; clearPrefetch?(): void };
   approvals?: ApprovalBroker;
   tools?(messageId: number | null, signal: AbortSignal, activity: () => void, model?: ModelEntry, captureTiming?: (ms: number) => void): ToolSession;
   /**
@@ -47,7 +48,7 @@ interface Interaction {
   hooks?: AnnounceHooks; heard?: boolean; failed?: boolean; settled?: boolean;
 }
 /** A quiet line's lifecycle: `started` when its audio begins, `done` exactly once when it ends. */
-export interface AnnounceHooks { started?(): void; done?(end: 'spoken' | 'cut' | 'failed'): void }
+export interface AnnounceHooks { started?(audioId?: number): void; done?(end: 'spoken' | 'cut' | 'failed'): void; timestamps?(words: NonNullable<VoiceEvent['timestamps']>, audioId: number): void; speed?: number }
 export class VoiceController {
   private sequence = 0;
   private closing = false;
@@ -156,6 +157,7 @@ export class VoiceController {
     this.emit('ptt:stop', job);
   }
   cancel(type: 'ptt:cancel' | 'ptt:tooShort' | 'voice:aborted' = 'ptt:cancel') {
+    this.deps.tts?.clearPrefetch?.();
     const parent = this.suspended; this.suspended = undefined;
     if (parent) { parent.controller.abort(); parent.tools?.close(); this.save(parent, true); clearTimeout(parent.timeout); }
     this.deps.approvals?.deny();
@@ -164,12 +166,14 @@ export class VoiceController {
     job.controller.abort(); job.tools?.close(); this.deps.tts?.cancel(); this.save(job, true); this.emit(type, job); this.finish(job);
   }
   mute() {
+    this.deps.tts?.clearPrefetch?.();
     this.deps.tts?.cancel();
     // A muted lesson line carries on as a caption rather than pausing the lesson.
     for (const job of [this.aside, this.active]) if (job) { if (job.announcement) job.failed = true; job.playbackDone = true; job.speaking = false; this.emit('voice:muted', job); this.complete(job); }
   }
   ttsEvent(event: VoiceEvent) {
     const job = this.job(event.id); if (!job) return;
+    if (event.type === 'tts:timestamps' && event.timestamps && job.announcement) job.hooks?.timestamps?.(event.timestamps, job.id);
     if (event.type === 'tts:chunk' && job.timing.ttsFirstAudioMs === undefined) job.timing.ttsFirstAudioMs = this.now() - (job.ttsStartedAt ?? job.releasedAt);
     this.deps.emit(event);
     if (event.type === 'tts:error') { job.failed = true; job.speaking = false; job.playbackDone = true; this.complete(job); }
@@ -177,7 +181,7 @@ export class VoiceController {
   playback(id: number, type: 'started' | 'ended' | 'failed') {
     const job = this.job(id); if (!job || !job.speaking) return;
     if (job.announcement) {
-      if (type === 'started') job.hooks?.started?.();
+      if (type === 'started') job.hooks?.started?.(job.id);
       else if (type === 'ended') job.heard = true; else job.failed = true;
     }
     if (type === 'started' && job.timing.voiceToVoiceMs === undefined && !job.announcement) {
@@ -194,7 +198,7 @@ export class VoiceController {
   }
   private beginSpeech(job: Interaction, settings?: AppSettings) {
     job.speechStarted = true;
-    settings = this.deps.settings?.() ?? settings;
+    settings = job.announcement ? settings ?? this.deps.settings?.() : this.deps.settings?.() ?? settings;
     if (settings?.ttsEnabled && settings.voiceId && this.deps.tts) {
       job.speaking = true; job.playbackDone = false; job.ttsStartedAt = this.now(); this.deps.tts.start(job.id, settings);
     } else if (settings) this.emit('voice:muted', job);
@@ -218,7 +222,7 @@ export class VoiceController {
    */
   announce(text: string | null, hooks?: AnnounceHooks): boolean {
     if (text === null) { this.dropPending(); if (this.aside) this.drop(this.aside); if (this.active?.announcement) this.drop(this.active); return false; }
-    const settings = this.deps.settings?.();
+    const current = this.deps.settings?.(), settings = current && hooks?.speed ? { ...current, speed: hooks.speed } : current;
     if (this.closing || !settings?.ttsEnabled || !settings.voiceId || !this.deps.tts) return false;
     // A model turn that is working silently (writing a lesson that has started to stream) lets the line play beside it.
     const silent = this.quiet(this.active);
@@ -234,6 +238,8 @@ export class VoiceController {
     this.speak(job, text, settings);
     return true;
   }
+  prefetchAnnouncement(text: string, speed: number) { const settings = this.deps.settings?.(); if (settings && !this.closing) this.deps.tts?.prefetch?.(text, { ...settings, speed }); }
+  cancelPrefetch() { this.deps.tts?.clearPrefetch?.(); }
   private dropPending() { const pending = this.pendingAnnouncement; this.pendingAnnouncement = undefined; pending?.hooks?.done?.('cut'); }
   private settle(job: Interaction) {
     if (job.settled) return;
@@ -246,6 +252,10 @@ export class VoiceController {
   /** A complete, locally generated reply for the current job. */
   private speak(job: Interaction, text: string, settings?: AppSettings) {
     job.text = text; job.llmDone = true;
+    if (job.announcement && settings?.ttsEnabled && settings.voiceId && this.deps.tts?.speak) {
+      job.speechStarted = true; job.speaking = true; job.playbackDone = false; job.ttsStartedAt = this.now();
+      this.emit('llm:delta', job, { text }); this.deps.tts.speak(job.id, settings, text); this.emit('llm:done', job); this.complete(job); return;
+    }
     this.beginSpeech(job, settings); this.emit('llm:delta', job, { text });
     if (job.speaking) { this.deps.tts.push(job.id, text); this.deps.tts.finish(job.id); }
     this.emit('llm:done', job); this.complete(job);

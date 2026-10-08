@@ -19,3 +19,5 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [Memory keeps personal values away from models](015-memory.md)
 - [Kite checks out, and the person pays](016-checkout.md)
 - [Repeat orders take one question, and Kite learns when to stop asking](017-repeat-orders.md)
+- [The whiteboard model writes structure; code places it](018-structured-whiteboard.md)
+- [Whiteboard teaching follows the audio clock and explicit changes](019-whiteboard-teaching.md)

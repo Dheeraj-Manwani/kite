@@ -1,0 +1,392 @@
+{
+  "checkedAt": "2026-10-08T06:18:24.501Z",
+  "conditions": "Fresh specialist calls; firstBeatMs is graph/beat readiness, not renderer first stroke or voice routing time. Every revealed beat is linted. No model-written coordinates.",
+  "phase0MedianTokens": 1112,
+  "fullGolden": false,
+  "formats": [
+    "json"
+  ],
+  "models": [
+    {
+      "model": "moonshot:kimi-k2.6",
+      "runs": [
+        {
+          "prompt": "react-rendering",
+          "family": "flow",
+          "text": "How does React decide what to re-render?",
+          "format": "json",
+          "script": {
+            "version": 2,
+            "title": "React Re-Render Decision",
+            "family": "flow",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "trigger",
+                "label": "State change",
+                "icon": "cpu"
+              },
+              {
+                "id": "diff",
+                "label": "New virtual DOM?",
+                "shape": "diamond"
+              },
+              {
+                "id": "reconcile",
+                "label": "Diff trees",
+                "icon": "git-branch"
+              },
+              {
+                "id": "same",
+                "label": "Skip render"
+              },
+              {
+                "id": "commit",
+                "label": "Update DOM",
+                "icon": "browser"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "trigger",
+                "to": "diff"
+              },
+              {
+                "id": "e1",
+                "from": "diff",
+                "to": "same",
+                "label": "no"
+              },
+              {
+                "id": "e2",
+                "from": "diff",
+                "to": "reconcile",
+                "label": "yes"
+              },
+              {
+                "id": "e3",
+                "from": "reconcile",
+                "to": "commit"
+              }
+            ],
+            "beats": [
+              {
+                "say": "A state change triggers React to check if rendering is needed.",
+                "reveal": [
+                  "trigger",
+                  "e0"
+                ]
+              },
+              {
+                "say": "React compares the new virtual DOM with the previous one.",
+                "reveal": [
+                  "diff",
+                  "e1",
+                  "e2"
+                ]
+              },
+              {
+                "say": "If nothing changed, React skips rendering entirely.",
+                "reveal": [
+                  "same"
+                ]
+              },
+              {
+                "say": "If differences exist, React diffs the trees and commits only the minimal DOM updates.",
+                "reveal": [
+                  "reconcile",
+                  "e3",
+                  "commit"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "React Re-Render Decision",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "A state change triggers React to check if rendering is needed.",
+                "draw": [
+                  {
+                    "id": "board_title_1053614958",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "React Re-Render Decision",
+                    "size": "title"
+                  },
+                  {
+                    "id": "trigger",
+                    "type": "rectangle",
+                    "label": "State change",
+                    "x": 100,
+                    "y": 292,
+                    "icon": "cpu",
+                    "width": 227,
+                    "height": 64
+                  },
+                  {
+                    "id": "diff",
+                    "type": "diamond",
+                    "label": "New virtual DOM?",
+                    "x": 506.12,
+                    "y": 272,
+                    "width": 393,
+                    "height": 104
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "from": "trigger",
+                    "to": "diff",
+                    "points": [
+                      {
+                        "x": 335,
+                        "y": 324
+                      },
+                      {
+                        "x": 498.12,
+                        "y": 324
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "React compares the new virtual DOM with the previous one.",
+                "draw": [
+                  {
+                    "id": "same",
+                    "type": "rectangle",
+                    "label": "Skip render",
+                    "x": 1284.192,
+                    "y": 210,
+                    "width": 144,
+                    "height": 64
+                  },
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "from": "diff",
+                    "to": "same",
+                    "label": "no",
+                    "points": [
+                      {
+                        "x": 843.8584895058955,
+                        "y": 306.27960172791455
+                      },
+                      {
+                        "x": 1276.2542314862317,
+                        "y": 252.02934186000778
+                      }
+                    ]
+                  },
+                  {
+                    "id": "reconcile",
+                    "type": "rectangle",
+                    "label": "Diff trees",
+                    "x": 1284.192,
+                    "y": 374,
+                    "icon": "git-branch",
+                    "width": 196,
+                    "height": 64
+                  },
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "from": "diff",
+                    "to": "reconcile",
+                    "label": "yes",
+                    "points": [
+                      {
+                        "x": 845.5238327908303,
+                        "y": 341.2433741955938
+                      },
+                      {
+                        "x": 1276.249611032023,
+                        "y": 393.2165482165626
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "If nothing changed, React skips rendering entirely.",
+                "draw": []
+              },
+              {
+                "say": "If differences exist, React diffs the trees and commits only the minimal DOM updates.",
+                "draw": [
+                  {
+                    "id": "commit",
+                    "type": "rectangle",
+                    "label": "Update DOM",
+                    "x": 1660.192,
+                    "y": 292,
+                    "icon": "browser",
+                    "width": 222,
+                    "height": 64
+                  },
+                  {
+                    "id": "e3",
+                    "type": "arrow",
+                    "from": "reconcile",
+                    "to": "commit",
+                    "points": [
+                      {
+                        "x": 1488.0199709970943,
+                        "y": 383.6917901754197
+                      },
+                      {
+                        "x": 1652.3640290029057,
+                        "y": 349.04856972175253
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "React Re-Render Decision",
+              "family": "flow",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "trigger",
+                  "label": "State change",
+                  "icon": "cpu"
+                },
+                {
+                  "id": "diff",
+                  "label": "New virtual DOM?",
+                  "shape": "diamond"
+                },
+                {
+                  "id": "reconcile",
+                  "label": "Diff trees",
+                  "icon": "git-branch"
+                },
+                {
+                  "id": "same",
+                  "label": "Skip render"
+                },
+                {
+                  "id": "commit",
+                  "label": "Update DOM",
+                  "icon": "browser"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "trigger",
+                  "to": "diff"
+                },
+                {
+                  "id": "e1",
+                  "from": "diff",
+                  "to": "same",
+                  "label": "no"
+                },
+                {
+                  "id": "e2",
+                  "from": "diff",
+                  "to": "reconcile",
+                  "label": "yes"
+                },
+                {
+                  "id": "e3",
+                  "from": "reconcile",
+                  "to": "commit"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "A state change triggers React to check if rendering is needed.",
+                  "reveal": [
+                    "trigger",
+                    "e0"
+                  ]
+                },
+                {
+                  "say": "React compares the new virtual DOM with the previous one.",
+                  "reveal": [
+                    "diff",
+                    "e1",
+                    "e2"
+                  ]
+                },
+                {
+                  "say": "If nothing changed, React skips rendering entirely.",
+                  "reveal": [
+                    "same"
+                  ]
+                },
+                {
+                  "say": "If differences exist, React diffs the trees and commits only the minimal DOM updates.",
+                  "reveal": [
+                    "reconcile",
+                    "e3",
+                    "commit"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 374,
+          "firstBeatMs": 7878,
+          "layoutMs": 157,
+          "metrics": {
+            "elements": 10,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 8,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 11.4,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 2
+            },
+            "issues": [],
+            "beats": 4,
+            "newPerBeat": {
+              "max": 4,
+              "mean": 2.5
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        }
+      ],
+      "summaries": [
+        {
+          "format": "json",
+          "prompts": 1,
+          "parsed": 1,
+          "lintClean": 1,
+          "medianTokens": 374,
+          "tokenRatioToPhase0": 0.3363309352517986,
+          "medianReadyMs": 7878,
+          "medianLayoutMs": 157,
+          "fixedLessons": 0,
+          "clarity": "Review the gallery for teaching order, correct labels and family; no automatic semantic clarity score is claimed."
+        }
+      ]
+    }
+  ],
+  "gate": {
+    "threeProviderGolden": false,
+    "halfTokens": true,
+    "firstStroke": "Measured separately with eval:board:live --phase2; readiness cannot substitute."
+  }
+}

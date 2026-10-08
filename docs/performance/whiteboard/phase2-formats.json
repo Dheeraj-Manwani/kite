@@ -1,0 +1,4862 @@
+{
+  "checkedAt": "2026-10-08T04:54:58.789Z",
+  "conditions": "Fresh specialist calls; firstBeatMs is graph/beat readiness, not renderer first stroke or voice routing time. Every revealed beat is linted. No model-written coordinates.",
+  "phase0MedianTokens": 1112,
+  "fullGolden": false,
+  "formats": [
+    "lines",
+    "json"
+  ],
+  "models": [
+    {
+      "model": "deepseek:deepseek-flash",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "family": "sequence",
+          "text": "Explain how the TCP three-way handshake works.",
+          "format": "lines",
+          "script": {
+            "version": 2,
+            "title": "TCP handshake",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "Client"
+              },
+              {
+                "id": "n1",
+                "label": "Server"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "n0",
+                "to": "n1",
+                "label": "SYN"
+              },
+              {
+                "id": "e1",
+                "from": "n1",
+                "to": "n0",
+                "label": "SYN-ACK"
+              },
+              {
+                "id": "e2",
+                "from": "n0",
+                "to": "n1",
+                "label": "ACK"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The client sends a SYN packet to the server.",
+                "reveal": [
+                  "n0",
+                  "n1",
+                  "e0"
+                ]
+              },
+              {
+                "say": "The server replies with SYN-ACK, acknowledging it.",
+                "reveal": [
+                  "e1"
+                ]
+              },
+              {
+                "say": "The client sends ACK, and the connection is open.",
+                "reveal": [
+                  "e2"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "TCP handshake",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The client sends a SYN packet to the server.",
+                "draw": [
+                  {
+                    "id": "board_title_372799649",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "TCP handshake",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "Client",
+                    "x": 60,
+                    "y": 140,
+                    "width": 120,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "Server",
+                    "x": 400,
+                    "y": 140,
+                    "width": 120,
+                    "height": 64
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "label": "SYN",
+                    "points": [
+                      {
+                        "x": 120,
+                        "y": 294
+                      },
+                      {
+                        "x": 460,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 120,
+                        "y": 220
+                      },
+                      {
+                        "x": 120,
+                        "y": 564
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n1_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 460,
+                        "y": 220
+                      },
+                      {
+                        "x": 460,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The server replies with SYN-ACK, acknowledging it.",
+                "draw": [
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "SYN-ACK",
+                    "points": [
+                      {
+                        "x": 460,
+                        "y": 384
+                      },
+                      {
+                        "x": 120,
+                        "y": 384
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The client sends ACK, and the connection is open.",
+                "draw": [
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "ACK",
+                    "points": [
+                      {
+                        "x": 120,
+                        "y": 474
+                      },
+                      {
+                        "x": 460,
+                        "y": 474
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "TCP handshake",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "Client"
+                },
+                {
+                  "id": "n1",
+                  "label": "Server"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "SYN"
+                },
+                {
+                  "id": "e1",
+                  "from": "n1",
+                  "to": "n0",
+                  "label": "SYN-ACK"
+                },
+                {
+                  "id": "e2",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "ACK"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The client sends a SYN packet to the server.",
+                  "reveal": [
+                    "n0",
+                    "n1",
+                    "e0"
+                  ]
+                },
+                {
+                  "say": "The server replies with SYN-ACK, acknowledging it.",
+                  "reveal": [
+                    "e1"
+                  ]
+                },
+                {
+                  "say": "The client sends ACK, and the connection is open.",
+                  "reveal": [
+                    "e2"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 128,
+          "firstBeatMs": 1189,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 8,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 6,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 13,
+            "colors": 1,
+            "labelWords": {
+              "max": 2,
+              "mean": 1.2
+            },
+            "issues": [],
+            "beats": 3,
+            "newPerBeat": {
+              "max": 6,
+              "mean": 2.7
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "tcp-handshake",
+          "family": "sequence",
+          "text": "Explain how the TCP three-way handshake works.",
+          "format": "json",
+          "script": {
+            "version": 2,
+            "title": "TCP Three-Way Handshake",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "client",
+                "label": "Client",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "server",
+                "label": "Server",
+                "icon": "server"
+              }
+            ],
+            "edges": [
+              {
+                "id": "syn",
+                "from": "client",
+                "to": "server",
+                "label": "SYN"
+              },
+              {
+                "id": "synack",
+                "from": "server",
+                "to": "client",
+                "label": "SYN-ACK"
+              },
+              {
+                "id": "ack",
+                "from": "client",
+                "to": "server",
+                "label": "ACK"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The client sends a SYN packet, asking to open a connection and stating its initial sequence number.",
+                "reveal": [
+                  "client",
+                  "server",
+                  "syn"
+                ]
+              },
+              {
+                "say": "The server replies with SYN-ACK: it acknowledges the client and sends its own sequence number.",
+                "reveal": [
+                  "synack"
+                ]
+              },
+              {
+                "say": "The client returns an ACK. Both sides now agree on the connection.",
+                "reveal": [
+                  "ack"
+                ]
+              },
+              {
+                "say": "Three messages complete the handshake, and reliable data transfer can begin.",
+                "reveal": [],
+                "highlight": [
+                  "client",
+                  "server",
+                  "syn",
+                  "synack",
+                  "ack"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "TCP Three-Way Handshake",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The client sends a SYN packet, asking to open a connection and stating its initial sequence number.",
+                "draw": [
+                  {
+                    "id": "board_title_1219880883",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "TCP Three-Way Handshake",
+                    "size": "title"
+                  },
+                  {
+                    "id": "client",
+                    "type": "rectangle",
+                    "label": "Client",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 153,
+                    "height": 64
+                  },
+                  {
+                    "id": "server",
+                    "type": "rectangle",
+                    "label": "Server",
+                    "x": 430.28,
+                    "y": 140,
+                    "icon": "server",
+                    "width": 159,
+                    "height": 64
+                  },
+                  {
+                    "id": "syn",
+                    "type": "arrow",
+                    "label": "SYN",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 294
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "client_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 220
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 564
+                      }
+                    ]
+                  },
+                  {
+                    "id": "server_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 220
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The server replies with SYN-ACK: it acknowledges the client and sends its own sequence number.",
+                "draw": [
+                  {
+                    "id": "synack",
+                    "type": "arrow",
+                    "label": "SYN-ACK",
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 384
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 384
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The client returns an ACK. Both sides now agree on the connection.",
+                "draw": [
+                  {
+                    "id": "ack",
+                    "type": "arrow",
+                    "label": "ACK",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 474
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 474
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "Three messages complete the handshake, and reliable data transfer can begin.",
+                "draw": [],
+                "highlight": [
+                  "client",
+                  "server",
+                  "syn",
+                  "synack",
+                  "ack"
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "TCP Three-Way Handshake",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "client",
+                  "label": "Client",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "server",
+                  "label": "Server",
+                  "icon": "server"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "syn",
+                  "from": "client",
+                  "to": "server",
+                  "label": "SYN"
+                },
+                {
+                  "id": "synack",
+                  "from": "server",
+                  "to": "client",
+                  "label": "SYN-ACK"
+                },
+                {
+                  "id": "ack",
+                  "from": "client",
+                  "to": "server",
+                  "label": "ACK"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The client sends a SYN packet, asking to open a connection and stating its initial sequence number.",
+                  "reveal": [
+                    "client",
+                    "server",
+                    "syn"
+                  ]
+                },
+                {
+                  "say": "The server replies with SYN-ACK: it acknowledges the client and sends its own sequence number.",
+                  "reveal": [
+                    "synack"
+                  ]
+                },
+                {
+                  "say": "The client returns an ACK. Both sides now agree on the connection.",
+                  "reveal": [
+                    "ack"
+                  ]
+                },
+                {
+                  "say": "Three messages complete the handshake, and reliable data transfer can begin.",
+                  "reveal": [],
+                  "highlight": [
+                    "client",
+                    "server",
+                    "syn",
+                    "synack",
+                    "ack"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 242,
+          "firstBeatMs": 1116,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 8,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 6,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 13,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 1.3
+            },
+            "issues": [],
+            "beats": 4,
+            "newPerBeat": {
+              "max": 6,
+              "mean": 2
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "oauth",
+          "family": "sequence",
+          "text": "How does OAuth login with Google work?",
+          "format": "lines",
+          "script": {
+            "version": 2,
+            "title": "oauth google",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "User",
+                "icon": "user"
+              },
+              {
+                "id": "n1",
+                "label": "App",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "n2",
+                "label": "Google",
+                "icon": "shield"
+              },
+              {
+                "id": "n3",
+                "label": "Callback URL",
+                "icon": "api"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "n0",
+                "to": "n1",
+                "label": "click login"
+              },
+              {
+                "id": "e1",
+                "from": "n1",
+                "to": "n2",
+                "label": "redirect request"
+              },
+              {
+                "id": "e2",
+                "from": "n2",
+                "to": "n0",
+                "label": "consent screen"
+              },
+              {
+                "id": "e3",
+                "from": "n0",
+                "to": "n2",
+                "label": "grant access"
+              },
+              {
+                "id": "e4",
+                "from": "n2",
+                "to": "n3",
+                "label": "auth code"
+              },
+              {
+                "id": "e5",
+                "from": "n3",
+                "to": "n1",
+                "label": "exchange code"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The user clicks Sign in with Google on the app.",
+                "reveal": [
+                  "n0",
+                  "n1",
+                  "e0"
+                ],
+                "highlight": [
+                  "n0",
+                  "n1",
+                  "e0"
+                ]
+              },
+              {
+                "say": "The app redirects to Google; the user sees a consent screen.",
+                "reveal": [
+                  "n0",
+                  "n1",
+                  "n2",
+                  "e1",
+                  "e2"
+                ],
+                "highlight": [
+                  "n2",
+                  "e1",
+                  "e2"
+                ]
+              },
+              {
+                "say": "The user grants access to the requested scopes.",
+                "reveal": [
+                  "n0",
+                  "n2",
+                  "e3"
+                ],
+                "highlight": [
+                  "e3"
+                ]
+              },
+              {
+                "say": "Google redirects back with a one-time auth code.",
+                "reveal": [
+                  "n2",
+                  "n3",
+                  "e4"
+                ],
+                "highlight": [
+                  "n3",
+                  "e4"
+                ]
+              },
+              {
+                "say": "The app exchanges the code for tokens; login is complete.",
+                "reveal": [
+                  "n1",
+                  "n3",
+                  "e5",
+                  "n0"
+                ],
+                "highlight": [
+                  "n1",
+                  "n3",
+                  "e5"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "oauth google",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The user clicks Sign in with Google on the app.",
+                "draw": [
+                  {
+                    "id": "board_title_4268605419",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "oauth google",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "User",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "user",
+                    "width": 143,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "App",
+                    "x": 420.44,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 133,
+                    "height": 64
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "label": "click login",
+                    "points": [
+                      {
+                        "x": 130.22,
+                        "y": 294
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 130.22,
+                        "y": 220
+                      },
+                      {
+                        "x": 130.22,
+                        "y": 834
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n1_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 220
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 834
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "n0",
+                  "n1",
+                  "e0"
+                ]
+              },
+              {
+                "say": "The app redirects to Google; the user sees a consent screen.",
+                "draw": [
+                  {
+                    "id": "n2",
+                    "type": "rectangle",
+                    "label": "Google",
+                    "x": 771.44,
+                    "y": 140,
+                    "icon": "shield",
+                    "width": 164,
+                    "height": 64
+                  },
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "redirect request",
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 384
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 384
+                      }
+                    ]
+                  },
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "consent screen",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 474
+                      },
+                      {
+                        "x": 130.22,
+                        "y": 474
+                      }
+                    ],
+                    "halo": true
+                  },
+                  {
+                    "id": "n2_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 220
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 834
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "n2",
+                  "e1",
+                  "e2"
+                ]
+              },
+              {
+                "say": "The user grants access to the requested scopes.",
+                "draw": [
+                  {
+                    "id": "e3",
+                    "type": "arrow",
+                    "label": "grant access",
+                    "points": [
+                      {
+                        "x": 130.22,
+                        "y": 564
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 564
+                      }
+                    ],
+                    "halo": true
+                  }
+                ],
+                "highlight": [
+                  "e3"
+                ]
+              },
+              {
+                "say": "Google redirects back with a one-time auth code.",
+                "draw": [
+                  {
+                    "id": "n3",
+                    "type": "rectangle",
+                    "label": "Callback URL",
+                    "x": 1153.38,
+                    "y": 140,
+                    "icon": "api",
+                    "width": 175,
+                    "height": 64
+                  },
+                  {
+                    "id": "e4",
+                    "type": "arrow",
+                    "label": "auth code",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 654
+                      },
+                      {
+                        "x": 1263.7,
+                        "y": 654
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n3_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1263.7,
+                        "y": 220
+                      },
+                      {
+                        "x": 1263.7,
+                        "y": 834
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "n3",
+                  "e4"
+                ]
+              },
+              {
+                "say": "The app exchanges the code for tokens; login is complete.",
+                "draw": [
+                  {
+                    "id": "e5",
+                    "type": "arrow",
+                    "label": "exchange code",
+                    "points": [
+                      {
+                        "x": 1263.7,
+                        "y": 744
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 744
+                      }
+                    ],
+                    "halo": true
+                  }
+                ],
+                "highlight": [
+                  "n1",
+                  "n3",
+                  "e5"
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "oauth google",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "User",
+                  "icon": "user"
+                },
+                {
+                  "id": "n1",
+                  "label": "App",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "n2",
+                  "label": "Google",
+                  "icon": "shield"
+                },
+                {
+                  "id": "n3",
+                  "label": "Callback URL",
+                  "icon": "api"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "click login"
+                },
+                {
+                  "id": "e1",
+                  "from": "n1",
+                  "to": "n2",
+                  "label": "redirect request"
+                },
+                {
+                  "id": "e2",
+                  "from": "n2",
+                  "to": "n0",
+                  "label": "consent screen"
+                },
+                {
+                  "id": "e3",
+                  "from": "n0",
+                  "to": "n2",
+                  "label": "grant access"
+                },
+                {
+                  "id": "e4",
+                  "from": "n2",
+                  "to": "n3",
+                  "label": "auth code"
+                },
+                {
+                  "id": "e5",
+                  "from": "n3",
+                  "to": "n1",
+                  "label": "exchange code"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The user clicks Sign in with Google on the app.",
+                  "reveal": [
+                    "n0",
+                    "n1",
+                    "e0"
+                  ],
+                  "highlight": [
+                    "n0",
+                    "n1",
+                    "e0"
+                  ]
+                },
+                {
+                  "say": "The app redirects to Google; the user sees a consent screen.",
+                  "reveal": [
+                    "n0",
+                    "n1",
+                    "n2",
+                    "e1",
+                    "e2"
+                  ],
+                  "highlight": [
+                    "n2",
+                    "e1",
+                    "e2"
+                  ]
+                },
+                {
+                  "say": "The user grants access to the requested scopes.",
+                  "reveal": [
+                    "n0",
+                    "n2",
+                    "e3"
+                  ],
+                  "highlight": [
+                    "e3"
+                  ]
+                },
+                {
+                  "say": "Google redirects back with a one-time auth code.",
+                  "reveal": [
+                    "n2",
+                    "n3",
+                    "e4"
+                  ],
+                  "highlight": [
+                    "n3",
+                    "e4"
+                  ]
+                },
+                {
+                  "say": "The app exchanges the code for tokens; login is complete.",
+                  "reveal": [
+                    "n1",
+                    "n3",
+                    "e5",
+                    "n0"
+                  ],
+                  "highlight": [
+                    "n1",
+                    "n3",
+                    "e5"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 277,
+          "firstBeatMs": 1388,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 15,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 11,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 13,
+            "colors": 1,
+            "labelWords": {
+              "max": 2,
+              "mean": 1.7
+            },
+            "issues": [],
+            "beats": 5,
+            "newPerBeat": {
+              "max": 6,
+              "mean": 3
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "oauth",
+          "family": "sequence",
+          "text": "How does OAuth login with Google work?",
+          "format": "json",
+          "script": {
+            "version": 2,
+            "title": "OAuth Login with Google",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "User",
+                "icon": "user"
+              },
+              {
+                "id": "n1",
+                "label": "App",
+                "icon": "browser"
+              },
+              {
+                "id": "n2",
+                "label": "Google",
+                "icon": "cloud"
+              },
+              {
+                "id": "n3",
+                "label": "Consent screen",
+                "icon": "shield"
+              },
+              {
+                "id": "n4",
+                "label": "Auth code",
+                "icon": "key"
+              },
+              {
+                "id": "n5",
+                "label": "App verifies code",
+                "icon": "server"
+              },
+              {
+                "id": "n6",
+                "label": "User profile",
+                "icon": "user"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "n0",
+                "to": "n1",
+                "label": "sign in"
+              },
+              {
+                "id": "e1",
+                "from": "n1",
+                "to": "n2",
+                "label": "redirect"
+              },
+              {
+                "id": "e2",
+                "from": "n2",
+                "to": "n3",
+                "label": "show"
+              },
+              {
+                "id": "e3",
+                "from": "n3",
+                "to": "n4",
+                "label": "grant"
+              },
+              {
+                "id": "e4",
+                "from": "n4",
+                "to": "n1",
+                "label": "return code"
+              },
+              {
+                "id": "e5",
+                "from": "n1",
+                "to": "n2",
+                "label": "exchange"
+              },
+              {
+                "id": "e6",
+                "from": "n2",
+                "to": "n6",
+                "label": "reply profile"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The user taps sign in. The app sends them to Google.",
+                "reveal": [
+                  "n0",
+                  "n1",
+                  "n2",
+                  "e0",
+                  "e1"
+                ]
+              },
+              {
+                "say": "Google shows a consent screen asking for permission.",
+                "reveal": [
+                  "n3",
+                  "e2"
+                ]
+              },
+              {
+                "say": "If they approve, Google issues a short-lived authorization code.",
+                "reveal": [
+                  "n4",
+                  "e3"
+                ]
+              },
+              {
+                "say": "That code is sent back to the app.",
+                "reveal": [
+                  "e4"
+                ]
+              },
+              {
+                "say": "The app privately exchanges the code for an access token.",
+                "reveal": [
+                  "n5",
+                  "e5"
+                ]
+              },
+              {
+                "say": "Google returns the user profile, and the app logs them in.",
+                "reveal": [
+                  "e6",
+                  "n6"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "OAuth Login with Google",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The user taps sign in. The app sends them to Google.",
+                "draw": [
+                  {
+                    "id": "board_title_1627040482",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "OAuth Login with Google",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "User",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "user",
+                    "width": 143,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "App",
+                    "x": 420.44,
+                    "y": 140,
+                    "icon": "browser",
+                    "width": 133,
+                    "height": 64
+                  },
+                  {
+                    "id": "n2",
+                    "type": "rectangle",
+                    "label": "Google",
+                    "x": 771.44,
+                    "y": 140,
+                    "icon": "cloud",
+                    "width": 164,
+                    "height": 64
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "label": "sign in",
+                    "points": [
+                      {
+                        "x": 130.22,
+                        "y": 294
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "redirect",
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 384
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 384
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 130.22,
+                        "y": 220
+                      },
+                      {
+                        "x": 130.22,
+                        "y": 924
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n1_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 220
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 924
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n2_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 220
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "Google shows a consent screen asking for permission.",
+                "draw": [
+                  {
+                    "id": "n3",
+                    "type": "rectangle",
+                    "label": "Consent screen",
+                    "x": 1153.38,
+                    "y": 140,
+                    "icon": "shield",
+                    "width": 177,
+                    "height": 76
+                  },
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "show",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 474
+                      },
+                      {
+                        "x": 1275.1100000000001,
+                        "y": 474
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n3_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1275.1100000000001,
+                        "y": 220
+                      },
+                      {
+                        "x": 1275.1100000000001,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "If they approve, Google issues a short-lived authorization code.",
+                "draw": [
+                  {
+                    "id": "n4",
+                    "type": "rectangle",
+                    "label": "Auth code",
+                    "x": 1616.8400000000001,
+                    "y": 140,
+                    "icon": "key",
+                    "width": 145,
+                    "height": 64
+                  },
+                  {
+                    "id": "e3",
+                    "type": "arrow",
+                    "label": "grant",
+                    "points": [
+                      {
+                        "x": 1275.1100000000001,
+                        "y": 564
+                      },
+                      {
+                        "x": 1714.7400000000002,
+                        "y": 564
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n4_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1714.7400000000002,
+                        "y": 220
+                      },
+                      {
+                        "x": 1714.7400000000002,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "That code is sent back to the app.",
+                "draw": [
+                  {
+                    "id": "e4",
+                    "type": "arrow",
+                    "label": "return code",
+                    "points": [
+                      {
+                        "x": 1714.7400000000002,
+                        "y": 654
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 654
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The app privately exchanges the code for an access token.",
+                "draw": [
+                  {
+                    "id": "n5",
+                    "type": "rectangle",
+                    "label": "App verifies code",
+                    "x": 2032.64,
+                    "y": 140,
+                    "icon": "server",
+                    "width": 169,
+                    "height": 76
+                  },
+                  {
+                    "id": "e5",
+                    "type": "arrow",
+                    "label": "exchange",
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 744
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 744
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n5_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 2163.9900000000002,
+                        "y": 220
+                      },
+                      {
+                        "x": 2163.9900000000002,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "Google returns the user profile, and the app logs them in.",
+                "draw": [
+                  {
+                    "id": "e6",
+                    "type": "arrow",
+                    "label": "reply profile",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 834
+                      },
+                      {
+                        "x": 2620.08,
+                        "y": 834
+                      }
+                    ],
+                    "halo": true
+                  },
+                  {
+                    "id": "n6",
+                    "type": "rectangle",
+                    "label": "User profile",
+                    "x": 2515.34,
+                    "y": 140,
+                    "icon": "user",
+                    "width": 160,
+                    "height": 64
+                  },
+                  {
+                    "id": "n6_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 2620.08,
+                        "y": 220
+                      },
+                      {
+                        "x": 2620.08,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "OAuth Login with Google",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "User",
+                  "icon": "user"
+                },
+                {
+                  "id": "n1",
+                  "label": "App",
+                  "icon": "browser"
+                },
+                {
+                  "id": "n2",
+                  "label": "Google",
+                  "icon": "cloud"
+                },
+                {
+                  "id": "n3",
+                  "label": "Consent screen",
+                  "icon": "shield"
+                },
+                {
+                  "id": "n4",
+                  "label": "Auth code",
+                  "icon": "key"
+                },
+                {
+                  "id": "n5",
+                  "label": "App verifies code",
+                  "icon": "server"
+                },
+                {
+                  "id": "n6",
+                  "label": "User profile",
+                  "icon": "user"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "sign in"
+                },
+                {
+                  "id": "e1",
+                  "from": "n1",
+                  "to": "n2",
+                  "label": "redirect"
+                },
+                {
+                  "id": "e2",
+                  "from": "n2",
+                  "to": "n3",
+                  "label": "show"
+                },
+                {
+                  "id": "e3",
+                  "from": "n3",
+                  "to": "n4",
+                  "label": "grant"
+                },
+                {
+                  "id": "e4",
+                  "from": "n4",
+                  "to": "n1",
+                  "label": "return code"
+                },
+                {
+                  "id": "e5",
+                  "from": "n1",
+                  "to": "n2",
+                  "label": "exchange"
+                },
+                {
+                  "id": "e6",
+                  "from": "n2",
+                  "to": "n6",
+                  "label": "reply profile"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The user taps sign in. The app sends them to Google.",
+                  "reveal": [
+                    "n0",
+                    "n1",
+                    "n2",
+                    "e0",
+                    "e1"
+                  ]
+                },
+                {
+                  "say": "Google shows a consent screen asking for permission.",
+                  "reveal": [
+                    "n3",
+                    "e2"
+                  ]
+                },
+                {
+                  "say": "If they approve, Google issues a short-lived authorization code.",
+                  "reveal": [
+                    "n4",
+                    "e3"
+                  ]
+                },
+                {
+                  "say": "That code is sent back to the app.",
+                  "reveal": [
+                    "e4"
+                  ]
+                },
+                {
+                  "say": "The app privately exchanges the code for an access token.",
+                  "reveal": [
+                    "n5",
+                    "e5"
+                  ]
+                },
+                {
+                  "say": "Google returns the user profile, and the app logs them in.",
+                  "reveal": [
+                    "e6",
+                    "n6"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 438,
+          "firstBeatMs": 1490,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 22,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 15,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 8.1,
+            "colors": 1,
+            "labelWords": {
+              "max": 4,
+              "mean": 1.7
+            },
+            "issues": [],
+            "beats": 6,
+            "newPerBeat": {
+              "max": 9,
+              "mean": 3.7
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        }
+      ],
+      "summaries": [
+        {
+          "format": "lines",
+          "prompts": 2,
+          "parsed": 2,
+          "lintClean": 1,
+          "medianTokens": 202.5,
+          "tokenRatioToPhase0": 0.1821043165467626,
+          "medianReadyMs": 1288.5,
+          "medianLayoutMs": 0,
+          "fixedLessons": 0,
+          "clarity": "Review the gallery for teaching order, correct labels and family; no automatic semantic clarity score is claimed."
+        },
+        {
+          "format": "json",
+          "prompts": 2,
+          "parsed": 2,
+          "lintClean": 1,
+          "medianTokens": 340,
+          "tokenRatioToPhase0": 0.3057553956834532,
+          "medianReadyMs": 1303,
+          "medianLayoutMs": 0,
+          "fixedLessons": 0,
+          "clarity": "Review the gallery for teaching order, correct labels and family; no automatic semantic clarity score is claimed."
+        }
+      ]
+    },
+    {
+      "model": "groq:openai/gpt-oss-120b",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "family": "sequence",
+          "text": "Explain how the TCP three-way handshake works.",
+          "format": "lines",
+          "script": {
+            "version": 2,
+            "title": "TCP three-way handshake",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "c0",
+                "label": "Client",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "s0",
+                "label": "Server",
+                "icon": "server"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "c0",
+                "to": "s0",
+                "label": "SYN"
+              },
+              {
+                "id": "e1",
+                "from": "s0",
+                "to": "c0",
+                "label": "SYN‑ACK"
+              },
+              {
+                "id": "e2",
+                "from": "c0",
+                "to": "s0",
+                "label": "ACK"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The client initiates a connection to the server.",
+                "reveal": [
+                  "c0",
+                  "s0"
+                ]
+              },
+              {
+                "say": "Client sends SYN (its initial sequence number).",
+                "reveal": [
+                  "e0"
+                ],
+                "highlight": [
+                  "c0",
+                  "s0"
+                ]
+              },
+              {
+                "say": "Server replies with SYN‑ACK (its sequence number and acknowledgment).",
+                "reveal": [
+                  "e1"
+                ],
+                "highlight": [
+                  "s0"
+                ]
+              },
+              {
+                "say": "Client sends final ACK, completing the handshake and establishing the connection.",
+                "reveal": [
+                  "e2"
+                ],
+                "highlight": [
+                  "c0"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "TCP three-way handshake",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The client initiates a connection to the server.",
+                "draw": [
+                  {
+                    "id": "board_title_864405971",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "TCP three-way handshake",
+                    "size": "title"
+                  },
+                  {
+                    "id": "c0",
+                    "type": "rectangle",
+                    "label": "Client",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 153,
+                    "height": 64
+                  },
+                  {
+                    "id": "s0",
+                    "type": "rectangle",
+                    "label": "Server",
+                    "x": 430.28,
+                    "y": 140,
+                    "icon": "server",
+                    "width": 159,
+                    "height": 64
+                  },
+                  {
+                    "id": "c0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 220
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 564
+                      }
+                    ]
+                  },
+                  {
+                    "id": "s0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 220
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "Client sends SYN (its initial sequence number).",
+                "draw": [
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "label": "SYN",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 294
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 294
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "c0",
+                  "s0"
+                ]
+              },
+              {
+                "say": "Server replies with SYN‑ACK (its sequence number and acknowledgment).",
+                "draw": [
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "SYN‑ACK",
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 384
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 384
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "s0"
+                ]
+              },
+              {
+                "say": "Client sends final ACK, completing the handshake and establishing the connection.",
+                "draw": [
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "ACK",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 474
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 474
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "c0"
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "TCP three-way handshake",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "c0",
+                  "label": "Client",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "s0",
+                  "label": "Server",
+                  "icon": "server"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "c0",
+                  "to": "s0",
+                  "label": "SYN"
+                },
+                {
+                  "id": "e1",
+                  "from": "s0",
+                  "to": "c0",
+                  "label": "SYN‑ACK"
+                },
+                {
+                  "id": "e2",
+                  "from": "c0",
+                  "to": "s0",
+                  "label": "ACK"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The client initiates a connection to the server.",
+                  "reveal": [
+                    "c0",
+                    "s0"
+                  ]
+                },
+                {
+                  "say": "Client sends SYN (its initial sequence number).",
+                  "reveal": [
+                    "e0"
+                  ],
+                  "highlight": [
+                    "c0",
+                    "s0"
+                  ]
+                },
+                {
+                  "say": "Server replies with SYN‑ACK (its sequence number and acknowledgment).",
+                  "reveal": [
+                    "e1"
+                  ],
+                  "highlight": [
+                    "s0"
+                  ]
+                },
+                {
+                  "say": "Client sends final ACK, completing the handshake and establishing the connection.",
+                  "reveal": [
+                    "e2"
+                  ],
+                  "highlight": [
+                    "c0"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 638,
+          "firstBeatMs": 1836,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 8,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 6,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 13,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 1.3
+            },
+            "issues": [],
+            "beats": 4,
+            "newPerBeat": {
+              "max": 5,
+              "mean": 2
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "tcp-handshake",
+          "family": "sequence",
+          "text": "Explain how the TCP three-way handshake works.",
+          "format": "json",
+          "script": {
+            "version": 2,
+            "title": "TCP Three‑Way Handshake",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "Client",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "n1",
+                "label": "Server",
+                "icon": "server"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "n0",
+                "to": "n1",
+                "label": "SYN"
+              },
+              {
+                "id": "e1",
+                "from": "n1",
+                "to": "n0",
+                "label": "SYN‑ACK"
+              },
+              {
+                "id": "e2",
+                "from": "n0",
+                "to": "n1",
+                "label": "ACK"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The client starts the handshake by sending a SYN packet.",
+                "reveal": [
+                  "n0",
+                  "n1",
+                  "e0"
+                ]
+              },
+              {
+                "say": "The server replies with a SYN‑ACK packet.",
+                "reveal": [
+                  "e1"
+                ]
+              },
+              {
+                "say": "The client sends an ACK, and the TCP connection is established.",
+                "reveal": [
+                  "e2"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "TCP Three‑Way Handshake",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The client starts the handshake by sending a SYN packet.",
+                "draw": [
+                  {
+                    "id": "board_title_4037357207",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "TCP Three‑Way Handshake",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "Client",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 153,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "Server",
+                    "x": 430.28,
+                    "y": 140,
+                    "icon": "server",
+                    "width": 159,
+                    "height": 64
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "label": "SYN",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 294
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 220
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 564
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n1_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 220
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The server replies with a SYN‑ACK packet.",
+                "draw": [
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "SYN‑ACK",
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 384
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 384
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The client sends an ACK, and the TCP connection is established.",
+                "draw": [
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "ACK",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 474
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 474
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "TCP Three‑Way Handshake",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "Client",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "n1",
+                  "label": "Server",
+                  "icon": "server"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "SYN"
+                },
+                {
+                  "id": "e1",
+                  "from": "n1",
+                  "to": "n0",
+                  "label": "SYN‑ACK"
+                },
+                {
+                  "id": "e2",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "ACK"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The client starts the handshake by sending a SYN packet.",
+                  "reveal": [
+                    "n0",
+                    "n1",
+                    "e0"
+                  ]
+                },
+                {
+                  "say": "The server replies with a SYN‑ACK packet.",
+                  "reveal": [
+                    "e1"
+                  ]
+                },
+                {
+                  "say": "The client sends an ACK, and the TCP connection is established.",
+                  "reveal": [
+                    "e2"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 539,
+          "firstBeatMs": 1805,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 8,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 6,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 13,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 1.3
+            },
+            "issues": [],
+            "beats": 3,
+            "newPerBeat": {
+              "max": 6,
+              "mean": 2.7
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "oauth",
+          "family": "sequence",
+          "text": "How does OAuth login with Google work?",
+          "format": "lines",
+          "script": {
+            "version": 2,
+            "title": "Google OAuth",
+            "family": "flow",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "User",
+                "icon": "user"
+              },
+              {
+                "id": "n1",
+                "label": "App",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "n2",
+                "label": "Google Auth",
+                "icon": "server"
+              },
+              {
+                "id": "n3",
+                "label": "Token Endpoint",
+                "icon": "server"
+              },
+              {
+                "id": "n4",
+                "label": "Google API",
+                "icon": "server"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "n0",
+                "to": "n1",
+                "label": "login"
+              },
+              {
+                "id": "e1",
+                "from": "n1",
+                "to": "n2",
+                "label": "redirect"
+              },
+              {
+                "id": "e2",
+                "from": "n2",
+                "to": "n1",
+                "label": "auth code"
+              },
+              {
+                "id": "e3",
+                "from": "n1",
+                "to": "n3",
+                "label": "exchange"
+              },
+              {
+                "id": "e4",
+                "from": "n3",
+                "to": "n1",
+                "label": "access token"
+              },
+              {
+                "id": "e5",
+                "from": "n1",
+                "to": "n4",
+                "label": "profile request"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The user clicks “Login with Google”, and the app starts the OAuth flow.",
+                "reveal": [
+                  "n0",
+                  "n1",
+                  "e0"
+                ]
+              },
+              {
+                "say": "The app redirects the user’s browser to Google’s authentication page.",
+                "reveal": [
+                  "n2",
+                  "e1"
+                ]
+              },
+              {
+                "say": "Google asks the user to consent, then redirects back with an authorization code.",
+                "reveal": [
+                  "e2"
+                ]
+              },
+              {
+                "say": "The app sends that code to Google’s token endpoint to trade it for a token.",
+                "reveal": [
+                  "n3",
+                  "e3"
+                ]
+              },
+              {
+                "say": "Google returns an access token (and optionally a refresh token) to the app.",
+                "reveal": [
+                  "e4"
+                ]
+              },
+              {
+                "say": "The app calls Google’s API with the token to fetch the user’s profile.",
+                "reveal": [
+                  "n4",
+                  "e5"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "Google OAuth",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The user clicks “Login with Google”, and the app starts the OAuth flow.",
+                "draw": [
+                  {
+                    "id": "board_title_1962557713",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "Google OAuth",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "User",
+                    "x": 100,
+                    "y": 530,
+                    "icon": "user",
+                    "width": 143,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "App",
+                    "x": 634.8399999999999,
+                    "y": 530,
+                    "icon": "device-laptop",
+                    "width": 133,
+                    "height": 64
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "from": "n0",
+                    "to": "n1",
+                    "label": "login",
+                    "points": [
+                      {
+                        "x": 251,
+                        "y": 562
+                      },
+                      {
+                        "x": 626.8399999999999,
+                        "y": 562
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The app redirects the user’s browser to Google’s authentication page.",
+                "draw": [
+                  {
+                    "id": "n2",
+                    "type": "rectangle",
+                    "label": "Google Auth",
+                    "x": 1239.7759999999998,
+                    "y": 223.33333333333331,
+                    "icon": "server",
+                    "width": 217,
+                    "height": 64
+                  },
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "from": "n1",
+                    "to": "n2",
+                    "label": "redirect",
+                    "points": [
+                      {
+                        "x": 775.0689371017683,
+                        "y": 527.0503181491281
+                      },
+                      {
+                        "x": 1273.5406976808401,
+                        "y": 290.7600618575495
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "Google asks the user to consent, then redirects back with an authorization code.",
+                "draw": [
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "from": "n2",
+                    "to": "n1",
+                    "label": "auth code",
+                    "points": [
+                      {
+                        "x": 1273.5406976808401,
+                        "y": 290.7600618575495
+                      },
+                      {
+                        "x": 775.0689371017683,
+                        "y": 527.0503181491281
+                      }
+                    ],
+                    "labelOffset": {
+                      "x": 0,
+                      "y": -18.916661419505772
+                    }
+                  }
+                ]
+              },
+              {
+                "say": "The app sends that code to Google’s token endpoint to trade it for a token.",
+                "draw": [
+                  {
+                    "id": "n3",
+                    "type": "rectangle",
+                    "label": "Token Endpoint",
+                    "x": 1239.7759999999998,
+                    "y": 387.3333333333333,
+                    "icon": "server",
+                    "width": 252,
+                    "height": 64
+                  },
+                  {
+                    "id": "e3",
+                    "type": "arrow",
+                    "from": "n1",
+                    "to": "n3",
+                    "label": "exchange",
+                    "points": [
+                      {
+                        "x": 775.6617251876575,
+                        "y": 546.0417545204667
+                      },
+                      {
+                        "x": 1231.9542748123422,
+                        "y": 448.06732646450894
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "Google returns an access token (and optionally a refresh token) to the app.",
+                "draw": [
+                  {
+                    "id": "e4",
+                    "type": "arrow",
+                    "from": "n3",
+                    "to": "n1",
+                    "label": "access token",
+                    "points": [
+                      {
+                        "x": 1231.9542748123422,
+                        "y": 448.06732646450894
+                      },
+                      {
+                        "x": 775.6617251876575,
+                        "y": 546.0417545204667
+                      }
+                    ],
+                    "labelOffset": {
+                      "x": 0,
+                      "y": 32.790227620782105
+                    },
+                    "halo": true
+                  }
+                ]
+              },
+              {
+                "say": "The app calls Google’s API with the token to fetch the user’s profile.",
+                "draw": [
+                  {
+                    "id": "n4",
+                    "type": "rectangle",
+                    "label": "Google API",
+                    "x": 1239.7759999999998,
+                    "y": 551.3333333333333,
+                    "icon": "server",
+                    "width": 209,
+                    "height": 64
+                  },
+                  {
+                    "id": "e5",
+                    "type": "arrow",
+                    "from": "n1",
+                    "to": "n4",
+                    "label": "profile request",
+                    "points": [
+                      {
+                        "x": 775.8355996876176,
+                        "y": 564.471847057876
+                      },
+                      {
+                        "x": 1231.7804003123822,
+                        "y": 579.6006039066575
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "Google OAuth",
+              "family": "flow",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "User",
+                  "icon": "user"
+                },
+                {
+                  "id": "n1",
+                  "label": "App",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "n2",
+                  "label": "Google Auth",
+                  "icon": "server"
+                },
+                {
+                  "id": "n3",
+                  "label": "Token Endpoint",
+                  "icon": "server"
+                },
+                {
+                  "id": "n4",
+                  "label": "Google API",
+                  "icon": "server"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "login"
+                },
+                {
+                  "id": "e1",
+                  "from": "n1",
+                  "to": "n2",
+                  "label": "redirect"
+                },
+                {
+                  "id": "e2",
+                  "from": "n2",
+                  "to": "n1",
+                  "label": "auth code"
+                },
+                {
+                  "id": "e3",
+                  "from": "n1",
+                  "to": "n3",
+                  "label": "exchange"
+                },
+                {
+                  "id": "e4",
+                  "from": "n3",
+                  "to": "n1",
+                  "label": "access token"
+                },
+                {
+                  "id": "e5",
+                  "from": "n1",
+                  "to": "n4",
+                  "label": "profile request"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The user clicks “Login with Google”, and the app starts the OAuth flow.",
+                  "reveal": [
+                    "n0",
+                    "n1",
+                    "e0"
+                  ]
+                },
+                {
+                  "say": "The app redirects the user’s browser to Google’s authentication page.",
+                  "reveal": [
+                    "n2",
+                    "e1"
+                  ]
+                },
+                {
+                  "say": "Google asks the user to consent, then redirects back with an authorization code.",
+                  "reveal": [
+                    "e2"
+                  ]
+                },
+                {
+                  "say": "The app sends that code to Google’s token endpoint to trade it for a token.",
+                  "reveal": [
+                    "n3",
+                    "e3"
+                  ]
+                },
+                {
+                  "say": "Google returns an access token (and optionally a refresh token) to the app.",
+                  "reveal": [
+                    "e4"
+                  ]
+                },
+                {
+                  "say": "The app calls Google’s API with the token to fetch the user’s profile.",
+                  "reveal": [
+                    "n4",
+                    "e5"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 832,
+          "firstBeatMs": 3068,
+          "layoutMs": 825,
+          "metrics": {
+            "elements": 12,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 12,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 13,
+            "colors": 1,
+            "labelWords": {
+              "max": 2,
+              "mean": 1.6
+            },
+            "issues": [],
+            "beats": 6,
+            "newPerBeat": {
+              "max": 4,
+              "mean": 2
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "oauth",
+          "family": "sequence",
+          "text": "How does OAuth login with Google work?",
+          "format": "json",
+          "script": {
+            "version": 2,
+            "title": "Google OAuth login",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "User",
+                "icon": "user"
+              },
+              {
+                "id": "n1",
+                "label": "App",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "n2",
+                "label": "Google",
+                "icon": "server"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "n0",
+                "to": "n1",
+                "label": "login click"
+              },
+              {
+                "id": "e1",
+                "from": "n1",
+                "to": "n2",
+                "label": "auth request"
+              },
+              {
+                "id": "e2",
+                "from": "n2",
+                "to": "n0",
+                "label": "login/consent"
+              },
+              {
+                "id": "e3",
+                "from": "n2",
+                "to": "n1",
+                "label": "code"
+              },
+              {
+                "id": "e4",
+                "from": "n1",
+                "to": "n2",
+                "label": "token request"
+              },
+              {
+                "id": "e5",
+                "from": "n2",
+                "to": "n1",
+                "label": "token"
+              },
+              {
+                "id": "e6",
+                "from": "n1",
+                "to": "n2",
+                "label": "userinfo"
+              },
+              {
+                "id": "e7",
+                "from": "n2",
+                "to": "n1",
+                "label": "profile"
+              }
+            ],
+            "beats": [
+              {
+                "say": "User clicks the Google login button on the app.",
+                "reveal": [
+                  "n0",
+                  "n1",
+                  "e0"
+                ]
+              },
+              {
+                "say": "App redirects the browser to Google’s authorization endpoint.",
+                "reveal": [
+                  "n2",
+                  "e1"
+                ]
+              },
+              {
+                "say": "User authenticates and consents, then Google redirects back with an authorization code.",
+                "reveal": [
+                  "e2",
+                  "e3"
+                ]
+              },
+              {
+                "say": "App exchanges the code for an access token at Google’s token endpoint.",
+                "reveal": [
+                  "e4",
+                  "e5"
+                ]
+              },
+              {
+                "say": "App calls Google’s UserInfo API with the token and receives the user’s profile.",
+                "reveal": [
+                  "e6",
+                  "e7"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "Google OAuth login",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "User clicks the Google login button on the app.",
+                "draw": [
+                  {
+                    "id": "board_title_2319076880",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "Google OAuth login",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "User",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "user",
+                    "width": 143,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "App",
+                    "x": 420.44,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 133,
+                    "height": 64
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "label": "login click",
+                    "points": [
+                      {
+                        "x": 130.22,
+                        "y": 294
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 130.22,
+                        "y": 220
+                      },
+                      {
+                        "x": 130.22,
+                        "y": 1014
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n1_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 220
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 1014
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "App redirects the browser to Google’s authorization endpoint.",
+                "draw": [
+                  {
+                    "id": "n2",
+                    "type": "rectangle",
+                    "label": "Google",
+                    "x": 771.44,
+                    "y": 140,
+                    "icon": "server",
+                    "width": 164,
+                    "height": 64
+                  },
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "auth request",
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 384
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 384
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n2_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 220
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 1014
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "User authenticates and consents, then Google redirects back with an authorization code.",
+                "draw": [
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "login/consent",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 474
+                      },
+                      {
+                        "x": 130.22,
+                        "y": 474
+                      }
+                    ],
+                    "halo": true
+                  },
+                  {
+                    "id": "e3",
+                    "type": "arrow",
+                    "label": "code",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 564
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "App exchanges the code for an access token at Google’s token endpoint.",
+                "draw": [
+                  {
+                    "id": "e4",
+                    "type": "arrow",
+                    "label": "token request",
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 654
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 654
+                      }
+                    ]
+                  },
+                  {
+                    "id": "e5",
+                    "type": "arrow",
+                    "label": "token",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 744
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 744
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "App calls Google’s UserInfo API with the token and receives the user’s profile.",
+                "draw": [
+                  {
+                    "id": "e6",
+                    "type": "arrow",
+                    "label": "userinfo",
+                    "points": [
+                      {
+                        "x": 485.94,
+                        "y": 834
+                      },
+                      {
+                        "x": 852.4100000000001,
+                        "y": 834
+                      }
+                    ]
+                  },
+                  {
+                    "id": "e7",
+                    "type": "arrow",
+                    "label": "profile",
+                    "points": [
+                      {
+                        "x": 852.4100000000001,
+                        "y": 924
+                      },
+                      {
+                        "x": 485.94,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "Google OAuth login",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "User",
+                  "icon": "user"
+                },
+                {
+                  "id": "n1",
+                  "label": "App",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "n2",
+                  "label": "Google",
+                  "icon": "server"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "login click"
+                },
+                {
+                  "id": "e1",
+                  "from": "n1",
+                  "to": "n2",
+                  "label": "auth request"
+                },
+                {
+                  "id": "e2",
+                  "from": "n2",
+                  "to": "n0",
+                  "label": "login/consent"
+                },
+                {
+                  "id": "e3",
+                  "from": "n2",
+                  "to": "n1",
+                  "label": "code"
+                },
+                {
+                  "id": "e4",
+                  "from": "n1",
+                  "to": "n2",
+                  "label": "token request"
+                },
+                {
+                  "id": "e5",
+                  "from": "n2",
+                  "to": "n1",
+                  "label": "token"
+                },
+                {
+                  "id": "e6",
+                  "from": "n1",
+                  "to": "n2",
+                  "label": "userinfo"
+                },
+                {
+                  "id": "e7",
+                  "from": "n2",
+                  "to": "n1",
+                  "label": "profile"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "User clicks the Google login button on the app.",
+                  "reveal": [
+                    "n0",
+                    "n1",
+                    "e0"
+                  ]
+                },
+                {
+                  "say": "App redirects the browser to Google’s authorization endpoint.",
+                  "reveal": [
+                    "n2",
+                    "e1"
+                  ]
+                },
+                {
+                  "say": "User authenticates and consents, then Google redirects back with an authorization code.",
+                  "reveal": [
+                    "e2",
+                    "e3"
+                  ]
+                },
+                {
+                  "say": "App exchanges the code for an access token at Google’s token endpoint.",
+                  "reveal": [
+                    "e4",
+                    "e5"
+                  ]
+                },
+                {
+                  "say": "App calls Google’s UserInfo API with the token and receives the user’s profile.",
+                  "reveal": [
+                    "e6",
+                    "e7"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 1357,
+          "firstBeatMs": 3175,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 15,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 12,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 11.6,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 1.4
+            },
+            "issues": [],
+            "beats": 5,
+            "newPerBeat": {
+              "max": 6,
+              "mean": 3
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        }
+      ],
+      "summaries": [
+        {
+          "format": "lines",
+          "prompts": 2,
+          "parsed": 2,
+          "lintClean": 1,
+          "medianTokens": 735,
+          "tokenRatioToPhase0": 0.6609712230215827,
+          "medianReadyMs": 2452,
+          "medianLayoutMs": 412.5,
+          "fixedLessons": 0,
+          "clarity": "Review the gallery for teaching order, correct labels and family; no automatic semantic clarity score is claimed."
+        },
+        {
+          "format": "json",
+          "prompts": 2,
+          "parsed": 2,
+          "lintClean": 1,
+          "medianTokens": 948,
+          "tokenRatioToPhase0": 0.8525179856115108,
+          "medianReadyMs": 2490,
+          "medianLayoutMs": 0,
+          "fixedLessons": 0,
+          "clarity": "Review the gallery for teaching order, correct labels and family; no automatic semantic clarity score is claimed."
+        }
+      ]
+    },
+    {
+      "model": "moonshot:kimi-k2.6",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "family": "sequence",
+          "text": "Explain how the TCP three-way handshake works.",
+          "format": "lines",
+          "script": {
+            "version": 2,
+            "title": "TCP Three-Way Handshake",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "Client",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "n1",
+                "label": "Server",
+                "icon": "server"
+              },
+              {
+                "id": "n2",
+                "label": "SYN"
+              },
+              {
+                "id": "n3",
+                "label": "SYN-ACK"
+              },
+              {
+                "id": "n4",
+                "label": "ACK"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e0",
+                "from": "n0",
+                "to": "n1",
+                "label": "SYN"
+              },
+              {
+                "id": "e1",
+                "from": "n1",
+                "to": "n0",
+                "label": "SYN-ACK"
+              },
+              {
+                "id": "e2",
+                "from": "n0",
+                "to": "n1",
+                "label": "ACK"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The client and server need to establish a reliable TCP connection.",
+                "reveal": [
+                  "n0",
+                  "n1"
+                ]
+              },
+              {
+                "say": "The client sends a SYN packet to initiate the handshake.",
+                "reveal": [
+                  "n2",
+                  "e0"
+                ],
+                "highlight": [
+                  "n2",
+                  "e0"
+                ]
+              },
+              {
+                "say": "The server responds with SYN-ACK, acknowledging and synchronizing.",
+                "reveal": [
+                  "n3",
+                  "e1"
+                ],
+                "highlight": [
+                  "n3",
+                  "e1"
+                ]
+              },
+              {
+                "say": "The client replies with ACK, completing the three-way handshake.",
+                "reveal": [
+                  "n4",
+                  "e2"
+                ],
+                "highlight": [
+                  "n4",
+                  "e2"
+                ]
+              }
+            ]
+          },
+          "lesson": {
+            "title": "TCP Three-Way Handshake",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The client and server need to establish a reliable TCP connection.",
+                "draw": [
+                  {
+                    "id": "board_title_1219880883",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "TCP Three-Way Handshake",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "Client",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 153,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "Server",
+                    "x": 430.28,
+                    "y": 140,
+                    "icon": "server",
+                    "width": 159,
+                    "height": 64
+                  },
+                  {
+                    "id": "n0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 220
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 564
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n1_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 220
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "The client sends a SYN packet to initiate the handshake.",
+                "draw": [
+                  {
+                    "id": "n2",
+                    "type": "rectangle",
+                    "label": "SYN",
+                    "x": 807.18,
+                    "y": 140,
+                    "width": 120,
+                    "height": 64
+                  },
+                  {
+                    "id": "e0",
+                    "type": "arrow",
+                    "label": "SYN",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 294
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n2_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 867.18,
+                        "y": 220
+                      },
+                      {
+                        "x": 867.18,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "n2",
+                  "e0"
+                ]
+              },
+              {
+                "say": "The server responds with SYN-ACK, acknowledging and synchronizing.",
+                "draw": [
+                  {
+                    "id": "n3",
+                    "type": "rectangle",
+                    "label": "SYN-ACK",
+                    "x": 1147.1799999999998,
+                    "y": 140,
+                    "width": 121,
+                    "height": 64
+                  },
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "SYN-ACK",
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 384
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 384
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n3_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1207.1799999999998,
+                        "y": 220
+                      },
+                      {
+                        "x": 1207.1799999999998,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "n3",
+                  "e1"
+                ]
+              },
+              {
+                "say": "The client replies with ACK, completing the three-way handshake.",
+                "draw": [
+                  {
+                    "id": "n4",
+                    "type": "rectangle",
+                    "label": "ACK",
+                    "x": 1487.1799999999998,
+                    "y": 140,
+                    "width": 120,
+                    "height": 64
+                  },
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "ACK",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 474
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 474
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n4_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1547.1799999999998,
+                        "y": 220
+                      },
+                      {
+                        "x": 1547.1799999999998,
+                        "y": 564
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [
+                  "n4",
+                  "e2"
+                ]
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "TCP Three-Way Handshake",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "Client",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "n1",
+                  "label": "Server",
+                  "icon": "server"
+                },
+                {
+                  "id": "n2",
+                  "label": "SYN"
+                },
+                {
+                  "id": "n3",
+                  "label": "SYN-ACK"
+                },
+                {
+                  "id": "n4",
+                  "label": "ACK"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e0",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "SYN"
+                },
+                {
+                  "id": "e1",
+                  "from": "n1",
+                  "to": "n0",
+                  "label": "SYN-ACK"
+                },
+                {
+                  "id": "e2",
+                  "from": "n0",
+                  "to": "n1",
+                  "label": "ACK"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The client and server need to establish a reliable TCP connection.",
+                  "reveal": [
+                    "n0",
+                    "n1"
+                  ]
+                },
+                {
+                  "say": "The client sends a SYN packet to initiate the handshake.",
+                  "reveal": [
+                    "n2",
+                    "e0"
+                  ],
+                  "highlight": [
+                    "n2",
+                    "e0"
+                  ]
+                },
+                {
+                  "say": "The server responds with SYN-ACK, acknowledging and synchronizing.",
+                  "reveal": [
+                    "n3",
+                    "e1"
+                  ],
+                  "highlight": [
+                    "n3",
+                    "e1"
+                  ]
+                },
+                {
+                  "say": "The client replies with ACK, completing the three-way handshake.",
+                  "reveal": [
+                    "n4",
+                    "e2"
+                  ],
+                  "highlight": [
+                    "n4",
+                    "e2"
+                  ]
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 195,
+          "firstBeatMs": 3406,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 14,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 9,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 13,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 1.2
+            },
+            "issues": [],
+            "beats": 4,
+            "newPerBeat": {
+              "max": 5,
+              "mean": 3.5
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "tcp-handshake",
+          "family": "sequence",
+          "text": "Explain how the TCP three-way handshake works.",
+          "format": "json",
+          "script": {
+            "version": 2,
+            "title": "TCP Three-Way Handshake",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "client",
+                "label": "Client",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "server",
+                "label": "Server",
+                "icon": "server"
+              },
+              {
+                "id": "syn",
+                "label": "SYN sent",
+                "icon": "message"
+              },
+              {
+                "id": "synack",
+                "label": "SYN-ACK sent",
+                "icon": "message"
+              },
+              {
+                "id": "ack",
+                "label": "ACK sent",
+                "icon": "message"
+              },
+              {
+                "id": "est",
+                "label": "Established",
+                "icon": "lock"
+              }
+            ],
+            "edges": [
+              {
+                "id": "e1",
+                "from": "client",
+                "to": "syn",
+                "label": "sends"
+              },
+              {
+                "id": "e2",
+                "from": "syn",
+                "to": "server",
+                "label": "to"
+              },
+              {
+                "id": "e3",
+                "from": "server",
+                "to": "synack",
+                "label": "sends"
+              },
+              {
+                "id": "e4",
+                "from": "synack",
+                "to": "client",
+                "label": "to"
+              },
+              {
+                "id": "e5",
+                "from": "client",
+                "to": "ack",
+                "label": "sends"
+              },
+              {
+                "id": "e6",
+                "from": "ack",
+                "to": "server",
+                "label": "to"
+              },
+              {
+                "id": "e7",
+                "from": "ack",
+                "to": "est",
+                "label": "opens"
+              }
+            ],
+            "beats": [
+              {
+                "say": "The client sends a SYN packet to the server, requesting a connection.",
+                "reveal": [
+                  "client",
+                  "server",
+                  "syn",
+                  "e1",
+                  "e2"
+                ],
+                "highlight": [],
+                "erase": []
+              },
+              {
+                "say": "The server responds with SYN-ACK, acknowledging and synchronizing.",
+                "reveal": [
+                  "synack",
+                  "e3",
+                  "e4"
+                ],
+                "highlight": [],
+                "erase": []
+              },
+              {
+                "say": "The client replies with ACK, and the connection is established.",
+                "reveal": [
+                  "ack",
+                  "e5",
+                  "e6",
+                  "est",
+                  "e7"
+                ],
+                "highlight": [],
+                "erase": []
+              }
+            ]
+          },
+          "lesson": {
+            "title": "TCP Three-Way Handshake",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "The client sends a SYN packet to the server, requesting a connection.",
+                "draw": [
+                  {
+                    "id": "board_title_1219880883",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "TCP Three-Way Handshake",
+                    "size": "title"
+                  },
+                  {
+                    "id": "client",
+                    "type": "rectangle",
+                    "label": "Client",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 153,
+                    "height": 64
+                  },
+                  {
+                    "id": "server",
+                    "type": "rectangle",
+                    "label": "Server",
+                    "x": 430.28,
+                    "y": 140,
+                    "icon": "server",
+                    "width": 159,
+                    "height": 64
+                  },
+                  {
+                    "id": "syn",
+                    "type": "rectangle",
+                    "label": "SYN sent",
+                    "x": 807.18,
+                    "y": 140,
+                    "icon": "message",
+                    "width": 142,
+                    "height": 64
+                  },
+                  {
+                    "id": "e1",
+                    "type": "arrow",
+                    "label": "sends",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 294
+                      },
+                      {
+                        "x": 898.9499999999999,
+                        "y": 294
+                      }
+                    ],
+                    "halo": true
+                  },
+                  {
+                    "id": "e2",
+                    "type": "arrow",
+                    "label": "to",
+                    "points": [
+                      {
+                        "x": 898.9499999999999,
+                        "y": 384
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 384
+                      }
+                    ]
+                  },
+                  {
+                    "id": "client_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 220
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 924
+                      }
+                    ]
+                  },
+                  {
+                    "id": "server_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 220
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 924
+                      }
+                    ]
+                  },
+                  {
+                    "id": "syn_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 898.9499999999999,
+                        "y": 220
+                      },
+                      {
+                        "x": 898.9499999999999,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [],
+                "erase": []
+              },
+              {
+                "say": "The server responds with SYN-ACK, acknowledging and synchronizing.",
+                "draw": [
+                  {
+                    "id": "synack",
+                    "type": "rectangle",
+                    "label": "SYN-ACK sent",
+                    "x": 1210.7199999999998,
+                    "y": 140,
+                    "icon": "message",
+                    "width": 181,
+                    "height": 64
+                  },
+                  {
+                    "id": "e3",
+                    "type": "arrow",
+                    "label": "sends",
+                    "points": [
+                      {
+                        "x": 508.72999999999996,
+                        "y": 474
+                      },
+                      {
+                        "x": 1325.7799999999997,
+                        "y": 474
+                      }
+                    ],
+                    "halo": true
+                  },
+                  {
+                    "id": "e4",
+                    "type": "arrow",
+                    "label": "to",
+                    "points": [
+                      {
+                        "x": 1325.7799999999997,
+                        "y": 564
+                      },
+                      {
+                        "x": 135.14,
+                        "y": 564
+                      }
+                    ]
+                  },
+                  {
+                    "id": "synack_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1325.7799999999997,
+                        "y": 220
+                      },
+                      {
+                        "x": 1325.7799999999997,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [],
+                "erase": []
+              },
+              {
+                "say": "The client replies with ACK, and the connection is established.",
+                "draw": [
+                  {
+                    "id": "ack",
+                    "type": "rectangle",
+                    "label": "ACK sent",
+                    "x": 1660.8399999999997,
+                    "y": 140,
+                    "icon": "message",
+                    "width": 142,
+                    "height": 64
+                  },
+                  {
+                    "id": "e5",
+                    "type": "arrow",
+                    "label": "sends",
+                    "points": [
+                      {
+                        "x": 135.14,
+                        "y": 654
+                      },
+                      {
+                        "x": 1753.6099999999997,
+                        "y": 654
+                      }
+                    ]
+                  },
+                  {
+                    "id": "e6",
+                    "type": "arrow",
+                    "label": "to",
+                    "points": [
+                      {
+                        "x": 1753.6099999999997,
+                        "y": 744
+                      },
+                      {
+                        "x": 508.72999999999996,
+                        "y": 744
+                      }
+                    ]
+                  },
+                  {
+                    "id": "est",
+                    "type": "rectangle",
+                    "label": "Established",
+                    "x": 2066.3799999999997,
+                    "y": 140,
+                    "icon": "lock",
+                    "width": 212,
+                    "height": 64
+                  },
+                  {
+                    "id": "e7",
+                    "type": "arrow",
+                    "label": "opens",
+                    "points": [
+                      {
+                        "x": 1753.6099999999997,
+                        "y": 834
+                      },
+                      {
+                        "x": 2170.93,
+                        "y": 834
+                      }
+                    ]
+                  },
+                  {
+                    "id": "ack_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1753.6099999999997,
+                        "y": 220
+                      },
+                      {
+                        "x": 1753.6099999999997,
+                        "y": 924
+                      }
+                    ]
+                  },
+                  {
+                    "id": "est_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 2170.93,
+                        "y": 220
+                      },
+                      {
+                        "x": 2170.93,
+                        "y": 924
+                      }
+                    ]
+                  }
+                ],
+                "highlight": [],
+                "erase": []
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "TCP Three-Way Handshake",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "client",
+                  "label": "Client",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "server",
+                  "label": "Server",
+                  "icon": "server"
+                },
+                {
+                  "id": "syn",
+                  "label": "SYN sent",
+                  "icon": "message"
+                },
+                {
+                  "id": "synack",
+                  "label": "SYN-ACK sent",
+                  "icon": "message"
+                },
+                {
+                  "id": "ack",
+                  "label": "ACK sent",
+                  "icon": "message"
+                },
+                {
+                  "id": "est",
+                  "label": "Established",
+                  "icon": "lock"
+                }
+              ],
+              "edges": [
+                {
+                  "id": "e1",
+                  "from": "client",
+                  "to": "syn",
+                  "label": "sends"
+                },
+                {
+                  "id": "e2",
+                  "from": "syn",
+                  "to": "server",
+                  "label": "to"
+                },
+                {
+                  "id": "e3",
+                  "from": "server",
+                  "to": "synack",
+                  "label": "sends"
+                },
+                {
+                  "id": "e4",
+                  "from": "synack",
+                  "to": "client",
+                  "label": "to"
+                },
+                {
+                  "id": "e5",
+                  "from": "client",
+                  "to": "ack",
+                  "label": "sends"
+                },
+                {
+                  "id": "e6",
+                  "from": "ack",
+                  "to": "server",
+                  "label": "to"
+                },
+                {
+                  "id": "e7",
+                  "from": "ack",
+                  "to": "est",
+                  "label": "opens"
+                }
+              ],
+              "beats": [
+                {
+                  "say": "The client sends a SYN packet to the server, requesting a connection.",
+                  "reveal": [
+                    "client",
+                    "server",
+                    "syn",
+                    "e1",
+                    "e2"
+                  ],
+                  "highlight": [],
+                  "erase": []
+                },
+                {
+                  "say": "The server responds with SYN-ACK, acknowledging and synchronizing.",
+                  "reveal": [
+                    "synack",
+                    "e3",
+                    "e4"
+                  ],
+                  "highlight": [],
+                  "erase": []
+                },
+                {
+                  "say": "The client replies with ACK, and the connection is established.",
+                  "reveal": [
+                    "ack",
+                    "e5",
+                    "e6",
+                    "est",
+                    "e7"
+                  ],
+                  "highlight": [],
+                  "erase": []
+                }
+              ]
+            }
+          },
+          "fixes": [],
+          "outputTokens": 407,
+          "firstBeatMs": 7387,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 20,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 14,
+            "minTextPx": 14,
+            "smallText": 0,
+            "overviewTextPx": 9.5,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 1.4
+            },
+            "issues": [],
+            "beats": 3,
+            "newPerBeat": {
+              "max": 9,
+              "mean": 6.7
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "oauth",
+          "family": "sequence",
+          "text": "How does OAuth login with Google work?",
+          "format": "lines",
+          "script": {
+            "version": 2,
+            "title": "OAuth with Google",
+            "family": "sequence",
+            "mode": "new",
+            "nodes": [
+              {
+                "id": "n0",
+                "label": "Your App",
+                "icon": "device-laptop"
+              },
+              {
+                "id": "n1",
+                "label": "Google",
+                "icon": "cloud"
+              },
+              {
+                "id": "n2",
+                "label": "User",
+                "icon": "user"
+              },
+              {
+                "id": "n3",
+                "label": "Access Token",
+                "icon": "key"
+              }
+            ],
+            "edges": [],
+            "beats": [
+              {
+                "say": "Your app wants to let users log in with Google.",
+                "reveal": [
+                  "n0",
+                  "n2"
+                ]
+              },
+              {
+                "say": "Google's authorization server handles identity verification.",
+                "reveal": [
+                  "n1"
+                ]
+              },
+              {
+                "say": "n2,n1,e0",
+                "reveal": [
+                  "n2",
+                  "n1"
+                ],
+                "highlight": []
+              },
+              {
+                "say": "Google issues a secure access token after consent.",
+                "reveal": [
+                  "n3"
+                ]
+              },
+              {
+                "say": "n0,n3,e1",
+                "reveal": [
+                  "n0",
+                  "n3"
+                ],
+                "highlight": []
+              },
+              {
+                "say": "Your app wants to let users log in with Google.",
+                "reveal": [
+                  "n0",
+                  "n2"
+                ]
+              },
+              {
+                "say": "Google's authorization server handles identity verification.",
+                "reveal": [
+                  "n1"
+                ]
+              },
+              {
+                "say": "n2,n1,e0",
+                "reveal": [],
+                "highlight": []
+              },
+              {
+                "say": "n3,e1",
+                "reveal": [
+                  "n3"
+                ],
+                "highlight": []
+              },
+              {
+                "say": "n0,n3,e2",
+                "reveal": [],
+                "highlight": []
+              }
+            ]
+          },
+          "lesson": {
+            "title": "OAuth with Google",
+            "mode": "new",
+            "beats": [
+              {
+                "say": "Your app wants to let users log in with Google.",
+                "draw": [
+                  {
+                    "id": "board_title_778586699",
+                    "type": "text",
+                    "x": 60,
+                    "y": 40,
+                    "text": "OAuth with Google",
+                    "size": "title"
+                  },
+                  {
+                    "id": "n0",
+                    "type": "rectangle",
+                    "label": "Your App",
+                    "x": 60,
+                    "y": 140,
+                    "icon": "device-laptop",
+                    "width": 141,
+                    "height": 64
+                  },
+                  {
+                    "id": "n2",
+                    "type": "rectangle",
+                    "label": "User",
+                    "x": 843.4200000000001,
+                    "y": 140,
+                    "icon": "user",
+                    "width": 143,
+                    "height": 64
+                  },
+                  {
+                    "id": "n0_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 150.74,
+                        "y": 220
+                      },
+                      {
+                        "x": 150.74,
+                        "y": 294
+                      }
+                    ]
+                  },
+                  {
+                    "id": "n2_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 913.6400000000001,
+                        "y": 220
+                      },
+                      {
+                        "x": 913.6400000000001,
+                        "y": 294
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "Google's authorization server handles identity verification.",
+                "draw": [
+                  {
+                    "id": "n1",
+                    "type": "rectangle",
+                    "label": "Google",
+                    "x": 461.48,
+                    "y": 140,
+                    "icon": "cloud",
+                    "width": 164,
+                    "height": 64
+                  },
+                  {
+                    "id": "n1_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 542.45,
+                        "y": 220
+                      },
+                      {
+                        "x": 542.45,
+                        "y": 294
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "n2,n1,e0",
+                "draw": [],
+                "highlight": []
+              },
+              {
+                "say": "Google issues a secure access token after consent.",
+                "draw": [
+                  {
+                    "id": "n3",
+                    "type": "rectangle",
+                    "label": "Access Token",
+                    "x": 1203.8600000000001,
+                    "y": 140,
+                    "icon": "key",
+                    "width": 165,
+                    "height": 76
+                  },
+                  {
+                    "id": "n3_lifeline",
+                    "type": "line",
+                    "dashed": true,
+                    "points": [
+                      {
+                        "x": 1319.46,
+                        "y": 220
+                      },
+                      {
+                        "x": 1319.46,
+                        "y": 294
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "say": "n0,n3,e1",
+                "draw": [],
+                "highlight": []
+              },
+              {
+                "say": "Your app wants to let users log in with Google.",
+                "draw": []
+              },
+              {
+                "say": "Google's authorization server handles identity verification.",
+                "draw": []
+              },
+              {
+                "say": "n2,n1,e0",
+                "draw": [],
+                "highlight": []
+              },
+              {
+                "say": "n3,e1",
+                "draw": [],
+                "highlight": []
+              },
+              {
+                "say": "n0,n3,e2",
+                "draw": [],
+                "highlight": []
+              }
+            ],
+            "structure": {
+              "version": 2,
+              "title": "OAuth with Google",
+              "family": "sequence",
+              "mode": "new",
+              "nodes": [
+                {
+                  "id": "n0",
+                  "label": "Your App",
+                  "icon": "device-laptop"
+                },
+                {
+                  "id": "n1",
+                  "label": "Google",
+                  "icon": "cloud"
+                },
+                {
+                  "id": "n2",
+                  "label": "User",
+                  "icon": "user"
+                },
+                {
+                  "id": "n3",
+                  "label": "Access Token",
+                  "icon": "key"
+                }
+              ],
+              "edges": [],
+              "beats": [
+                {
+                  "say": "Your app wants to let users log in with Google.",
+                  "reveal": [
+                    "n0",
+                    "n2"
+                  ]
+                },
+                {
+                  "say": "Google's authorization server handles identity verification.",
+                  "reveal": [
+                    "n1"
+                  ]
+                },
+                {
+                  "say": "n2,n1,e0",
+                  "reveal": [
+                    "n2",
+                    "n1"
+                  ],
+                  "highlight": []
+                },
+                {
+                  "say": "Google issues a secure access token after consent.",
+                  "reveal": [
+                    "n3"
+                  ]
+                },
+                {
+                  "say": "n0,n3,e1",
+                  "reveal": [
+                    "n0",
+                    "n3"
+                  ],
+                  "highlight": []
+                },
+                {
+                  "say": "Your app wants to let users log in with Google.",
+                  "reveal": [
+                    "n0",
+                    "n2"
+                  ]
+                },
+                {
+                  "say": "Google's authorization server handles identity verification.",
+                  "reveal": [
+                    "n1"
+                  ]
+                },
+                {
+                  "say": "n2,n1,e0",
+                  "reveal": [],
+                  "highlight": []
+                },
+                {
+                  "say": "n3,e1",
+                  "reveal": [
+                    "n3"
+                  ],
+                  "highlight": []
+                },
+                {
+                  "say": "n0,n3,e2",
+                  "reveal": [],
+                  "highlight": []
+                }
+              ]
+            }
+          },
+          "fixes": [
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "ignored malformed or out-of-order record",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference",
+            "dropped unknown beat reference"
+          ],
+          "outputTokens": 392,
+          "firstBeatMs": 2177,
+          "layoutMs": 0,
+          "metrics": {
+            "elements": 9,
+            "overlaps": 0,
+            "overlapArea": 0,
+            "overflow": 0,
+            "through": 0,
+            "crossings": 0,
+            "textOnLines": 0,
+            "textBlocks": 5,
+            "minTextPx": 16.2,
+            "smallText": 0,
+            "overviewTextPx": 16.2,
+            "colors": 1,
+            "labelWords": {
+              "max": 3,
+              "mean": 1.8
+            },
+            "issues": [],
+            "beats": 10,
+            "newPerBeat": {
+              "max": 5,
+              "mean": 0.9
+            }
+          },
+          "lintClean": true,
+          "truncated": false
+        },
+        {
+          "prompt": "oauth",
+          "family": "sequence",
+          "text": "How does OAuth login with Google work?",
+          "format": "json",
+          "error": "429"
+        }
+      ],
+      "summaries": [
+        {
+          "format": "lines",
+          "prompts": 2,
+          "parsed": 2,
+          "lintClean": 1,
+          "medianTokens": 293.5,
+          "tokenRatioToPhase0": 0.26393884892086333,
+          "medianReadyMs": 2791.5,
+          "medianLayoutMs": 0,
+          "fixedLessons": 1,
+          "clarity": "Review the gallery for teaching order, correct labels and family; no automatic semantic clarity score is claimed."
+        },
+        {
+          "format": "json",
+          "prompts": 2,
+          "parsed": 1,
+          "lintClean": 0.5,
+          "medianTokens": 407,
+          "tokenRatioToPhase0": 0.3660071942446043,
+          "medianReadyMs": 7387,
+          "medianLayoutMs": 0,
+          "fixedLessons": 0,
+          "clarity": "Review the gallery for teaching order, correct labels and family; no automatic semantic clarity score is claimed."
+        }
+      ]
+    }
+  ],
+  "gate": {
+    "threeProviderGolden": false,
+    "halfTokens": false,
+    "firstStroke": "Measured separately with eval:board:live --phase2; readiness cannot substitute."
+  }
+}

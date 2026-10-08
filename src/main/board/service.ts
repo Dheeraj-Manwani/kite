@@ -2,7 +2,8 @@ import { classifyBoardCommand, describeScene, layoutScene, markLabel, repairLess
 import { randomUUID } from 'node:crypto';
 import { lessonMetrics } from '../../shared/boardMetrics';
 import type { StreamEnd, ToolResult } from '../tools/types';
-import { BoardSession, type BoardSessionDeps } from './session';
+import { BoardSession, boardTiming, type BoardSessionDeps } from './session';
+import { adaptSavedLesson, type BoardScript } from '../../shared/boardScript';
 import { routingHints } from '../ai/routing';
 export interface BoardServiceDeps extends Omit<BoardSessionDeps, 'emit'> {
   emit(view: BoardView | null): void;
@@ -13,8 +14,9 @@ export interface BoardServiceDeps extends Omit<BoardSessionDeps, 'emit'> {
   captions?(): boolean;
   now?(): number;
   save?(board: SavedBoard): void;
+  structured?(): boolean;
 }
-interface Stream { session: BoardSession; count: number; base: ElementInput[]; adding: boolean }
+interface Stream { session: BoardSession; count: number; base: ElementInput[]; adding: boolean; structureBase?: BoardScript }
 /** Owns the one whiteboard lesson on screen and answers its voice commands locally. */
 export class BoardService {
   private session?: BoardSession;
@@ -26,9 +28,27 @@ export class BoardService {
   private presenting = false;
   private archive?: { id: string; messageId: number };
   private savedRevision?: string;
+  private structure?: BoardScript;
+  private planEpoch = 0;
+  private planning?: AbortController;
+  private parents: { session: BoardSession; structure?: BoardScript; archive?: { id: string; messageId: number }; revision?: string; stats?: LessonStats }[] = [];
+  private inheritedStats?: LessonStats;
   constructor(private deps: BoardServiceDeps) {}
   private now() { return this.deps.now?.() ?? performance.now(); }
   get active() { return !!this.session && !this.session.ended; }
+  inputs() { return this.active ? this.session.inputs() : []; }
+  visibleIds() { return this.active ? this.session.visibleInputs().map(e => e.id) : []; }
+  structuredContext() { return this.active ? this.structure : undefined; }
+  beginPlan() { this.planning?.abort(); this.planning = new AbortController(); return ++this.planEpoch; }
+  planSignal() { return this.planning?.signal; }
+  currentPlan(epoch: number) { return this.planEpoch === epoch && this.deps.enabled(); }
+  private lesson(written: LooseLesson, base: ElementInput[]) {
+    return written.structure ? { lesson: written as LessonInput, fixes: [] as string[] } : sanitizeLesson(written, base.map(e => e.id));
+  }
+  private rememberStructure(script?: BoardScript, base?: BoardScript) {
+    if (!script) { this.structure = undefined; return; }
+    this.structure = base ? { ...base, nodes: [...base.nodes, ...script.nodes], edges: [...base.edges, ...script.edges], beats: [...base.beats, ...script.beats] } : script;
+  }
   /**
    * Lessons the model is still writing, by tool call: the session their beats went to, how many arrived, and the
    * board they were written against (for repairs). The final call is matched to its stream by the same call id.
@@ -45,11 +65,11 @@ export class BoardService {
     const current = this.active ? this.session : undefined, adding = written.mode === 'add' && !!current;
     const base = adding ? current.inputs() : [];
     // Repair instead of reject: the model learns what was changed, and the lesson plays.
-    const { lesson, fixes } = sanitizeLesson(written, base.map(e => e.id));
+    const { lesson, fixes } = this.lesson(written, base);
     if (!lesson.beats.length) return { ok: false, message: `Nothing in that lesson could be drawn (${fixes.join('; ')}). Each beat needs a "say" and elements with a type and a position.` };
     this.measure(lesson, base, meta.requestedAt, fixes.length);
-    if (adding) { current.insert(lesson.beats); this.deps.log?.('board:add', { count: lesson.beats.length }); }
-    else this.open(lesson, meta.messageId).start();
+    if (adding) { this.rememberStructure(lesson.structure, this.structure); current.insert(lesson.beats, !!lesson.structure); this.deps.log?.('board:add', { count: lesson.beats.length }); }
+    else { const session = this.open(lesson, meta.messageId); this.rememberStructure(lesson.structure); session.start(); }
     return this.result(lesson.title, adding, fixes);
   }
   /**
@@ -61,29 +81,32 @@ export class BoardService {
     const stream = this.streams.get(callId);
     if (stream) {
       if (stream.session.ended || this.session !== stream.session) return;
-      const { lesson } = sanitizeLesson(written, stream.base.map(e => e.id));
+      const { lesson } = this.lesson(written, stream.base);
+      this.rememberStructure(lesson.structure, stream.structureBase);
       if (written.title?.trim()) stream.session.rename(lesson.title);
       const fresh = lesson.beats.slice(stream.count);
-      if (fresh.length) { stream.count = lesson.beats.length; stream.session.append(fresh); }
+      if (fresh.length) { stream.count = lesson.beats.length; stream.session.append(fresh, !!lesson.structure); }
       return;
     }
     const current = this.active ? this.session : undefined;
     // With a board open, a follow-up and a new topic look alike until the model says which.
     if (current && written.mode === undefined) return;
     const adding = written.mode === 'add' && !!current, base = adding ? current.inputs() : [];
-    const { lesson, fixes } = sanitizeLesson(written, base.map(e => e.id));
+    const { lesson, fixes } = this.lesson(written, base);
+    const structureBase = adding ? this.structure : undefined;
     if (!lesson.beats.length) return;
     this.measure(lesson, base, meta.requestedAt, fixes.length);
     let session: BoardSession;
-    if (adding) { session = current; session.stream(); session.insert(lesson.beats); this.deps.log?.('board:add', { count: lesson.beats.length, streamed: true }); }
-    else { session = this.open(lesson, meta.messageId); session.stream(); session.start(); }
-    this.streams.set(callId, { session, count: lesson.beats.length, base, adding });
+    if (adding) { session = current; session.stream(); this.rememberStructure(lesson.structure, structureBase); session.insert(lesson.beats, !!lesson.structure); this.deps.log?.('board:add', { count: lesson.beats.length, streamed: true }); }
+    else { session = this.open(lesson, meta.messageId); this.rememberStructure(lesson.structure); session.stream(); session.start(); }
+    this.streams.set(callId, { session, count: lesson.beats.length, base, adding, structureBase });
   }
   /** The streamed lesson's final input: add what has not arrived yet, settle its title, and let it end. */
   private complete(stream: Stream, written: LooseLesson): ToolResult {
-    const { lesson, fixes } = sanitizeLesson(written, stream.base.map(e => e.id));
+    const { lesson, fixes } = this.lesson(written, stream.base);
     if (stream.session.ended || this.session !== stream.session) return { ok: true, message: 'The whiteboard was closed while the lesson was being drawn.', transcript: `(Started a sketch: ${lesson.title})` };
-    stream.session.append(lesson.beats.slice(stream.count));
+    this.rememberStructure(lesson.structure, stream.structureBase);
+    stream.session.append(lesson.beats.slice(stream.count), !!lesson.structure);
     stream.session.rename(lesson.title);
     stream.session.seal();
     this.measure(lesson, stream.base, undefined, fixes.length, true);
@@ -111,7 +134,9 @@ export class BoardService {
   }
   /** A new lesson replaces whatever is on the board. */
   private open(lesson: LessonInput, messageId?: number | null, savedId?: string) {
-    this.session?.stop();
+    if (lesson.structure?.navigation === 'child' && this.deps.teaching?.() && this.active && this.parents.length < 8) {
+      this.session.seal(); this.session.pause(); this.persist(this.session); this.parents.push({ session: this.session, structure: this.structure, archive: this.archive, revision: this.savedRevision, stats: this.inheritedStats });
+    } else { this.session?.stop(); if (lesson.mode !== 'add') { for (const parent of this.parents) parent.session.stop(); this.parents = []; } }
     this.archive = messageId ? { id: savedId ?? randomUUID(), messageId } : undefined;
     this.savedRevision = undefined;
     const session: BoardSession = new BoardSession(++this.sequence, lesson.title, lesson.beats, {
@@ -124,7 +149,7 @@ export class BoardService {
       },
       speak: (text, hooks) => this.session === session && this.deps.speak(text, hooks),
       silence: () => { if (this.session === session) this.deps.silence(); },
-    });
+    }, [], boardTiming, !!lesson.structure);
     this.session = session;
     this.deps.opened?.();
     this.deps.log?.('board:start', { count: lesson.beats.length });
@@ -132,7 +157,7 @@ export class BoardService {
   }
   private persist(session: BoardSession) {
     if (!this.archive || !this.deps.save) return;
-    const snapshot = { ...this.archive, title: session.name, lesson: session.script(), scene: session.scene() };
+    const snapshot = { ...this.archive, title: session.name, lesson: { ...session.script(), ...(this.structure ? { structure: this.structure } : {}) }, scene: session.scene() };
     const revision = JSON.stringify(snapshot);
     if (revision === this.savedRevision) return;
     try { this.deps.save(snapshot); this.savedRevision = revision; }
@@ -142,21 +167,25 @@ export class BoardService {
   reopen(saved: SavedBoard): ToolResult {
     if (!this.deps.enabled()) return { ok: false, message: 'The whiteboard is turned off in Settings.' };
     this.measure(saved.lesson, [], undefined, 0);
-    this.open(saved.lesson, saved.messageId, saved.id).start();
+    const adapted = adaptSavedLesson(saved.lesson);
+    const lesson = saved.lesson.structure ? { ...saved.lesson, structure: { ...saved.lesson.structure, navigation: undefined as undefined } } : saved.lesson;
+    const session = this.open(lesson, saved.messageId, saved.id);
+    this.rememberStructure(adapted.version === 2 ? adapted : undefined); session.start();
     return { ok: true, message: 'Replaying the saved whiteboard.' };
   }
   /** `keepClock`: the same lesson, now complete (streamed): its time to first stroke is already measured or running. */
   private measure(lesson: LessonInput, base: ElementInput[], requestedAt: number | undefined, fixes: number, keepClock = false) {
-    const repaired = repairLesson(lesson, base), m = lessonMetrics(repaired.beats, base);
+    const repaired = lesson.structure ? lesson : repairLesson(lesson, base), m = lessonMetrics(repaired.beats, base);
     const changed = repaired.beats.reduce((n, beat, i) => n + (JSON.stringify(beat.draw) !== JSON.stringify(lesson.beats[i].draw) ? 1 : 0), 0);
     const first = keepClock ? this.stats?.firstStrokeMs : undefined;
+    if (lesson.structure?.navigation === 'child' && this.active && !keepClock) this.inheritedStats = this.stats;
     this.stats = { repairs: 0, fixes: fixes + changed, beats: m.beats, elements: m.elements, ...(first !== undefined ? { firstStrokeMs: first } : {}),
       lint: { overlaps: m.overlaps, overflow: m.overflow, through: m.through, crossings: m.crossings, textOnLines: m.textOnLines, minTextPx: m.minTextPx } };
     if (!keepClock) this.requestedAt = requestedAt;
   }
   /** Every view carries the lesson's stats; the renderer acknowledgement stops the first-stroke clock. */
   private annotate(view: BoardView): BoardView {
-    view = { ...view, captions: this.deps.captions?.() ?? true, presenting: this.presenting, savedId: this.archive?.id };
+    view = { ...view, captions: this.deps.captions?.() ?? true, presenting: this.presenting, savedId: this.archive?.id, breadcrumbs: this.parents.map(p => p.session.name) };
     if (!this.stats) return view;
     return { ...view, stats: this.stats };
   }
@@ -171,19 +200,29 @@ export class BoardService {
   command(text: string): string | undefined {
     const session = this.active ? this.session : undefined; if (!session) return undefined;
     const action = classifyBoardCommand(text);
+    if (action === 'new-request' && session.question) session.answerQuestion(text);
     return action === 'new-request' ? undefined : this.apply(session, action);
   }
   control(action: BoardAction) { const session = this.active ? this.session : undefined; if (session) this.apply(session, action); }
   private apply(session: BoardSession, action: BoardAction): string {
+    if (typeof action === 'object') { if (action.type === 'jump') return session.jump(action.beat); session.setSpeed(action.speed); return ''; }
     switch (action) {
       case 'pause': session.pause(); return 'Okay, I’ll wait.';
       case 'resume': return session.resume();
       case 'next': return session.next();
+      case 'previous': return session.previous();
+      case 'back': return this.back();
       case 'repeat': return session.repeat();
       case 'replay': return session.replay();
-      case 'close': session.stop(); return 'Okay, I’ve put the board away.';
+      case 'close': this.close(); return 'Okay, I’ve put the board away.';
       case 'bigger': case 'smaller': this.presenting = action === 'bigger'; session.refresh(); return '';
     }
+  }
+  private back() {
+    const parent = this.parents.pop(); if (!parent) return 'This is the first board.';
+    this.planEpoch++; this.planning?.abort(); this.streams.clear(); this.session?.stop();
+    this.session = parent.session; this.structure = parent.structure; this.archive = parent.archive; this.savedRevision = parent.revision; this.stats = parent.stats;
+    this.session.refresh(); return 'Back to the previous board. Say “continue” when you’re ready.';
   }
   drawn(id: number, key: number) { if (this.session?.id === id) this.session.drew(key); }
   /** Renderer acknowledgement after font/layout/camera readiness, when its first drawing frame begins. */
@@ -192,12 +231,20 @@ export class BoardService {
     this.stats = { ...this.stats, firstStrokeMs: Math.round(this.now() - this.requestedAt) }; this.requestedAt = undefined;
     this.deps.log?.('board:lesson', { ...this.stats }); this.refresh();
   }
+  cue(id: number, key: number, expectedMs: number, actualMs: number) {
+    if (this.session?.id !== id || this.session.view().drawing?.key !== key) return;
+    this.deps.log?.('board:cue', { expectedMs, actualMs, errorMs: Math.abs(actualMs - expectedMs) });
+  }
   /** System context: when to draw, and what is on the board now. Board text was written by the model, never the screen. */
   context(): string | undefined {
     if (!this.deps.enabled()) return undefined;
     const session = this.active ? this.session : undefined;
     if (!session) return routingHints.board;
     const status = session.state === 'done' ? 'finished' : session.state;
+    if (this.deps.structured?.()) return `Kite's whiteboard is open with "${session.name}" (beat ${session.beat + 1} of ${session.count}, ${status}).
+${session.question ? `Waiting for the user's answer to: ${session.question}` : session.answer ? `The user answered: ${session.answer}. Give kind, accurate feedback in an added beat, then continue teaching.` : ''}
+Structure: ${JSON.stringify(this.structure ? { family: this.structure.family, nodes: this.structure.nodes, edges: this.structure.edges } : session.inputs().map(e => ({ id: e.id, label: e.label ?? e.text, from: e.from, to: e.to })))}
+For a follow-up, call explain_on_whiteboard with the question in topic, a relevant part in focus, and mode "add". The specialist plans narration and layout. Use mode "new" for a different topic. Kite handles pause, continue, next, repeat, replay and close locally.`;
     return `Kite's whiteboard is open with the lesson "${session.name}" (beat ${session.beat + 1} of ${session.count}, ${status}). Its elements, with ids you can reuse:
 ${describeScene(layoutScene(session.inputs()))}
 For a follow-up about it, call explain_on_whiteboard with mode "add": highlight the ids you talk about and draw new elements in free space. Use mode "new" only for a different topic. Kite itself handles "pause", "continue", "next", "repeat", "replay" and "close the board".`;
@@ -212,7 +259,7 @@ For a follow-up about it, call explain_on_whiteboard with mode "add": highlight 
   title() { return this.active ? this.session?.name : undefined; }
   pause() { if (this.active) this.session?.pause(); }
   refresh() { if (this.active) this.session?.refresh(); }
-  close() { this.streams.clear(); this.presenting = false; this.session?.stop(); this.session = undefined; }
+  close() { this.planEpoch++; this.planning?.abort(); this.planning = undefined; this.streams.clear(); this.presenting = false; this.session?.stop(); for (const parent of this.parents) parent.session.stop(); this.parents = []; this.session = undefined; this.structure = undefined; }
   /** A built-in lesson for demos and manual testing: no model or key needed. */
   demo() { return this.start(demoLesson); }
 }

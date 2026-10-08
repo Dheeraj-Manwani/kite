@@ -86,6 +86,7 @@ const api: KiteAPI = {
   boardControl: action => ipcRenderer.send('board:control', action),
   boardDrawn: (id, key) => ipcRenderer.send('board:drawn', id, key),
   boardStarted: (id, key) => ipcRenderer.send('board:started', id, key),
+  boardCue: (id, key, expectedMs, actualMs) => ipcRenderer.send('board:cue', id, key, expectedMs, actualMs),
   setBoardBounds: bounds => ipcRenderer.send('board:bounds', bounds),
   exportBoard: (action, png, title) => ipcRenderer.invoke('board:export', action, png, title),
   demoBoard: () => ipcRenderer.invoke('dev:boardDemo'),

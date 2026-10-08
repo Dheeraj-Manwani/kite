@@ -5,38 +5,49 @@ import type { ScreenBounds } from '../../shared/types';
 import { cursorInput } from '../kite/useKiteLoop';
 import { runtime } from '../kite/runtime';
 import { ringPaths } from '../guide/ring';
-import { react } from '../voice/runtime';
+import { react, voiceRuntime } from '../voice/runtime';
 import { elementStrokes } from './rough';
 import { BoardPlayer } from './player';
 import { boardRuntime } from './runtime';
 import { exportPng } from './export';
 /** Written line by line; the player clips each line while it is being "handwritten". */
-function Lines({ block, color, clip, order }: { block: TextBlock; color: string; clip: string; order: number }) {
+function Lines({ block, color, clip, order, animated = true }: { block: TextBlock; color: string; clip: string; order: number; animated?: boolean }) {
   return <>{block.lines.map((line, i) => {
     const x = block.align === 'center' ? block.x + block.width / 2 : block.x, id = `${clip}-${i}`;
     return <g key={i}>
       <clipPath id={id}><rect x={0} y={0} width={0} height={0} /></clipPath>
-      <text data-kind="text" data-order={order + i} data-clip={id} x={x} y={block.y + i * block.size * lineHeight + block.size}
+      <text data-kind={animated ? 'text' : undefined} data-order={order + i} data-clip={id} x={x} y={block.y + i * block.size * lineHeight + block.size}
         fontSize={block.size} fontFamily={boardFontFamily} fill={color} stroke={block.halo ? '#ffffff' : undefined} strokeWidth={block.halo ? 6 : undefined} paintOrder={block.halo ? 'stroke' : undefined} strokeLinejoin="round" textAnchor={block.align === 'center' ? 'middle' : 'start'}>{line}</text>
     </g>;
   })}</>;
 }
 /** One element in drawing order: fill (under), outline passes, arrowheads, then its words. */
-const Element = memo(function Element({ e, prefix }: { e: LaidElement; prefix: string }) {
+const Element = memo(function Element({ e, prefix, before, animated = true, dim = false, pulse = false }: { e: LaidElement; prefix: string; before?: LaidElement; animated?: boolean; dim?: boolean; pulse?: boolean }) {
   const strokes = useMemo(() => elementStrokes(e), [e]);
   const color = boardColors[e.color] ?? boardColors.black, clip = `${prefix}-${e.id}`;
   const label = e.kind === 'text' ? e.text : e.kind === 'shape' || e.kind === 'arrow' ? e.label : null;
+  const oldLabel = before?.kind === 'text' ? before.text : before?.kind === 'shape' || before?.kind === 'arrow' ? before.label : null;
+  const a = before && elementBounds(before), b = elementBounds(e), moving = a && (a.x !== b.x || a.y !== b.y);
+  const value = !!oldLabel && !!label && oldLabel.lines.join(' ') !== label.lines.join(' '), oldStrokes = before?.kind === 'arrow' ? elementStrokes(before) : [];
   let outline = 0;
-  return <g data-el={e.id}>
-    {strokes.filter(s => s.role === 'fill').map((s, i) => <path key={`fill${i}`} d={s.d} data-kind="fade" data-fill="1" data-order={20}
+  return <g data-el={e.id} data-kind={moving && e.kind !== 'arrow' && animated ? 'move' : undefined} data-order={5} data-from-x={moving ? a.x - b.x : undefined} data-from-y={moving ? a.y - b.y : undefined}
+    className={pulse ? 'board-pulse' : undefined} opacity={dim ? 0.25 : undefined}>
+    {e.kind === 'formula' && <g transform={`translate(${e.box.x} ${e.box.y}) scale(${e.box.width / e.formula.box.width} ${e.box.height / e.formula.box.height}) translate(${-e.formula.box.x} ${-e.formula.box.y})`} aria-label={e.label}>
+      {e.formula.paths.map((p, i) => <path key={i} d={p.d} transform={p.transform} data-kind={animated ? 'stroke' : undefined} data-order={10 + i} fill="none" stroke={color.stroke} strokeWidth={35} strokeLinejoin="round" />)}
+    </g>}
+    {strokes.filter(s => s.role === 'fill').map((s, i) => <path key={`fill${i}`} d={s.d} data-kind={animated && !before ? 'fade' : undefined} data-fill="1" data-order={20}
       fill={s.solidFill ? color.fill : 'none'} stroke={s.solidFill ? 'none' : color.stroke} strokeOpacity={0.5} strokeWidth={1.3} strokeLinecap="round" />)}
     {strokes.filter(s => s.role !== 'fill').map((s, i) => {
       const second = s.role === 'outline' && outline++ > 0;
-      return <path key={i} d={s.d} data-kind={s.dashed ? 'fade' : 'stroke'} data-order={s.role === 'head' ? 30 + i : 10 + i} data-fast={second ? '1' : undefined}
+      return <path key={i} d={s.d} data-kind={!animated ? undefined : before?.kind === 'arrow' ? 'morph' : before ? undefined : s.dashed ? 'fade' : 'stroke'} data-from-path={oldStrokes.filter(p => p.role !== 'fill')[i]?.d} data-order={s.role === 'head' ? 30 + i : 10 + i} data-fast={second ? '1' : undefined}
         fill="none" stroke={color.stroke} strokeWidth={second ? 1.5 : 2.1} strokeDasharray={s.dashed ? '10 9' : undefined} strokeLinecap="round" strokeLinejoin="round" />;
     })}
     {e.kind === 'arrow' && e.label && <rect x={e.label.x - 5} y={e.label.y - 2} width={e.label.width + 10} height={e.label.height + 4} rx={6} fill="#ffffff" opacity={0.9} />}
-    {label && <Lines block={label} color={color.stroke} clip={clip} order={40} />}
+    {value && animated && <g data-kind="erase" data-order={0}>
+      <Lines block={oldLabel} color={color.stroke} clip={`${clip}-previous`} order={0} animated={false} />
+      <path d={`M${oldLabel.x} ${oldLabel.y + oldLabel.height / 2}h${oldLabel.width}`} stroke={color.stroke} strokeWidth={2} />
+    </g>}
+    {label && <Lines block={label} color={color.stroke} clip={clip} order={40} animated={animated && (!before || value)} />}
   </g>;
 });
 /** Where a new board opens on the display under the cursor; `presenting`: the large presentation panel. */
@@ -90,9 +101,19 @@ export function BoardLayer() {
       const v = current.current, nib = player.current.tick(now);
       boardRuntime.pen = nib;
       // While a lesson plays, the kite stays at the board between strokes; paused or done, it comes home.
-      boardRuntime.rest = v?.status === 'playing' ? player.current.last ?? boardRuntime.rest ?? restPoint() : null;
+      boardRuntime.rest = v?.status === 'playing' ? player.current.last ?? boardRuntime.rest ?? restPoint() : v?.status === 'asking' ? restPoint() : null;
+      boardRuntime.aim = null;
+      if (v?.teaching && svg.current && !nib) {
+        const audio = v.drawing?.audioId === voiceRuntime.audioId ? voiceRuntime.audioMs : -1;
+        const cue = v.drawing?.cues?.filter(c => c.startMs <= audio).at(-1)?.id;
+        const named = v.recap && v.highlight.length ? v.highlight[Math.floor(now / 1100) % v.highlight.length] : v.highlight[0];
+        const target = v.elements.find(e => e.id === cue) ?? v.elements.find(e => e.id === named) ?? v.elements.find(e => v.drawing?.ids.includes(e.id));
+        const matrix = svg.current.getScreenCTM();
+        if (v.status === 'asking') boardRuntime.aim = { x: cursorInput.point.x - (cursorInput.geometry?.origin.x ?? 0), y: cursorInput.point.y - (cursorInput.geometry?.origin.y ?? 0) };
+        else if (target && matrix) { const box = elementBounds(target), p = new DOMPoint(box.x + box.width / 2, box.y + box.height / 2).matrixTransform(matrix); boardRuntime.aim = { x: p.x, y: p.y }; }
+      }
     };
-    return () => { off(); player.current.cancel(); boardRuntime.tick = null; boardRuntime.pen = null; boardRuntime.rest = null; boardRuntime.hit = null; boardRuntime.frame = null; window.kite.setBoardBounds(null); };
+    return () => { off(); player.current.cancel(); boardRuntime.tick = null; boardRuntime.pen = null; boardRuntime.rest = null; boardRuntime.aim = null; boardRuntime.hit = null; boardRuntime.frame = null; window.kite.setBoardBounds(null); };
   }, []);
   const restPoint = () => { const f = boardRuntime.frame; return f ? { x: f.x + 60, y: f.y + panelChrome.header + 40 } : null; };
   const viewport = frame ? panelViewport(frame) : { width: 1, height: 1 };
@@ -126,12 +147,23 @@ export function BoardLayer() {
     if (player.current.key === drawing.key) return;
     if (board.current !== view.id) { board.current = view.id; planned.current = null; }
     focus.current = drawing.ids;
-    const wait = moveTo(planCamera(view.elements, drawing.ids, viewport, planned.current), false);
-    const groups = drawing.ids.map(id => node.querySelector(`[data-el="${CSS.escape(id)}"]`)).filter(Boolean);
+    const wait = moveTo(planCamera(view.elements, drawing.ids, viewport, planned.current), !!view.teaching);
+    const ids = drawing.cues ? [...drawing.ids].sort((a, b) => (drawing.cues.find(c => c.id === a)?.startMs ?? 0) - (drawing.cues.find(c => c.id === b)?.startMs ?? 0)) : drawing.ids;
+    const groups = [...ids, ...(view.transition?.erased ?? [])].map(id => node.querySelector(`[data-el="${CSS.escape(id)}"]`)).filter(Boolean);
+    groups.push(...node.querySelectorAll('[data-teaching-effect]'));
+    const end = Math.max(0, ...(drawing.cues ?? []).map(c => c.startMs + c.durationMs));
+    const cues = drawing.cues && [...drawing.cues, ...groups.filter(g => !drawing.cues.some(c => c.id === g.getAttribute('data-el'))).map((g, i) => ({ id: g.getAttribute('data-el'), startMs: end + i * 120, durationMs: 120 }))];
     const id = view.id, key = drawing.key;
     player.current.last = null;
-    player.current.play(key, node, groups, drawing.durationMs, () => window.kite.boardDrawn(id, key), reduced(), wait, () => window.kite.boardStarted(id, key));
+    player.current.play(key, node, groups, drawing.durationMs, () => window.kite.boardDrawn(id, key), reduced(), wait, () => window.kite.boardStarted(id, key), cues ? { cues, clock: () => current.current?.drawing?.audioId === voiceRuntime.audioId ? voiceRuntime.audioMs : -1,
+      onCue: (_element, expected, actual) => window.kite.boardCue(id, key, expected, actual) } : undefined);
   }, [view?.drawing?.key, view?.id]);
+  useLayoutEffect(() => {
+    const cues = view?.drawing?.cues; if (!cues) return;
+    const end = Math.max(0, ...cues.map(c => c.startMs + c.durationMs));
+    const extras = [...(view.transition?.erased ?? []), ...Array.from(svg.current?.querySelectorAll('[data-teaching-effect]') ?? []).map(g => g.getAttribute('data-el'))];
+    player.current.updateTiming([...cues, ...extras.filter(id => !cues.some(c => c.id === id)).map((id, i) => ({ id, startMs: end + i * 120, durationMs: 120 }))]);
+  }, [view?.drawing?.cues]);
   // Between beats: keep the camera on the last beat; a finished lesson shows the whole board; a resized panel re-plans at once.
   useLayoutEffect(() => {
     if (!view || !frame || view.drawing) return;
@@ -155,6 +187,7 @@ export function BoardLayer() {
     } : null;
   }, [view === null, frame]);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(''), 2600); return () => clearTimeout(t); }, [toast]);
+  useEffect(() => { setToast(''); }, [view?.id]);
   const rings = useMemo(() => (view?.highlight ?? []).map(id => elements.find(e => e.id === id)).filter(Boolean).map(e => {
     const b = elementBounds(e), pad = 14;
     return { id: e.id, paths: ringPaths({ x: b.x - pad, y: b.y - pad, width: b.width + pad * 2, height: b.height + pad * 2 }, e.seed) };
@@ -199,6 +232,9 @@ export function BoardLayer() {
       <div className="board-tools">
         {view.status !== 'done' && <button onClick={() => control(playing ? 'pause' : 'resume')}>{playing ? 'Pause' : 'Resume'}</button>}
         {view.status !== 'done' && <button onClick={() => control('next')}>Next</button>}
+        {view.teaching && <button disabled={view.beat === 0} onClick={() => control('previous')}>Previous</button>}
+        {!!view.breadcrumbs?.length && <button onClick={() => control('back')}>Go back</button>}
+        {view.teaching && <label className="board-speed"><span className="sr-only">Lesson speed</span><select aria-label="Lesson speed" value={view.speed ?? 1} onChange={e => control({ type: 'speed', speed: Number(e.target.value) })}>{[0.75, 1, 1.25, 1.5].map(n => <option key={n} value={n}>{n}×</option>)}</select></label>}
         <button onClick={() => control('replay')}>Replay</button>
         <button aria-pressed={!!view.presenting} onClick={() => control(view.presenting ? 'smaller' : 'bigger')}>{view.presenting ? 'Smaller' : 'Bigger'}</button>
         {camera && <button onClick={() => setCamera(null)}>Fit</button>}
@@ -211,11 +247,26 @@ export function BoardLayer() {
       <svg ref={svg} className="board-svg" viewBox={`${cam.x} ${cam.y} ${viewport.width / cam.scale} ${viewport.height / cam.scale}`} width={viewport.width} height={viewport.height}
         xmlns="http://www.w3.org/2000/svg" role="img" aria-label={`${view.title}: ${elements.length} drawn elements`}>
         <rect className="board-sheet" x={-4000} y={-4000} width={canvas.width + 8000} height={canvas.height + 8000} fill="#ffffff" />
-        {elements.map(e => <Element key={`${e.id}:${JSON.stringify(e)}`} e={e} prefix={prefix} />)}
+        {elements.map(e => <Element key={`${e.id}:${JSON.stringify(e)}`} e={e} prefix={prefix} before={view.transition?.changed.includes(e.id) ? view.transition.before.find(old => old.id === e.id) : undefined}
+          dim={view.effects?.some(f => f.kind === 'dim' && !f.ids.includes(e.id))} pulse={!reduced() && view.effects?.some(f => f.kind === 'pulse' && f.ids.includes(e.id))} />)}
+        {view.transition?.before.filter(e => view.transition.erased.includes(e.id)).map(e => <g key={`erase-${e.id}`} data-el={e.id} data-kind="erase" data-order={0}><Element e={e} prefix={`${prefix}-erase`} animated={false} /></g>)}
+        {(view.effects ?? []).flatMap((effect, i) => {
+          const ids = effect.kind === 'badge' ? [effect.id] : effect.ids;
+          return ids.map(id => { const e = elements.find(n => n.id === id); if (!e || effect.kind === 'dim' || effect.kind === 'pulse') return null; const b = elementBounds(e);
+            return <g key={`${i}-${id}`} data-teaching-effect="1" data-el={`effect-${i}-${id}`}>
+              {effect.kind === 'badge' ? <><circle data-kind="stroke" data-order={0} cx={b.x - 20} cy={b.y + 10} r={14} stroke="#1e1e1e" fill="#fff" /><text data-kind="text" data-order={1} x={b.x - 20} y={b.y + 16} textAnchor="middle" fontFamily={boardFontFamily} fontSize={18}>{effect.number}</text></>
+                : <path data-kind="stroke" data-order={0} d={`M${b.x} ${effect.kind === 'strike' ? b.y + b.height / 2 : b.y + b.height + 8}h${b.width}`} stroke="#e03131" strokeWidth={2.5} />}
+            </g>;
+          });
+        })}
         {rings.map(r => <g key={`${view.drawing?.key ?? 0}:${r.id}`} className="board-ring">{r.paths.map((d, i) => <path key={i} d={d} pathLength={1} className={`pass-${i}`} />)}</g>)}
       </svg>
     </div>
-    <footer className="board-caption" role="status" aria-live="polite">{toast || view.note || (view.captions === false ? <span className="sr-only">{view.caption}</span> : view.caption)}</footer>
+    <footer className="board-caption" role="status" aria-live="polite">
+      {!!view.breadcrumbs?.length && <span className="board-breadcrumb">{[...view.breadcrumbs, view.title].join(' › ')}</span>}
+      {view.teaching && <nav className="board-beats" aria-label="Lesson beats">{Array.from({ length: view.total }, (_, i) => <button key={i} aria-label={`Go to beat ${i + 1}`} aria-current={view.beat === i ? 'step' : undefined} onClick={() => control({ type: 'jump', beat: i })}>{i + 1}</button>)}</nav>}
+      {toast || view.note || (view.captions === false ? <span className="sr-only">{view.caption}</span> : view.caption)}
+    </footer>
     <span className="board-resize" aria-hidden="true" onPointerDown={drag('resize')} />
   </section>;
 }

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whiteboard gallery</title>
+<style>
+:root { --bg: #f6f5f2; --panel: #ffffff; --text: #1e1e1e; --muted: #5f6368; --line: #dcdad4; --bad: #c92a2a; --good: #2b8a3e; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161616; --panel: #202020; --text: #ececec; --muted: #a0a0a0; --line: #3a3a3a; --bad: #ff8787; --good: #8ce99a; } }
+body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 32px 0 8px; }
+p.lede { color: var(--muted); margin: 0 0 16px; max-width: 80ch; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; background: var(--panel); }
+th, td { border: 1px solid var(--line); padding: 8px; vertical-align: top; text-align: left; }
+th small { display: block; color: var(--muted); font-weight: normal; }
+.summary td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.boards th { width: 200px; min-width: 160px; font-weight: 500; }
+.boards td { width: 590px; } .boards img { display: block; width: 590px; height: auto; border-radius: 6px; }
+.boards td p { margin: 6px 0 0; color: var(--muted); } .boards td p.bad { color: var(--bad); } .boards td p.good { color: var(--good); }
+.empty { color: var(--muted); font-style: italic; }
+.tag, .follow { display: block; font-size: 12px; color: var(--muted); }
+</style></head><body>
+<h1>Whiteboard gallery</h1>
+<p class="lede">Each lesson from <code>latest.json</code>, finished and rendered by Kite's overlay in the default 1400 × 900 panel on a 1920 × 1080 display. Fresh phase-2 specialist generations, recompiled through the current deterministic layout. Ready time is not renderer first stroke. Failed calls count against the full prompt denominator; crossings are recorded separately from the lint-clean gate. Click a board to open it at full size.</p>
+<p class="lede">Provider generations: 2026-10-08T04:57:46.491Z. Layout revalidated: 2026-10-08T05:14:04.678Z. Model timings and tokens describe the original generations. See <a href="../phase2-live.json">fresh overlay first-stroke samples and conditions</a>.</p>
+<h2>Summary</h2>
+<div class="scroll"><table class="summary"><thead><tr><th>Model</th><th>Drew</th><th>Valid first try</th><th>Repairs</th><th>First token</th><th>First beat (streamed)</th><th>First stroke</th><th>Output tokens</th><th>Lint-clean</th><th>Overlaps</th><th>Through shapes</th><th>Crossings</th><th>Text (median)</th><th>Text under 14 px</th></tr></thead>
+<tbody><tr><th scope="row">deepseek:deepseek-flash (lines)<small>deepseek:deepseek-flash:lines</small></th>
+    <td>2/2</td><td>100%</td><td>0</td><td>—</td><td>1.7 s</td><td>—</td>
+    <td>274</td><td>100%</td><td>0</td><td>0</td><td>0</td><td>14.45 px</td><td>0%</td></tr>
+<tr><th scope="row">deepseek:deepseek-flash (json)<small>deepseek:deepseek-flash:json</small></th>
+    <td>2/2</td><td>100%</td><td>0</td><td>—</td><td>1.6 s</td><td>—</td>
+    <td>289</td><td>100%</td><td>0</td><td>0</td><td>0</td><td>14 px</td><td>0%</td></tr>
+<tr><th scope="row">groq:openai/gpt-oss-120b (lines)<small>groq:openai/gpt-oss-120b:lines</small></th>
+    <td>2/2</td><td>100%</td><td>0</td><td>—</td><td>1.4 s</td><td>—</td>
+    <td>298.5</td><td>100%</td><td>0</td><td>0</td><td>0</td><td>14 px</td><td>0%</td></tr>
+<tr><th scope="row">groq:openai/gpt-oss-120b (json)<small>groq:openai/gpt-oss-120b:json</small></th>
+    <td>2/2</td><td>100%</td><td>0</td><td>—</td><td>2.2 s</td><td>—</td>
+    <td>436.5</td><td>100%</td><td>0</td><td>0</td><td>0</td><td>14 px</td><td>0%</td></tr>
+<tr><th scope="row">moonshot:kimi-k2.6 (lines)<small>moonshot:kimi-k2.6:lines</small></th>
+    <td>2/2</td><td>100%</td><td>1</td><td>—</td><td>3.4 s</td><td>—</td>
+    <td>166.5</td><td>100%</td><td>0</td><td>0</td><td>0</td><td>14 px</td><td>0%</td></tr>
+<tr><th scope="row">moonshot:kimi-k2.6 (json)<small>moonshot:kimi-k2.6:json</small></th>
+    <td>1/2</td><td>50%</td><td>0</td><td>—</td><td>4.7 s</td><td>—</td>
+    <td>281</td><td>50%</td><td>0</td><td>0</td><td>0</td><td>15.8 px</td><td>0%</td></tr></tbody></table></div>
+<p class="lede">Times and tokens are medians over lessons; overlaps, through and crossings are means per lesson.</p>
+<h2>Boards</h2>
+<div class="scroll"><table class="boards"><thead><tr><th>Prompt</th><th>deepseek:deepseek-flash (lines)</th><th>deepseek:deepseek-flash (json)</th><th>groq:openai/gpt-oss-120b (lines)</th><th>groq:openai/gpt-oss-120b (json)</th><th>moonshot:kimi-k2.6 (lines)</th><th>moonshot:kimi-k2.6 (json)</th></tr></thead>
+<tbody><tr><th scope="row"><span class="tag"> · sequence</span>Explain how the TCP three-way handshake works.</th><td><a href="gallery/deepseek-deepseek-flash-lines/tcp-handshake-0.jpg"><img src="gallery/deepseek-deepseek-flash-lines/tcp-handshake-0.jpg" alt="TCP Three-Way Handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 266 tokens · 5 beats · 17 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/deepseek-deepseek-flash-json/tcp-handshake-0.jpg"><img src="gallery/deepseek-deepseek-flash-json/tcp-handshake-0.jpg" alt="TCP Three-Way Handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 210 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b-lines/tcp-handshake-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b-lines/tcp-handshake-0.jpg" alt="TCP three-way handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 346 tokens · 7 beats · 20 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b-json/tcp-handshake-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b-json/tcp-handshake-0.jpg" alt="TCP three‑way handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 479 tokens · 1 beats · 17 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6-lines/tcp-handshake-0.jpg"><img src="gallery/moonshot-kimi-k2.6-lines/tcp-handshake-0.jpg" alt="TCP Three-Way Handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 142 tokens · 4 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6-json/tcp-handshake-0.jpg"><img src="gallery/moonshot-kimi-k2.6-json/tcp-handshake-0.jpg" alt="TCP Three-Way Handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 281 tokens · 4 beats · 17 elements · text 15.8 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does React decide what to re-render?</th><td><a href="gallery/deepseek-deepseek-flash-lines/react-rendering-0.jpg"><img src="gallery/deepseek-deepseek-flash-lines/react-rendering-0.jpg" alt="React Re-render Decision" loading="lazy" width="590" height="380"></a>
+      <p>— · 282 tokens · 7 beats · 12 elements · text 14.9 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/deepseek-deepseek-flash-json/react-rendering-0.jpg"><img src="gallery/deepseek-deepseek-flash-json/react-rendering-0.jpg" alt="React re-render decision" loading="lazy" width="590" height="380"></a>
+      <p>— · 368 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b-lines/react-rendering-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b-lines/react-rendering-0.jpg" alt="React render flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 251 tokens · 4 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b-json/react-rendering-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b-json/react-rendering-0.jpg" alt="React Re‑render Decision" loading="lazy" width="590" height="380"></a>
+      <p>— · 394 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6-lines/react-rendering-0.jpg"><img src="gallery/moonshot-kimi-k2.6-lines/react-rendering-0.jpg" alt="How does React decide what to re-render?" loading="lazy" width="590" height="380"></a>
+      <p>— · 191 tokens · 4 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">Error: 429</td></tr></tbody></table></div>
+</body></html>

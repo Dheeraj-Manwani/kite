@@ -1,10 +1,11 @@
 import type { LaidElement, LaidShape, Point } from '../../shared/board';
+import { boardIcons } from '../../shared/boardIcons';
 /**
  * Hand-drawn (Excalidraw-like) outlines, after rough.js: every straight edge is a slightly bowed cubic
  * with jittered ends, drawn twice. Each pass is one continuous path so the pen can trace it. All output is
  * deterministic for a seed, so an element keeps its wobble across re-renders and in exported images.
  */
-export interface StrokePlan { d: string; role: 'outline' | 'fill' | 'head'; dashed?: boolean; solidFill?: boolean }
+export interface StrokePlan { d: string; role: 'outline' | 'fill' | 'head' | 'icon'; dashed?: boolean; solidFill?: boolean }
 export type Rand = () => number;
 export function random(seed: number): Rand {
   let t = seed >>> 0;
@@ -109,16 +110,20 @@ function behind(points: Point[], end: 'start' | 'end', distance: number): Point 
 /** Strokes in drawing order: outline passes, then fill, then arrowheads. Text is rendered separately. */
 export function elementStrokes(e: LaidElement): StrokePlan[] {
   const rand = random(e.seed);
-  if (e.kind === 'text') return [];
+  if (e.kind === 'text' || e.kind === 'formula') return [];
   if (e.kind === 'shape') {
     const { x, y, width: w, height: h } = e.box, out: StrokePlan[] = [];
     if (e.shape === 'ellipse') out.push({ d: ellipsePass(x + w / 2, y + h / 2, w / 2, h / 2, rand, 0), role: 'outline' }, { d: ellipsePass(x + w / 2, y + h / 2, w / 2, h / 2, rand, 1), role: 'outline' });
     else { const polygon = outlinePolygon(e); out.push({ d: polyline(polygon, rand, true), role: 'outline' }, { d: polyline(polygon, rand, true, true), role: 'outline' }); }
     if (e.fill === 'hachure') out.push({ d: hachure(outlinePolygon(e), 8, rand), role: 'fill' });
     if (e.fill === 'solid') out.push({ d: e.shape === 'ellipse' ? ellipsePass(x + w / 2, y + h / 2, w / 2 - 1, h / 2 - 1, rand, 0) + 'Z' : polyline(outlinePolygon(e), rand, true, true) + 'Z', role: 'fill', solidFill: true });
+    const factor = e.shape === 'ellipse' ? 1.42 : e.shape === 'diamond' ? 1.9 : 1;
+    if (e.icon && boardIcons[e.icon]) for (const path of boardIcons[e.icon]) out.push({ role: 'icon',
+      d: 'M' + path.map(p => `${f(x + (w - w / factor) / 2 + 16 + p.x * 1.5)} ${f(y + h / 2 - 18 + p.y * 1.5)}`).join('L') });
     return out;
   }
   const points = e.points, dashed = e.dashed;
+  if (e.kind === 'line' && e.fill === 'solid') return [{ d: polyline(points, rand, true) + 'Z', role: 'fill', solidFill: true }];
   const out: StrokePlan[] = [{ d: polyline(points, rand, false), role: 'outline', dashed }];
   // Single straight shafts get the second, lighter pass that makes Excalidraw lines look inked.
   if (points.length === 2 && !dashed) out.push({ d: polyline(points, rand, false, true), role: 'outline' });

@@ -13,10 +13,12 @@ export interface AppSettings { onboardingComplete: boolean; hotkey: import('./re
   permissions: import('./permissions').PermissionSettings;
   /** The model that runs tasks and jobs; null picks one automatically (agent.ts `jobsModel`). */
   jobsModel: ModelSelection | null;
+  /** Specialist diagram planner; null uses the measured automatic preference. */
+  boardModel?: ModelSelection | null;
   /** Memory's master switch: off, nothing is saved or used (saved facts stay until deleted). */
   memory: boolean }
 export interface AboutInfo { version: string; updateStatus: string; updateReady: boolean }
-export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean> }
+export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean>; boardPlannerEnabled?: boolean }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
 export interface Timing { captureMs?: number; transcribeMs: number; firstTokenMs: number; totalMs: number; ttsFirstAudioMs?: number; voiceToVoiceMs?: number; voiceAverageMs?: number }
 export type VoiceEventType = 'ptt:start' | 'ptt:stop' | 'ptt:cancel' | 'ptt:tooShort'
@@ -102,6 +104,7 @@ export interface KiteAPI {
   demoGuide(): Promise<OperationResult>;
   onBoardEvent(callback: (view: import('./board').BoardView | null) => void): () => void;
   boardControl(action: import('./board').BoardAction): void;
+  boardCue(id: number, key: number, expectedMs: number, actualMs: number): void;
   boardDrawn(id: number, key: number): void;
   boardStarted(id: number, key: number): void;
   setBoardBounds(bounds: ScreenBounds | null): void;

@@ -100,6 +100,10 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
         {providers.map(p => <ProviderRow key={p.id} id={p.id} label={p.label} badge={p.badge} snapshot={snapshot} toast={setToast} />)}</Group>
       <Group title="Models">
         <Row label="Main model" description="Answers every question.">{picker('Main model', s.model, model => update({ model }))}</Row>
+        {snapshot.boardPlannerEnabled && <Row label="Whiteboard model" description={<>Plans visual lessons. {s.boardModel
+          ? <button type="button" className="link" onClick={() => update({ boardModel: null })}>Choose automatically</button>
+          : 'Automatic: DeepSeek Flash when its key is saved, else the main model.'}</>}>
+          {picker('Whiteboard model', s.boardModel ?? snapshot.models.find(m => m.provider === 'deepseek' && m.id === 'deepseek-flash' && snapshot.keys.deepseek) ?? s.model, model => update({ boardModel: model }))}</Row>}
         <Row label="Vision model" description="Looks at your screen when you circle something or approve a look.">{picker('Vision model', s.visionModel, visionModel => update({ visionModel }), { visionOnly: true })}</Row>
         <Row label="Jobs model" description={<>Does tasks and errands for you, one step at a time. {s.jobsModel
           ? <button type="button" className="link" onClick={() => update({ jobsModel: null })}>Choose automatically</button>

@@ -1,0 +1,65 @@
+{
+  "checkedAt": "2026-10-08T05:04:46.594Z",
+  "conditions": "60 rendered elements (30 measured nodes, 29 labelled edges, title), layout in Node worker plus deterministic routing/label lint in shared code. Cold startup reported separately; three fixed warmup runs before ten samples.",
+  "elements": 60,
+  "cold": {
+    "totalMs": 169.33999999999997,
+    "layoutMs": 73.29740000000004,
+    "roundTripMs": 152.45750000000004
+  },
+  "warm": [
+    {
+      "totalMs": 31.42349999999999,
+      "layoutMs": 27.969799999999964,
+      "roundTripMs": 28.5634
+    },
+    {
+      "totalMs": 32.54279999999994,
+      "layoutMs": 28.80200000000002,
+      "roundTripMs": 29.241700000000037
+    },
+    {
+      "totalMs": 28.24260000000004,
+      "layoutMs": 24.156299999999987,
+      "roundTripMs": 25.062799999999925
+    },
+    {
+      "totalMs": 31.87970000000007,
+      "layoutMs": 27.687200000000075,
+      "roundTripMs": 28.692300000000046
+    },
+    {
+      "totalMs": 32.108600000000024,
+      "layoutMs": 28.035499999999956,
+      "roundTripMs": 28.72090000000003
+    },
+    {
+      "totalMs": 26.844100000000026,
+      "layoutMs": 22.988099999999918,
+      "roundTripMs": 23.441900000000032
+    },
+    {
+      "totalMs": 35.77679999999998,
+      "layoutMs": 31.075500000000034,
+      "roundTripMs": 31.838700000000017
+    },
+    {
+      "totalMs": 24.081699999999955,
+      "layoutMs": 20.994800000000055,
+      "roundTripMs": 21.431499999999915
+    },
+    {
+      "totalMs": 22.534099999999967,
+      "layoutMs": 19.758800000000065,
+      "roundTripMs": 20.106700000000046
+    },
+    {
+      "totalMs": 24.53200000000004,
+      "layoutMs": 21.560899999999947,
+      "roundTripMs": 21.923599999999965
+    }
+  ],
+  "medianMs": 29.833050000000014,
+  "maxMs": 35.77679999999998,
+  "targetMs": 50
+}

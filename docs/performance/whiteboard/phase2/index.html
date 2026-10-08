@@ -1,0 +1,454 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whiteboard gallery</title>
+<style>
+:root { --bg: #f6f5f2; --panel: #ffffff; --text: #1e1e1e; --muted: #5f6368; --line: #dcdad4; --bad: #c92a2a; --good: #2b8a3e; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161616; --panel: #202020; --text: #ececec; --muted: #a0a0a0; --line: #3a3a3a; --bad: #ff8787; --good: #8ce99a; } }
+body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 32px 0 8px; }
+p.lede { color: var(--muted); margin: 0 0 16px; max-width: 80ch; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; background: var(--panel); }
+th, td { border: 1px solid var(--line); padding: 8px; vertical-align: top; text-align: left; }
+th small { display: block; color: var(--muted); font-weight: normal; }
+.summary td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.boards th { width: 200px; min-width: 160px; font-weight: 500; }
+.boards td { width: 590px; } .boards img { display: block; width: 590px; height: auto; border-radius: 6px; }
+.boards td p { margin: 6px 0 0; color: var(--muted); } .boards td p.bad { color: var(--bad); } .boards td p.good { color: var(--good); }
+.empty { color: var(--muted); font-style: italic; }
+.tag, .follow { display: block; font-size: 12px; color: var(--muted); }
+</style></head><body>
+<h1>Whiteboard gallery</h1>
+<p class="lede">Each lesson from <code>latest.json</code>, finished and rendered by Kite's overlay in the default 1400 × 900 panel on a 1920 × 1080 display. Fresh phase-2 specialist generations, recompiled through the current deterministic layout. Ready time is not renderer first stroke. Failed calls count against the full prompt denominator; crossings are recorded separately from the lint-clean gate. Click a board to open it at full size.</p>
+<p class="lede">Provider generations: 2026-10-08T06:16:29.554Z. Layout revalidated: 2026-10-08T06:17:50.561Z. Model timings and tokens describe the original generations. See <a href="../phase2-live.json">fresh overlay first-stroke samples and conditions</a>.</p>
+<h2>Summary</h2>
+<div class="scroll"><table class="summary"><thead><tr><th>Model</th><th>Drew</th><th>Valid first try</th><th>Repairs</th><th>First token</th><th>First beat (streamed)</th><th>First stroke</th><th>Output tokens</th><th>Lint-clean</th><th>Overlaps</th><th>Through shapes</th><th>Crossings</th><th>Text (median)</th><th>Text under 14 px</th></tr></thead>
+<tbody><tr><th scope="row">deepseek:deepseek-flash (lines)<small>deepseek:deepseek-flash</small></th>
+    <td>60/60</td><td>100%</td><td>14</td><td>—</td><td>1.5 s</td><td>—</td>
+    <td>234.5</td><td>100%</td><td>0</td><td>0</td><td>0.3</td><td>14 px</td><td>0%</td></tr>
+<tr><th scope="row">moonshot:kimi-k2.6 (lines)<small>moonshot:kimi-k2.6</small></th>
+    <td>58/60</td><td>97%</td><td>9</td><td>—</td><td>4.7 s</td><td>—</td>
+    <td>248.5</td><td>97%</td><td>0</td><td>0</td><td>0.1896551724137931</td><td>14 px</td><td>0%</td></tr>
+<tr><th scope="row">groq:openai/gpt-oss-120b (lines)<small>groq:openai/gpt-oss-120b</small></th>
+    <td>60/60</td><td>100%</td><td>4</td><td>—</td><td>1.4 s</td><td>—</td>
+    <td>275</td><td>100%</td><td>0</td><td>0</td><td>0.16666666666666666</td><td>14 px</td><td>0%</td></tr></tbody></table></div>
+<p class="lede">Times and tokens are medians over lessons; overlaps, through and crossings are means per lesson.</p>
+<h2>Boards</h2>
+<div class="scroll"><table class="boards"><thead><tr><th>Prompt</th><th>deepseek:deepseek-flash (lines)</th><th>moonshot:kimi-k2.6 (lines)</th><th>groq:openai/gpt-oss-120b (lines)</th></tr></thead>
+<tbody><tr><th scope="row"><span class="tag"> · sequence</span>Explain how the TCP three-way handshake works.</th><td><a href="gallery/deepseek-deepseek-flash/tcp-handshake-0.jpg"><img src="gallery/deepseek-deepseek-flash/tcp-handshake-0.jpg" alt="TCP three-way handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 123 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/tcp-handshake-0.jpg"><img src="gallery/moonshot-kimi-k2.6/tcp-handshake-0.jpg" alt="TCP Three-Way Handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 178 tokens · 4 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/tcp-handshake-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/tcp-handshake-0.jpg" alt="TCP three-way handshake" loading="lazy" width="590" height="380"></a>
+      <p>— · 739 tokens · 4 beats · 17 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>How does OAuth login with Google work?</th><td><a href="gallery/deepseek-deepseek-flash/oauth-0.jpg"><img src="gallery/deepseek-deepseek-flash/oauth-0.jpg" alt="OAuth with Google" loading="lazy" width="590" height="380"></a>
+      <p>— · 217 tokens · 4 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/oauth-0.jpg"><img src="gallery/moonshot-kimi-k2.6/oauth-0.jpg" alt="OAuth with Google" loading="lazy" width="590" height="380"></a>
+      <p>— · 307 tokens · 6 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/oauth-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/oauth-0.jpg" alt="OAuth login with Google" loading="lazy" width="590" height="380"></a>
+      <p>— · 359 tokens · 6 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>What happens when I type a website name and DNS looks it up?</th><td><a href="gallery/deepseek-deepseek-flash/dns-0.jpg"><img src="gallery/deepseek-deepseek-flash/dns-0.jpg" alt="DNS Lookup" loading="lazy" width="590" height="380"></a>
+      <p>— · 310 tokens · 5 beats · 21 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">Error: 429</td><td><a href="gallery/groq-openai-gpt-oss-120b/dns-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/dns-0.jpg" alt="DNS lookup" loading="lazy" width="590" height="380"></a>
+      <p>— · 402 tokens · 7 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>How does HTTPS keep my connection secure?</th><td><a href="gallery/deepseek-deepseek-flash/https-tls-0.jpg"><img src="gallery/deepseek-deepseek-flash/https-tls-0.jpg" alt="How HTTPS Keeps Your Connection Secure" loading="lazy" width="590" height="380"></a>
+      <p>— · 244 tokens · 4 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">Error: 429</td><td><a href="gallery/groq-openai-gpt-oss-120b/https-tls-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/https-tls-0.jpg" alt="HTTPS security" loading="lazy" width="590" height="380"></a>
+      <p>— · 306 tokens · 4 beats · 13 elements · text 14 px</p>
+      <p class="bad">2 crossings</p></td></tr>
+<tr><th scope="row"><span class="tag"> · layers</span>Explain the OSI model layers.</th><td><a href="gallery/deepseek-deepseek-flash/osi-0.jpg"><img src="gallery/deepseek-deepseek-flash/osi-0.jpg" alt="OSI Model Layers" loading="lazy" width="590" height="380"></a>
+      <p>— · 305 tokens · 8 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/osi-0.jpg"><img src="gallery/moonshot-kimi-k2.6/osi-0.jpg" alt="OSI Model Layers" loading="lazy" width="590" height="380"></a>
+      <p>— · 369 tokens · 7 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/osi-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/osi-0.jpg" alt="OSI Model" loading="lazy" width="590" height="380"></a>
+      <p>— · 282 tokens · 6 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>How does a load balancer spread traffic across servers?</th><td><a href="gallery/deepseek-deepseek-flash/load-balancer-0.jpg"><img src="gallery/deepseek-deepseek-flash/load-balancer-0.jpg" alt="Load Balancer" loading="lazy" width="590" height="380"></a>
+      <p>— · 176 tokens · 3 beats · 8 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/load-balancer-0.jpg"><img src="gallery/moonshot-kimi-k2.6/load-balancer-0.jpg" alt="Load Balancer Traffic Flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 309 tokens · 4 beats · 14 elements · text 14 px</p>
+      <p class="bad">3 crossings</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/load-balancer-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/load-balancer-0.jpg" alt="Load balancer traffic spread" loading="lazy" width="590" height="380"></a>
+      <p>— · 272 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>How does a CDN make websites faster?</th><td><a href="gallery/deepseek-deepseek-flash/cdn-0.jpg"><img src="gallery/deepseek-deepseek-flash/cdn-0.jpg" alt="How a CDN speeds up sites" loading="lazy" width="590" height="380"></a>
+      <p>— · 162 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/cdn-0.jpg"><img src="gallery/moonshot-kimi-k2.6/cdn-0.jpg" alt="How a CDN makes websites faster" loading="lazy" width="590" height="380"></a>
+      <p>— · 302 tokens · 7 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/cdn-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/cdn-0.jpg" alt="How CDN speeds sites" loading="lazy" width="590" height="380"></a>
+      <p>— · 283 tokens · 3 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>How is a WebSocket different from normal HTTP requests?</th><td><a href="gallery/deepseek-deepseek-flash/websocket-0.jpg"><img src="gallery/deepseek-deepseek-flash/websocket-0.jpg" alt="WebSocket vs HTTP" loading="lazy" width="590" height="380"></a>
+      <p>— · 211 tokens · 4 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/websocket-0.jpg"><img src="gallery/moonshot-kimi-k2.6/websocket-0.jpg" alt="WebSocket vs HTTP" loading="lazy" width="590" height="380"></a>
+      <p>— · 181 tokens · 3 beats · 1 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/websocket-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/websocket-0.jpg" alt="WebSocket vs HTTP" loading="lazy" width="590" height="380"></a>
+      <p>— · 202 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does React decide what to re-render?</th><td><a href="gallery/deepseek-deepseek-flash/react-rendering-0.jpg"><img src="gallery/deepseek-deepseek-flash/react-rendering-0.jpg" alt="React re-render flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 196 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/react-rendering-0.jpg"><img src="gallery/moonshot-kimi-k2.6/react-rendering-0.jpg" alt="React Re-Render Decision" loading="lazy" width="590" height="380"></a>
+      <p>— · 333 tokens · 6 beats · 1 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/react-rendering-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/react-rendering-0.jpg" alt="React re‑render flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 322 tokens · 3 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>Explain the JavaScript event loop.</th><td><a href="gallery/deepseek-deepseek-flash/event-loop-0.jpg"><img src="gallery/deepseek-deepseek-flash/event-loop-0.jpg" alt="JavaScript event loop" loading="lazy" width="590" height="380"></a>
+      <p>— · 197 tokens · 5 beats · 9 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td><td><a href="gallery/moonshot-kimi-k2.6/event-loop-0.jpg"><img src="gallery/moonshot-kimi-k2.6/event-loop-0.jpg" alt="JavaScript Event Loop" loading="lazy" width="590" height="380"></a>
+      <p>— · 217 tokens · 5 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/event-loop-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/event-loop-0.jpg" alt="JavaScript Event Loop" loading="lazy" width="590" height="380"></a>
+      <p>— · 236 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · timeline</span>How do git branches and merging work?</th><td><a href="gallery/deepseek-deepseek-flash/git-branching-0.jpg"><img src="gallery/deepseek-deepseek-flash/git-branching-0.jpg" alt="Git branches and merging" loading="lazy" width="590" height="380"></a>
+      <p>— · 284 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/git-branching-0.jpg"><img src="gallery/moonshot-kimi-k2.6/git-branching-0.jpg" alt="Git Branches and Merging" loading="lazy" width="590" height="380"></a>
+      <p>— · 211 tokens · 4 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/git-branching-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/git-branching-0.jpg" alt="Git branches &amp; merging" loading="lazy" width="590" height="380"></a>
+      <p>— · 280 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>Walk me through what happens in a REST API request from a mobile app.</th><td><a href="gallery/deepseek-deepseek-flash/rest-request-0.jpg"><img src="gallery/deepseek-deepseek-flash/rest-request-0.jpg" alt="REST API request from a mobile app" loading="lazy" width="590" height="380"></a>
+      <p>— · 221 tokens · 4 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/rest-request-0.jpg"><img src="gallery/moonshot-kimi-k2.6/rest-request-0.jpg" alt="REST API Request from Mobile App" loading="lazy" width="590" height="380"></a>
+      <p>— · 246 tokens · 6 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/rest-request-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/rest-request-0.jpg" alt="REST API flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 429 tokens · 9 beats · 17 elements · text 14 px</p>
+      <p class="bad">4 crossings</p></td></tr>
+<tr><th scope="row"><span class="tag"> · tree</span>Explain recursion using factorial.</th><td><a href="gallery/deepseek-deepseek-flash/recursion-0.jpg"><img src="gallery/deepseek-deepseek-flash/recursion-0.jpg" alt="Recursion" loading="lazy" width="590" height="380"></a>
+      <p>— · 271 tokens · 6 beats · 12 elements · text 14.1 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/recursion-0.jpg"><img src="gallery/moonshot-kimi-k2.6/recursion-0.jpg" alt="Recursion: Factorial" loading="lazy" width="590" height="380"></a>
+      <p>— · 300 tokens · 3 beats · 24 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/recursion-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/recursion-0.jpg" alt="Recursion: factorial" loading="lazy" width="590" height="380"></a>
+      <p>— · 241 tokens · 1 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does a compiler turn code into a program?</th><td><a href="gallery/deepseek-deepseek-flash/compiler-0.jpg"><img src="gallery/deepseek-deepseek-flash/compiler-0.jpg" alt="How a compiler works" loading="lazy" width="590" height="380"></a>
+      <p>— · 338 tokens · 5 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/compiler-0.jpg"><img src="gallery/moonshot-kimi-k2.6/compiler-0.jpg" alt="How does a compiler turn code into a program?" loading="lazy" width="590" height="380"></a>
+      <p>— · 263 tokens · 5 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/compiler-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/compiler-0.jpg" alt="Compiler pipeline" loading="lazy" width="590" height="380"></a>
+      <p>— · 381 tokens · 7 beats · 24 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does garbage collection work?</th><td><a href="gallery/deepseek-deepseek-flash/garbage-collection-0.jpg"><img src="gallery/deepseek-deepseek-flash/garbage-collection-0.jpg" alt="garbage collection" loading="lazy" width="590" height="380"></a>
+      <p>— · 203 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/garbage-collection-0.jpg"><img src="gallery/moonshot-kimi-k2.6/garbage-collection-0.jpg" alt="Garbage Collection Cycle" loading="lazy" width="590" height="380"></a>
+      <p>— · 220 tokens · 5 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/garbage-collection-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/garbage-collection-0.jpg" alt="Garbage Collection" loading="lazy" width="590" height="380"></a>
+      <p>— · 235 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>Explain the MVC pattern.</th><td><a href="gallery/deepseek-deepseek-flash/mvc-0.jpg"><img src="gallery/deepseek-deepseek-flash/mvc-0.jpg" alt="MVC pattern" loading="lazy" width="590" height="380"></a>
+      <p>— · 203 tokens · 5 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/mvc-0.jpg"><img src="gallery/moonshot-kimi-k2.6/mvc-0.jpg" alt="MVC Pattern" loading="lazy" width="590" height="380"></a>
+      <p>— · 364 tokens · 5 beats · 16 elements · text 14 px</p>
+      <p class="bad">2 crossings</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/mvc-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/mvc-0.jpg" alt="MVC pattern" loading="lazy" width="590" height="380"></a>
+      <p>— · 173 tokens · 1 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · algorithm</span>Show me how binary search works.</th><td><a href="gallery/deepseek-deepseek-flash/binary-search-0.jpg"><img src="gallery/deepseek-deepseek-flash/binary-search-0.jpg" alt="Binary Search" loading="lazy" width="590" height="380"></a>
+      <p>— · 266 tokens · 6 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/binary-search-0.jpg"><img src="gallery/moonshot-kimi-k2.6/binary-search-0.jpg" alt="Binary Search" loading="lazy" width="590" height="380"></a>
+      <p>— · 258 tokens · 4 beats · 20 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/binary-search-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/binary-search-0.jpg" alt="Binary Search" loading="lazy" width="590" height="380"></a>
+      <p>— · 754 tokens · 7 beats · 15 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag"> · algorithm</span>Explain quicksort.</th><td><a href="gallery/deepseek-deepseek-flash/quicksort-0.jpg"><img src="gallery/deepseek-deepseek-flash/quicksort-0.jpg" alt="Quicksort" loading="lazy" width="590" height="380"></a>
+      <p>— · 225 tokens · 4 beats · 13 elements · text 15.3 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/quicksort-0.jpg"><img src="gallery/moonshot-kimi-k2.6/quicksort-0.jpg" alt="Quicksort" loading="lazy" width="590" height="380"></a>
+      <p>— · 234 tokens · 5 beats · 16 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/quicksort-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/quicksort-0.jpg" alt="Quicksort" loading="lazy" width="590" height="380"></a>
+      <p>— · 336 tokens · 6 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · algorithm</span>How does breadth-first search work on a graph?</th><td><a href="gallery/deepseek-deepseek-flash/bfs-0.jpg"><img src="gallery/deepseek-deepseek-flash/bfs-0.jpg" alt="How Does Breadth-First Search Work?" loading="lazy" width="590" height="380"></a>
+      <p>— · 225 tokens · 4 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/bfs-0.jpg"><img src="gallery/moonshot-kimi-k2.6/bfs-0.jpg" alt="Breadth-First Search" loading="lazy" width="590" height="380"></a>
+      <p>— · 347 tokens · 5 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/bfs-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/bfs-0.jpg" alt="Breadth‑First Search" loading="lazy" width="590" height="380"></a>
+      <p>— · 347 tokens · 6 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · algorithm</span>How does a hash table handle collisions?</th><td><a href="gallery/deepseek-deepseek-flash/hash-collisions-0.jpg"><img src="gallery/deepseek-deepseek-flash/hash-collisions-0.jpg" alt="Hash table collisions" loading="lazy" width="590" height="380"></a>
+      <p>— · 253 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="bad">3 crossings</p></td><td><a href="gallery/moonshot-kimi-k2.6/hash-collisions-0.jpg"><img src="gallery/moonshot-kimi-k2.6/hash-collisions-0.jpg" alt="Hash Table Collisions" loading="lazy" width="590" height="380"></a>
+      <p>— · 277 tokens · 3 beats · 16 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/hash-collisions-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/hash-collisions-0.jpg" alt="Hash table collisions" loading="lazy" width="590" height="380"></a>
+      <p>— · 137 tokens · 1 beats · 4 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · compare</span>Explain Big O notation with examples.</th><td><a href="gallery/deepseek-deepseek-flash/big-o-0.jpg"><img src="gallery/deepseek-deepseek-flash/big-o-0.jpg" alt="Big O Notation" loading="lazy" width="590" height="380"></a>
+      <p>— · 364 tokens · 6 beats · 18 elements · text 16.2 px</p>
+      <p class="bad">3 crossings</p></td><td><a href="gallery/moonshot-kimi-k2.6/big-o-0.jpg"><img src="gallery/moonshot-kimi-k2.6/big-o-0.jpg" alt="Big O Notation" loading="lazy" width="590" height="380"></a>
+      <p>— · 430 tokens · 10 beats · 20 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/big-o-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/big-o-0.jpg" alt="Big O notation" loading="lazy" width="590" height="380"></a>
+      <p>— · 338 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · algorithm</span>How does inserting into a linked list work?</th><td><a href="gallery/deepseek-deepseek-flash/linked-list-0.jpg"><img src="gallery/deepseek-deepseek-flash/linked-list-0.jpg" alt="Linked List Insertion" loading="lazy" width="590" height="380"></a>
+      <p>— · 240 tokens · 5 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/linked-list-0.jpg"><img src="gallery/moonshot-kimi-k2.6/linked-list-0.jpg" alt="Inserting into a Linked List" loading="lazy" width="590" height="380"></a>
+      <p>— · 220 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/linked-list-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/linked-list-0.jpg" alt="Linked List Insertion" loading="lazy" width="590" height="380"></a>
+      <p>— · 248 tokens · 4 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · algorithm</span>How does Dijkstra&#39;s shortest path algorithm work?</th><td><a href="gallery/deepseek-deepseek-flash/dijkstra-0.jpg"><img src="gallery/deepseek-deepseek-flash/dijkstra-0.jpg" alt="Dijkstra&#39;s Algorithm" loading="lazy" width="590" height="380"></a>
+      <p>— · 235 tokens · 5 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/dijkstra-0.jpg"><img src="gallery/moonshot-kimi-k2.6/dijkstra-0.jpg" alt="Dijkstra&#39;s Shortest Path" loading="lazy" width="590" height="380"></a>
+      <p>— · 369 tokens · 7 beats · 5 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/dijkstra-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/dijkstra-0.jpg" alt="Dijkstra&#39;s shortest path" loading="lazy" width="590" height="380"></a>
+      <p>— · 408 tokens · 7 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · compare</span>Explain the CAP theorem.</th><td><a href="gallery/deepseek-deepseek-flash/cap-0.jpg"><img src="gallery/deepseek-deepseek-flash/cap-0.jpg" alt="CAP Theorem" loading="lazy" width="590" height="380"></a>
+      <p>— · 326 tokens · 3 beats · 17 elements · text 16.2 px</p>
+      <p class="bad">5 crossings</p></td><td><a href="gallery/moonshot-kimi-k2.6/cap-0.jpg"><img src="gallery/moonshot-kimi-k2.6/cap-0.jpg" alt="CAP Theorem" loading="lazy" width="590" height="380"></a>
+      <p>— · 171 tokens · 2 beats · 8 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/cap-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/cap-0.jpg" alt="CAP theorem" loading="lazy" width="590" height="380"></a>
+      <p>— · 233 tokens · 1 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>Microservices versus a monolith: what&#39;s the difference?</th><td><a href="gallery/deepseek-deepseek-flash/microservices-0.jpg"><img src="gallery/deepseek-deepseek-flash/microservices-0.jpg" alt="Microservices vs Monolith" loading="lazy" width="590" height="380"></a>
+      <p>— · 200 tokens · 4 beats · 7 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/microservices-0.jpg"><img src="gallery/moonshot-kimi-k2.6/microservices-0.jpg" alt="Microservices vs Monolith" loading="lazy" width="590" height="380"></a>
+      <p>— · 321 tokens · 4 beats · 17 elements · text 14 px</p>
+      <p class="bad">2 crossings</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/microservices-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/microservices-0.jpg" alt="Microservices vs Monolith" loading="lazy" width="590" height="380"></a>
+      <p>— · 232 tokens · 3 beats · 9 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>How does a message queue like Kafka work?</th><td><a href="gallery/deepseek-deepseek-flash/message-queue-0.jpg"><img src="gallery/deepseek-deepseek-flash/message-queue-0.jpg" alt="Kafka message queue" loading="lazy" width="590" height="380"></a>
+      <p>— · 321 tokens · 4 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/message-queue-0.jpg"><img src="gallery/moonshot-kimi-k2.6/message-queue-0.jpg" alt="Kafka Message Queue" loading="lazy" width="590" height="380"></a>
+      <p>— · 254 tokens · 4 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/message-queue-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/message-queue-0.jpg" alt="Kafka message queue" loading="lazy" width="590" height="380"></a>
+      <p>— · 283 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · tree</span>How does a database index make queries faster?</th><td><a href="gallery/deepseek-deepseek-flash/db-index-0.jpg"><img src="gallery/deepseek-deepseek-flash/db-index-0.jpg" alt="Database Index Query" loading="lazy" width="590" height="380"></a>
+      <p>— · 216 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/db-index-0.jpg"><img src="gallery/moonshot-kimi-k2.6/db-index-0.jpg" alt="How a Database Index Speeds Up Queries" loading="lazy" width="590" height="380"></a>
+      <p>— · 303 tokens · 5 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/db-index-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/db-index-0.jpg" alt="How DB Indexes Speed Queries" loading="lazy" width="590" height="380"></a>
+      <p>— · 257 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does caching with Redis in front of a database work?</th><td><a href="gallery/deepseek-deepseek-flash/caching-0.jpg"><img src="gallery/deepseek-deepseek-flash/caching-0.jpg" alt="Redis cache in front of database" loading="lazy" width="590" height="380"></a>
+      <p>— · 159 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/caching-0.jpg"><img src="gallery/moonshot-kimi-k2.6/caching-0.jpg" alt="Redis Caching" loading="lazy" width="590" height="380"></a>
+      <p>— · 346 tokens · 5 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/caching-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/caching-0.jpg" alt="Redis caching" loading="lazy" width="590" height="380"></a>
+      <p>— · 276 tokens · 4 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · compare</span>How are Docker containers different from virtual machines?</th><td><a href="gallery/deepseek-deepseek-flash/docker-0.jpg"><img src="gallery/deepseek-deepseek-flash/docker-0.jpg" alt="Docker containers vs virtual machines" loading="lazy" width="590" height="380"></a>
+      <p>— · 307 tokens · 4 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/docker-0.jpg"><img src="gallery/moonshot-kimi-k2.6/docker-0.jpg" alt="Containers vs VMs" loading="lazy" width="590" height="380"></a>
+      <p>— · 270 tokens · 4 beats · 12 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/docker-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/docker-0.jpg" alt="Docker vs VM" loading="lazy" width="590" height="380"></a>
+      <p>— · 154 tokens · 1 beats · 4 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>How would you design a URL shortener?</th><td><a href="gallery/deepseek-deepseek-flash/url-shortener-0.jpg"><img src="gallery/deepseek-deepseek-flash/url-shortener-0.jpg" alt="Design a URL shortener" loading="lazy" width="590" height="380"></a>
+      <p>— · 445 tokens · 7 beats · 25 elements · text 14 px</p>
+      <p class="bad">3 crossings</p></td><td><a href="gallery/moonshot-kimi-k2.6/url-shortener-0.jpg"><img src="gallery/moonshot-kimi-k2.6/url-shortener-0.jpg" alt="URL Shortener Design" loading="lazy" width="590" height="380"></a>
+      <p>— · 411 tokens · 8 beats · 22 elements · text 14 px</p>
+      <p class="bad">2 crossings</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/url-shortener-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/url-shortener-0.jpg" alt="URL Shortener Design" loading="lazy" width="590" height="380"></a>
+      <p>— · 253 tokens · 4 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>What does ACID mean for database transactions?</th><td><a href="gallery/deepseek-deepseek-flash/transactions-0.jpg"><img src="gallery/deepseek-deepseek-flash/transactions-0.jpg" alt="acid" loading="lazy" width="590" height="380"></a>
+      <p>— · 185 tokens · 6 beats · 6 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/transactions-0.jpg"><img src="gallery/moonshot-kimi-k2.6/transactions-0.jpg" alt="ACID Transactions" loading="lazy" width="590" height="380"></a>
+      <p>— · 207 tokens · 5 beats · 10 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/transactions-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/transactions-0.jpg" alt="ACID properties" loading="lazy" width="590" height="380"></a>
+      <p>— · 248 tokens · 5 beats · 8 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · cycle</span>Explain process states in an operating system.</th><td><a href="gallery/deepseek-deepseek-flash/os-process-0.jpg"><img src="gallery/deepseek-deepseek-flash/os-process-0.jpg" alt="Process States" loading="lazy" width="590" height="380"></a>
+      <p>— · 254 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td><td><a href="gallery/moonshot-kimi-k2.6/os-process-0.jpg"><img src="gallery/moonshot-kimi-k2.6/os-process-0.jpg" alt="Process States" loading="lazy" width="590" height="380"></a>
+      <p>— · 275 tokens · 6 beats · 12 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/os-process-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/os-process-0.jpg" alt="Process States" loading="lazy" width="590" height="380"></a>
+      <p>— · 270 tokens · 5 beats · 16 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>Explain photosynthesis.</th><td><a href="gallery/deepseek-deepseek-flash/photosynthesis-0.jpg"><img src="gallery/deepseek-deepseek-flash/photosynthesis-0.jpg" alt="photosynthesis" loading="lazy" width="590" height="380"></a>
+      <p>— · 214 tokens · 4 beats · 10 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/photosynthesis-0.jpg"><img src="gallery/moonshot-kimi-k2.6/photosynthesis-0.jpg" alt="Photosynthesis" loading="lazy" width="590" height="380"></a>
+      <p>— · 211 tokens · 3 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/photosynthesis-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/photosynthesis-0.jpg" alt="Photosynthesis" loading="lazy" width="590" height="380"></a>
+      <p>— · 231 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · cycle</span>Explain the water cycle.</th><td><a href="gallery/deepseek-deepseek-flash/water-cycle-0.jpg"><img src="gallery/deepseek-deepseek-flash/water-cycle-0.jpg" alt="Water cycle" loading="lazy" width="590" height="380"></a>
+      <p>— · 205 tokens · 4 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/water-cycle-0.jpg"><img src="gallery/moonshot-kimi-k2.6/water-cycle-0.jpg" alt="Water Cycle" loading="lazy" width="590" height="380"></a>
+      <p>— · 213 tokens · 5 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/water-cycle-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/water-cycle-0.jpg" alt="Water Cycle" loading="lazy" width="590" height="380"></a>
+      <p>— · 238 tokens · 4 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · timeline</span>How does mitosis work?</th><td><a href="gallery/deepseek-deepseek-flash/cell-division-0.jpg"><img src="gallery/deepseek-deepseek-flash/cell-division-0.jpg" alt="mitosis" loading="lazy" width="590" height="380"></a>
+      <p>— · 251 tokens · 6 beats · 8 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/cell-division-0.jpg"><img src="gallery/moonshot-kimi-k2.6/cell-division-0.jpg" alt="Mitosis" loading="lazy" width="590" height="380"></a>
+      <p>— · 222 tokens · 5 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/cell-division-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/cell-division-0.jpg" alt="Mitosis" loading="lazy" width="590" height="380"></a>
+      <p>— · 266 tokens · 4 beats · 10 elements · text 15 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does blood flow through the heart?</th><td><a href="gallery/deepseek-deepseek-flash/heart-0.jpg"><img src="gallery/deepseek-deepseek-flash/heart-0.jpg" alt="blood flow through the heart" loading="lazy" width="590" height="380"></a>
+      <p>— · 262 tokens · 3 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/heart-0.jpg"><img src="gallery/moonshot-kimi-k2.6/heart-0.jpg" alt="Blood Flow Through the Heart" loading="lazy" width="590" height="380"></a>
+      <p>— · 453 tokens · 6 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/heart-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/heart-0.jpg" alt="Blood flow through heart" loading="lazy" width="590" height="380"></a>
+      <p>— · 600 tokens · 9 beats · 30 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>What&#39;s the structure of an atom?</th><td><a href="gallery/deepseek-deepseek-flash/atom-0.jpg"><img src="gallery/deepseek-deepseek-flash/atom-0.jpg" alt="Atom structure" loading="lazy" width="590" height="380"></a>
+      <p>— · 234 tokens · 4 beats · 11 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/atom-0.jpg"><img src="gallery/moonshot-kimi-k2.6/atom-0.jpg" alt="Structure of an Atom" loading="lazy" width="590" height="380"></a>
+      <p>— · 165 tokens · 4 beats · 7 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/atom-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/atom-0.jpg" alt="Atom structure" loading="lazy" width="590" height="380"></a>
+      <p>— · 438 tokens · 3 beats · 12 elements · text 16.2 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does the greenhouse effect work?</th><td><a href="gallery/deepseek-deepseek-flash/greenhouse-0.jpg"><img src="gallery/deepseek-deepseek-flash/greenhouse-0.jpg" alt="greenhouse effect" loading="lazy" width="590" height="380"></a>
+      <p>— · 215 tokens · 4 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/greenhouse-0.jpg"><img src="gallery/moonshot-kimi-k2.6/greenhouse-0.jpg" alt="Greenhouse Effect" loading="lazy" width="590" height="380"></a>
+      <p>— · 189 tokens · 4 beats · 11 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/greenhouse-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/greenhouse-0.jpg" alt="Greenhouse Effect" loading="lazy" width="590" height="380"></a>
+      <p>— · 268 tokens · 4 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>How do vaccines train the immune system?</th><td><a href="gallery/deepseek-deepseek-flash/vaccines-0.jpg"><img src="gallery/deepseek-deepseek-flash/vaccines-0.jpg" alt="How Vaccines Train Immunity" loading="lazy" width="590" height="380"></a>
+      <p>— · 193 tokens · 4 beats · 10 elements · text 14.4 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/vaccines-0.jpg"><img src="gallery/moonshot-kimi-k2.6/vaccines-0.jpg" alt="How vaccines train the immune system" loading="lazy" width="590" height="380"></a>
+      <p>— · 238 tokens · 3 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/vaccines-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/vaccines-0.jpg" alt="How vaccines train immunity" loading="lazy" width="590" height="380"></a>
+      <p>— · 416 tokens · 6 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · compare</span>What&#39;s the difference between series and parallel circuits?</th><td><a href="gallery/deepseek-deepseek-flash/circuits-0.jpg"><img src="gallery/deepseek-deepseek-flash/circuits-0.jpg" alt="Series vs parallel" loading="lazy" width="590" height="380"></a>
+      <p>— · 362 tokens · 4 beats · 15 elements · text 14.9 px</p>
+      <p class="bad">2 crossings</p></td><td><a href="gallery/moonshot-kimi-k2.6/circuits-0.jpg"><img src="gallery/moonshot-kimi-k2.6/circuits-0.jpg" alt="Series vs Parallel Circuits" loading="lazy" width="590" height="380"></a>
+      <p>— · 225 tokens · 5 beats · 11 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/circuits-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/circuits-0.jpg" alt="Series vs Parallel" loading="lazy" width="590" height="380"></a>
+      <p>— · 181 tokens · 2 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>Explain a food chain and energy transfer.</th><td><a href="gallery/deepseek-deepseek-flash/food-chain-0.jpg"><img src="gallery/deepseek-deepseek-flash/food-chain-0.jpg" alt="food chain" loading="lazy" width="590" height="380"></a>
+      <p>— · 255 tokens · 5 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/food-chain-0.jpg"><img src="gallery/moonshot-kimi-k2.6/food-chain-0.jpg" alt="Food Chain Energy Transfer" loading="lazy" width="590" height="380"></a>
+      <p>— · 281 tokens · 6 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/food-chain-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/food-chain-0.jpg" alt="Food chain" loading="lazy" width="590" height="380"></a>
+      <p>— · 219 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · cycle</span>Why do we have seasons?</th><td><a href="gallery/deepseek-deepseek-flash/seasons-0.jpg"><img src="gallery/deepseek-deepseek-flash/seasons-0.jpg" alt="Why We Have Seasons" loading="lazy" width="590" height="380"></a>
+      <p>— · 309 tokens · 5 beats · 14 elements · text 14.3 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/seasons-0.jpg"><img src="gallery/moonshot-kimi-k2.6/seasons-0.jpg" alt="Why do we have seasons?" loading="lazy" width="590" height="380"></a>
+      <p>— · 250 tokens · 4 beats · 12 elements · text 16.2 px</p>
+      <p class="bad">1 crossing</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/seasons-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/seasons-0.jpg" alt="Why do we have seasons?" loading="lazy" width="590" height="380"></a>
+      <p>— · 271 tokens · 4 beats · 10 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · plot</span>Explain supply and demand.</th><td><a href="gallery/deepseek-deepseek-flash/supply-demand-0.jpg"><img src="gallery/deepseek-deepseek-flash/supply-demand-0.jpg" alt="supply and demand" loading="lazy" width="590" height="380"></a>
+      <p>— · 222 tokens · 4 beats · 10 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/supply-demand-0.jpg"><img src="gallery/moonshot-kimi-k2.6/supply-demand-0.jpg" alt="Supply and Demand" loading="lazy" width="590" height="380"></a>
+      <p>— · 172 tokens · 3 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/supply-demand-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/supply-demand-0.jpg" alt="Supply &amp; Demand" loading="lazy" width="590" height="380"></a>
+      <p>— · 212 tokens · 1 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · plot</span>How does compound interest work?</th><td><a href="gallery/deepseek-deepseek-flash/compound-interest-0.jpg"><img src="gallery/deepseek-deepseek-flash/compound-interest-0.jpg" alt="Compound interest" loading="lazy" width="590" height="380"></a>
+      <p>— · 173 tokens · 4 beats · 4 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/compound-interest-0.jpg"><img src="gallery/moonshot-kimi-k2.6/compound-interest-0.jpg" alt="Compound Interest Over Time" loading="lazy" width="590" height="380"></a>
+      <p>— · 175 tokens · 4 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/compound-interest-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/compound-interest-0.jpg" alt="Compound Interest" loading="lazy" width="590" height="380"></a>
+      <p>— · 274 tokens · 3 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>What causes inflation?</th><td><a href="gallery/deepseek-deepseek-flash/inflation-0.jpg"><img src="gallery/deepseek-deepseek-flash/inflation-0.jpg" alt="Inflation" loading="lazy" width="590" height="380"></a>
+      <p>— · 217 tokens · 5 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/inflation-0.jpg"><img src="gallery/moonshot-kimi-k2.6/inflation-0.jpg" alt="What causes inflation?" loading="lazy" width="590" height="380"></a>
+      <p>— · 158 tokens · 3 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/inflation-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/inflation-0.jpg" alt="What causes inflation?" loading="lazy" width="590" height="380"></a>
+      <p>— · 250 tokens · 1 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · sequence</span>How does a UPI payment go from my phone to the shop?</th><td><a href="gallery/deepseek-deepseek-flash/upi-0.jpg"><img src="gallery/deepseek-deepseek-flash/upi-0.jpg" alt="UPI Payment Flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 246 tokens · 4 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/upi-0.jpg"><img src="gallery/moonshot-kimi-k2.6/upi-0.jpg" alt="UPI Payment Flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 273 tokens · 4 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/upi-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/upi-0.jpg" alt="UPI payment flow" loading="lazy" width="590" height="380"></a>
+      <p>— · 325 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>How does buying a share on the stock market work?</th><td><a href="gallery/deepseek-deepseek-flash/stock-market-0.jpg"><img src="gallery/deepseek-deepseek-flash/stock-market-0.jpg" alt="Buying a Share" loading="lazy" width="590" height="380"></a>
+      <p>— · 264 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/stock-market-0.jpg"><img src="gallery/moonshot-kimi-k2.6/stock-market-0.jpg" alt="Buying a Share" loading="lazy" width="590" height="380"></a>
+      <p>— · 265 tokens · 6 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/stock-market-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/stock-market-0.jpg" alt="Buying a share" loading="lazy" width="590" height="380"></a>
+      <p>— · 299 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span>Explain the Pythagorean theorem.</th><td><a href="gallery/deepseek-deepseek-flash/pythagoras-0.jpg"><img src="gallery/deepseek-deepseek-flash/pythagoras-0.jpg" alt="Pythagorean theorem" loading="lazy" width="590" height="380"></a>
+      <p>— · 162 tokens · 3 beats · 8 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/pythagoras-0.jpg"><img src="gallery/moonshot-kimi-k2.6/pythagoras-0.jpg" alt="Pythagorean Theorem" loading="lazy" width="590" height="380"></a>
+      <p>— · 180 tokens · 4 beats · 8 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/pythagoras-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/pythagoras-0.jpg" alt="Pythagorean theorem" loading="lazy" width="590" height="380"></a>
+      <p>— · 272 tokens · 2 beats · 12 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · plot</span>What is a derivative in calculus?</th><td><a href="gallery/deepseek-deepseek-flash/derivatives-0.jpg"><img src="gallery/deepseek-deepseek-flash/derivatives-0.jpg" alt="derivative" loading="lazy" width="590" height="380"></a>
+      <p>— · 235 tokens · 5 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/derivatives-0.jpg"><img src="gallery/moonshot-kimi-k2.6/derivatives-0.jpg" alt="What is a derivative?" loading="lazy" width="590" height="380"></a>
+      <p>— · 228 tokens · 5 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/derivatives-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/derivatives-0.jpg" alt="Derivative in calculus" loading="lazy" width="590" height="380"></a>
+      <p>— · 264 tokens · 4 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span>Explain Ohm&#39;s law.</th><td><a href="gallery/deepseek-deepseek-flash/ohms-law-0.jpg"><img src="gallery/deepseek-deepseek-flash/ohms-law-0.jpg" alt="Ohm&#39;s law" loading="lazy" width="590" height="380"></a>
+      <p>— · 140 tokens · 2 beats · 6 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/ohms-law-0.jpg"><img src="gallery/moonshot-kimi-k2.6/ohms-law-0.jpg" alt="Ohm&#39;s Law" loading="lazy" width="590" height="380"></a>
+      <p>— · 180 tokens · 5 beats · 6 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/ohms-law-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/ohms-law-0.jpg" alt="Ohm&#39;s Law" loading="lazy" width="590" height="380"></a>
+      <p>— · 147 tokens · 1 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span>How do I solve a quadratic equation?</th><td><a href="gallery/deepseek-deepseek-flash/quadratic-0.jpg"><img src="gallery/deepseek-deepseek-flash/quadratic-0.jpg" alt="Solving a Quadratic" loading="lazy" width="590" height="380"></a>
+      <p>— · 307 tokens · 6 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/quadratic-0.jpg"><img src="gallery/moonshot-kimi-k2.6/quadratic-0.jpg" alt="Solve a Quadratic Equation" loading="lazy" width="590" height="380"></a>
+      <p>— · 266 tokens · 6 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/quadratic-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/quadratic-0.jpg" alt="Solving a quadratic" loading="lazy" width="590" height="380"></a>
+      <p>— · 369 tokens · 4 beats · 17 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · tree</span>Explain probability with two coin flips.</th><td><a href="gallery/deepseek-deepseek-flash/probability-0.jpg"><img src="gallery/deepseek-deepseek-flash/probability-0.jpg" alt="Two Coin Flips" loading="lazy" width="590" height="380"></a>
+      <p>— · 247 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/probability-0.jpg"><img src="gallery/moonshot-kimi-k2.6/probability-0.jpg" alt="Two Coin Flips" loading="lazy" width="590" height="380"></a>
+      <p>— · 258 tokens · 3 beats · 14 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/probability-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/probability-0.jpg" alt="Probability with two coin flips" loading="lazy" width="590" height="380"></a>
+      <p>— · 393 tokens · 4 beats · 15 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span>How do you add fractions with different denominators?</th><td><a href="gallery/deepseek-deepseek-flash/fractions-0.jpg"><img src="gallery/deepseek-deepseek-flash/fractions-0.jpg" alt="Add Fractions with Different Denominators" loading="lazy" width="590" height="380"></a>
+      <p>— · 192 tokens · 4 beats · 10 elements · text 15.8 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/fractions-0.jpg"><img src="gallery/moonshot-kimi-k2.6/fractions-0.jpg" alt="Adding Fractions with Different Denominators" loading="lazy" width="590" height="380"></a>
+      <p>— · 215 tokens · 5 beats · 15 elements · text 15.5 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/fractions-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/fractions-0.jpg" alt="Add fractions" loading="lazy" width="590" height="380"></a>
+      <p>— · 313 tokens · 5 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span>Where does pi come from?</th><td><a href="gallery/deepseek-deepseek-flash/pi-0.jpg"><img src="gallery/deepseek-deepseek-flash/pi-0.jpg" alt="Where Pi Comes From" loading="lazy" width="590" height="380"></a>
+      <p>— · 237 tokens · 4 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/pi-0.jpg"><img src="gallery/moonshot-kimi-k2.6/pi-0.jpg" alt="Where does pi come from?" loading="lazy" width="590" height="380"></a>
+      <p>— · 135 tokens · 4 beats · 6 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/pi-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/pi-0.jpg" alt="Where does π come from?" loading="lazy" width="590" height="380"></a>
+      <p>— · 389 tokens · 6 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span>How does matrix multiplication work?</th><td><a href="gallery/deepseek-deepseek-flash/matrix-multiply-0.jpg"><img src="gallery/deepseek-deepseek-flash/matrix-multiply-0.jpg" alt="Matrix Multiplication" loading="lazy" width="590" height="380"></a>
+      <p>— · 199 tokens · 4 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/matrix-multiply-0.jpg"><img src="gallery/moonshot-kimi-k2.6/matrix-multiply-0.jpg" alt="Matrix Multiplication" loading="lazy" width="590" height="380"></a>
+      <p>— · 226 tokens · 4 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/matrix-multiply-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/matrix-multiply-0.jpg" alt="Matrix multiplication" loading="lazy" width="590" height="380"></a>
+      <p>— · 341 tokens · 5 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · architecture</span>How does a neural network learn?</th><td><a href="gallery/deepseek-deepseek-flash/neural-network-0.jpg"><img src="gallery/deepseek-deepseek-flash/neural-network-0.jpg" alt="How a neural network learns" loading="lazy" width="590" height="380"></a>
+      <p>— · 238 tokens · 4 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/neural-network-0.jpg"><img src="gallery/moonshot-kimi-k2.6/neural-network-0.jpg" alt="How does a neural network learn?" loading="lazy" width="590" height="380"></a>
+      <p>— · 247 tokens · 6 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/neural-network-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/neural-network-0.jpg" alt="How a neural network learns" loading="lazy" width="590" height="380"></a>
+      <p>— · 281 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>How does a large language model generate text?</th><td><a href="gallery/deepseek-deepseek-flash/transformer-0.jpg"><img src="gallery/deepseek-deepseek-flash/transformer-0.jpg" alt="How a large language model generates text" loading="lazy" width="590" height="380"></a>
+      <p>— · 255 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/transformer-0.jpg"><img src="gallery/moonshot-kimi-k2.6/transformer-0.jpg" alt="How does an LLM generate text?" loading="lazy" width="590" height="380"></a>
+      <p>— · 270 tokens · 5 beats · 4 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/transformer-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/transformer-0.jpg" alt="How LLM Generates Text" loading="lazy" width="590" height="380"></a>
+      <p>— · 220 tokens · 1 beats · 8 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · flow</span>What is retrieval augmented generation?</th><td><a href="gallery/deepseek-deepseek-flash/rag-0.jpg"><img src="gallery/deepseek-deepseek-flash/rag-0.jpg" alt="retrieval augmented generation" loading="lazy" width="590" height="380"></a>
+      <p>— · 222 tokens · 5 beats · 10 elements · text 14.5 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/rag-0.jpg"><img src="gallery/moonshot-kimi-k2.6/rag-0.jpg" alt="Retrieval Augmented Generation" loading="lazy" width="590" height="380"></a>
+      <p>— · 195 tokens · 4 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/rag-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/rag-0.jpg" alt="Retrieval Augmented Generation" loading="lazy" width="590" height="380"></a>
+      <p>— · 280 tokens · 3 beats · 11 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag"> · cycle</span>Explain how training versus testing data works in machine learning.</th><td><a href="gallery/deepseek-deepseek-flash/ml-training-0.jpg"><img src="gallery/deepseek-deepseek-flash/ml-training-0.jpg" alt="Training vs Testing Data" loading="lazy" width="590" height="380"></a>
+      <p>— · 163 tokens · 5 beats · 4 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/ml-training-0.jpg"><img src="gallery/moonshot-kimi-k2.6/ml-training-0.jpg" alt="Training vs Testing Data" loading="lazy" width="590" height="380"></a>
+      <p>— · 254 tokens · 5 beats · 15 elements · text 14.7 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/ml-training-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/ml-training-0.jpg" alt="Training vs Testing" loading="lazy" width="590" height="380"></a>
+      <p>— · 210 tokens · 3 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · timeline</span>Give me a timeline of the space race.</th><td><a href="gallery/deepseek-deepseek-flash/history-timeline-0.jpg"><img src="gallery/deepseek-deepseek-flash/history-timeline-0.jpg" alt="The Space Race" loading="lazy" width="590" height="380"></a>
+      <p>— · 237 tokens · 5 beats · 6 elements · text 14.8 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/history-timeline-0.jpg"><img src="gallery/moonshot-kimi-k2.6/history-timeline-0.jpg" alt="Space Race Timeline" loading="lazy" width="590" height="380"></a>
+      <p>— · 209 tokens · 4 beats · 8 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/history-timeline-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/history-timeline-0.jpg" alt="Space Race" loading="lazy" width="590" height="380"></a>
+      <p>— · 281 tokens · 4 beats · 10 elements · text 14.8 px</p>
+      <p class="good">Lint-clean</p></td></tr></tbody></table></div>
+</body></html>

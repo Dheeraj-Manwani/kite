@@ -1,0 +1,78 @@
+{
+  "checkedAt": "2026-10-08T07:28:11.596Z",
+  "conditions": "1920x1080 real offscreen overlay, ordinary motion, Cartesia sonic-3.5, real PCM/Web Audio playback clock with output muted. Three fully known fixture beats; no planner or human clarity score. Cue error compares actual SVG onset with final provider word timestamps.",
+  "complete": true,
+  "records": [
+    {
+      "beat": 0,
+      "spoken": "spoken",
+      "wordCount": 9
+    },
+    {
+      "beat": 1,
+      "spoken": "spoken",
+      "wordCount": 10
+    },
+    {
+      "beat": 2,
+      "spoken": "spoken",
+      "wordCount": 10
+    }
+  ],
+  "measurements": [
+    {
+      "beat": 0,
+      "cue": 0,
+      "expectedMs": 1080.4216,
+      "actualMs": 1251.5873015873017,
+      "errorMs": 171.16570158730178
+    },
+    {
+      "beat": 0,
+      "cue": 1,
+      "expectedMs": 2361.0357999999997,
+      "actualMs": 2392.2675736961446,
+      "errorMs": 31.231773696144955
+    },
+    {
+      "beat": 1,
+      "cue": 2,
+      "expectedMs": 1001.2531,
+      "actualMs": 1019.3877551020398,
+      "errorMs": 18.1346551020398
+    },
+    {
+      "beat": 1,
+      "cue": 3,
+      "expectedMs": 1880.8566,
+      "actualMs": 1881.4285714285693,
+      "errorMs": 0.5719714285692135
+    },
+    {
+      "beat": 2,
+      "cue": 4,
+      "expectedMs": 1080.7005000000001,
+      "actualMs": 1100.6575963718842,
+      "errorMs": 19.957096371884063
+    },
+    {
+      "beat": 2,
+      "cue": 5,
+      "expectedMs": 1882.774,
+      "actualMs": 1901.7460317460361,
+      "errorMs": 18.972031746036237
+    }
+  ],
+  "deadAirMs": [
+    405.8063999999995,
+    351.09770000000026
+  ],
+  "medianCueErrorMs": 19.46456405896015,
+  "maxDeadAirMs": 405.8063999999995,
+  "errors": [],
+  "gates": {
+    "wordSync": true,
+    "deadAir": true,
+    "providerClarity": "pending human comparison"
+  }
+}

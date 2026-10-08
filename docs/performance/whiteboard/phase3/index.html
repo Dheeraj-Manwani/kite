@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whiteboard gallery</title>
+<style>
+:root { --bg: #f6f5f2; --panel: #ffffff; --text: #1e1e1e; --muted: #5f6368; --line: #dcdad4; --bad: #c92a2a; --good: #2b8a3e; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161616; --panel: #202020; --text: #ececec; --muted: #a0a0a0; --line: #3a3a3a; --bad: #ff8787; --good: #8ce99a; } }
+body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 32px 0 8px; }
+p.lede { color: var(--muted); margin: 0 0 16px; max-width: 80ch; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; background: var(--panel); }
+th, td { border: 1px solid var(--line); padding: 8px; vertical-align: top; text-align: left; }
+th small { display: block; color: var(--muted); font-weight: normal; }
+.summary td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.boards th { width: 200px; min-width: 160px; font-weight: 500; }
+.boards td { width: 590px; } .boards img { display: block; width: 590px; height: auto; border-radius: 6px; }
+.boards td p { margin: 6px 0 0; color: var(--muted); } .boards td p.bad { color: var(--bad); } .boards td p.good { color: var(--good); }
+.empty { color: var(--muted); font-style: italic; }
+.tag, .follow { display: block; font-size: 12px; color: var(--muted); }
+</style></head><body>
+<h1>Whiteboard gallery</h1>
+<p class="lede">Each lesson from <code>latest.json</code>, finished and rendered by Kite's overlay in the default 1400 × 900 panel on a 1920 × 1080 display. Five deterministic teaching fixtures plus three targeted fresh probes on each of three providers. This is not the full golden set or a scored clarity comparison. Click a board to open it at full size.</p>
+<p class="lede">Teaching fixtures and targeted provider probes: 2026-10-08T07:38:01.951Z. Finished-board images do not measure live voice timing or teaching clarity. See <a href="../phase3-renderer.json">synthetic renderer checks</a> and <a href="../phase3-live.json">real Cartesia cue/gap measurements and conditions</a>. A scored human clarity comparison remains pending.</p>
+<h2>Summary</h2>
+<div class="scroll"><table class="summary"><thead><tr><th>Model</th><th>Drew</th><th>Valid first try</th><th>Repairs</th><th>First token</th><th>First beat (streamed)</th><th>First stroke</th><th>Output tokens</th><th>Lint-clean</th><th>Overlaps</th><th>Through shapes</th><th>Crossings</th><th>Text (median)</th><th>Text under 14 px</th></tr></thead>
+<tbody><tr><th scope="row">Teaching fixtures<small>local:teaching-fixtures</small></th>
+    <td>5/5</td><td>—</td><td>undefined</td><td>—</td><td>—</td><td>—</td>
+    <td>—</td><td>100%</td><td>—</td><td>—</td><td>—</td><td>— px</td><td>—</td></tr>
+<tr><th scope="row">deepseek:deepseek-flash<small>deepseek:deepseek-flash</small></th>
+    <td>3/3</td><td>—</td><td>undefined</td><td>—</td><td>—</td><td>—</td>
+    <td>—</td><td>100%</td><td>—</td><td>—</td><td>—</td><td>— px</td><td>—</td></tr>
+<tr><th scope="row">groq:openai/gpt-oss-120b<small>groq:openai/gpt-oss-120b</small></th>
+    <td>3/3</td><td>—</td><td>undefined</td><td>—</td><td>—</td><td>—</td>
+    <td>—</td><td>100%</td><td>—</td><td>—</td><td>—</td><td>— px</td><td>—</td></tr>
+<tr><th scope="row">moonshot:kimi-k2.6<small>moonshot:kimi-k2.6</small></th>
+    <td>3/3</td><td>—</td><td>undefined</td><td>—</td><td>—</td><td>—</td>
+    <td>—</td><td>100%</td><td>—</td><td>—</td><td>—</td><td>— px</td><td>—</td></tr></tbody></table></div>
+<p class="lede">Times and tokens are medians over lessons; overlaps, through and crossings are means per lesson.</p>
+<h2>Boards</h2>
+<div class="scroll"><table class="boards"><thead><tr><th>Prompt</th><th>Teaching fixtures</th><th>deepseek:deepseek-flash</th><th>groq:openai/gpt-oss-120b</th><th>moonshot:kimi-k2.6</th></tr></thead>
+<tbody><tr><th scope="row"><span class="tag"> · data</span></th><td><a href="gallery/local-teaching-fixtures/sort-an-array-0.jpg"><img src="gallery/local-teaching-fixtures/sort-an-array-0.jpg" alt="Sort an array" loading="lazy" width="590" height="380"></a>
+      <p>— · — tokens · 5 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+<tr><th scope="row"><span class="tag"> · data</span></th><td><a href="gallery/local-teaching-fixtures/a-pointer-traverses-a-linked-list-0.jpg"><img src="gallery/local-teaching-fixtures/a-pointer-traverses-a-linked-list-0.jpg" alt="A pointer traverses a linked list" loading="lazy" width="590" height="380"></a>
+      <p>— · — tokens · 3 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+<tr><th scope="row"><span class="tag"> · data</span></th><td><a href="gallery/local-teaching-fixtures/update-and-erase-a-value-0.jpg"><img src="gallery/local-teaching-fixtures/update-and-erase-a-value-0.jpg" alt="Update and erase a value" loading="lazy" width="590" height="380"></a>
+      <p>— · — tokens · 3 beats · 4 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span></th><td><a href="gallery/local-teaching-fixtures/solve-for-x-0.jpg"><img src="gallery/local-teaching-fixtures/solve-for-x-0.jpg" alt="Solve for x" loading="lazy" width="590" height="380"></a>
+      <p>— · — tokens · 3 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+<tr><th scope="row"><span class="tag"> · plot</span></th><td><a href="gallery/local-teaching-fixtures/the-parabola-y-x--0.jpg"><img src="gallery/local-teaching-fixtures/the-parabola-y-x--0.jpg" alt="The parabola y = x²" loading="lazy" width="590" height="380"></a>
+      <p>— · — tokens · 2 beats · 7 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td class="empty">—</td><td class="empty">—</td><td class="empty">—</td></tr>
+<tr><th scope="row"><span class="tag"> · data</span>Teach me how to sort [7, 3, 5] using swaps. Show the array changing and ask me one question before giving its answer.</th><td class="empty">—</td><td><a href="gallery/deepseek-deepseek-flash/teach-array-0.jpg"><img src="gallery/deepseek-deepseek-flash/teach-array-0.jpg" alt="Swap Sort: 7 3 5" loading="lazy" width="590" height="380"></a>
+      <p>— · 250 tokens · 4 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/teach-array-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/teach-array-0.jpg" alt="Sorting with swaps" loading="lazy" width="590" height="380"></a>
+      <p>— · 431 tokens · 4 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/teach-array-0.jpg"><img src="gallery/moonshot-kimi-k2.6/teach-array-0.jpg" alt="Swaps sort" loading="lazy" width="590" height="380"></a>
+      <p>— · 327 tokens · 5 beats · 7 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · steps</span>Show the worked maths for solving x + 2 = 5, with aligned equations.</th><td class="empty">—</td><td><a href="gallery/deepseek-deepseek-flash/solve-equation-0.jpg"><img src="gallery/deepseek-deepseek-flash/solve-equation-0.jpg" alt="Solve x + 2 = 5" loading="lazy" width="590" height="380"></a>
+      <p>— · 280 tokens · 4 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/solve-equation-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/solve-equation-0.jpg" alt="Solve x+2=5" loading="lazy" width="590" height="380"></a>
+      <p>— · 158 tokens · 1 beats · 7 elements · text 19.5 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/solve-equation-0.jpg"><img src="gallery/moonshot-kimi-k2.6/solve-equation-0.jpg" alt="Solve x + 2 = 5" loading="lazy" width="590" height="380"></a>
+      <p>— · 180 tokens · 3 beats · 7 elements · text 19.5 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag"> · plot</span>Plot y = x^2 from x=-3 to 3, mark the minimum at (0,0) and shade the area under the curve.</th><td class="empty">—</td><td><a href="gallery/deepseek-deepseek-flash/quadratic-plot-0.jpg"><img src="gallery/deepseek-deepseek-flash/quadratic-plot-0.jpg" alt="Parabola y = x²" loading="lazy" width="590" height="380"></a>
+      <p>— · 219 tokens · 4 beats · 7 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/groq-openai-gpt-oss-120b/quadratic-plot-0.jpg"><img src="gallery/groq-openai-gpt-oss-120b/quadratic-plot-0.jpg" alt="y = x^2" loading="lazy" width="590" height="380"></a>
+      <p>— · 215 tokens · 1 beats · 7 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td><td><a href="gallery/moonshot-kimi-k2.6/quadratic-plot-0.jpg"><img src="gallery/moonshot-kimi-k2.6/quadratic-plot-0.jpg" alt="Quadratic Function" loading="lazy" width="590" height="380"></a>
+      <p>— · 170 tokens · 3 beats · 7 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr></tbody></table></div>
+</body></html>

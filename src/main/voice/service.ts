@@ -42,6 +42,11 @@ import { guideActions, type GuideAction } from '../../shared/guide';
 import { BoardService } from '../board/service';
 import { boardActions, type BoardAction } from '../../shared/board';
 import { explainOnWhiteboard } from '../tools/impl/explain_on_whiteboard';
+import { planWhiteboard } from '../tools/impl/plan_whiteboard';
+import { boardModel, boardProviderOptions, planBoard } from '../board/planner';
+import { elkLayout } from '../board/elk';
+import { structuredBoards, teachingBoards } from '../board/feature';
+import { formulaPaths } from '../board/math';
 import { safeFilename } from '../tools/impl/create_note';
 import { TaskService } from '../agent/service';
 import { decideStep } from '../agent/model';
@@ -132,10 +137,15 @@ export function startVoiceService() {
     return { requestedAt: performance.now(), step: (step: ModelStep) => {
       if (!step.tools.includes('explain_on_whiteboard')) return;
       tokens += step.outputTokens ?? 0;
-      if (step.invalid.includes('explain_on_whiteboard')) repairs++; else board.usage(tokens || undefined, repairs);
+      if (step.invalid.includes('explain_on_whiteboard')) repairs++;
+      else if (structuredBoards()) logEvent('board:routing', { outputTokens: tokens, repairs });
+      else board.usage(tokens || undefined, repairs);
     } };
   };
   const board = new BoardService({
+    structured: structuredBoards,
+    teaching: teachingBoards,
+    prefetch: (text, speed) => controller.prefetchAnnouncement(text, speed), cancelPrefetch: () => controller.cancelPrefetch(),
     save: saved => { history.saveBoard(saved); },
     log: logEvent, enabled: () => preferences.get().whiteboard, speed: () => preferences.get().speed,
     // Spoken lines repeat as captions only when asked, or when they would not be heard (no voice, or a screen reader).
@@ -201,7 +211,26 @@ export function startVoiceService() {
       imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
       definitions: [...createTools(apps, history, preferences.get()),
         ...memoryTools({ store: memory, show: text => appEvent({ type: 'memory:show', text }), saved: savedNotice, source: () => `From what you said, ${today()}` }), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
-        ...(preferences.get().whiteboard ? [explainOnWhiteboard((input, callId) => board.start(input, { requestedAt: lesson.requestedAt, callId, messageId }), {
+        ...(preferences.get().whiteboard ? [structuredBoards() ? planWhiteboard(async (request, ctx) => {
+          const epoch = board.beginPlan(), callId = ctx.callId ?? randomUUID();
+          try {
+            const snapshot = preferences.snapshot(), model = boardModel(snapshot.settings, snapshot.models, id => secrets.hasKey(id));
+            const planned = await planBoard({ model: getModel(model.provider, model.id), request, signal: AbortSignal.any([ctx.signal, board.planSignal()]),
+              recent: conversation.context(), current: board.structuredContext(), base: board.inputs(), visible: board.visibleIds(), layout: elkLayout, formula: formulaPaths, teaching: teachingBoards(), providerOptions: boardProviderOptions(model),
+              onLesson: partial => { if (board.currentPlan(epoch)) board.preview(callId, partial, { requestedAt: lesson.requestedAt, messageId }); } });
+            if (!board.currentPlan(epoch)) return { ok: true, message: 'The board was put away while planning.', transcript: '(Whiteboard closed)' };
+            const result = board.start(planned.lesson, { callId, requestedAt: lesson.requestedAt, messageId });
+            board.usage(planned.outputTokens, planned.fixes.length);
+            logEvent('board:planner', { provider: model.provider, model: model.id, family: planned.script.family, format: 'lines', outputTokens: planned.outputTokens,
+              firstBeatMs: planned.firstBeatMs, layoutMs: planned.layoutMs, fixes: planned.fixes.length, truncated: planned.truncated });
+            return result;
+          } catch (error) {
+            if (!board.currentPlan(epoch)) return { ok: true, message: 'The board was put away while planning.', transcript: '(Whiteboard closed)' };
+            board.endStream(callId, ctx.signal.aborted ? 'aborted' : 'truncated');
+            if (ctx.signal.aborted) throw error;
+            return { ok: false, message: `The whiteboard could not be planned: ${error instanceof Error ? error.message : 'provider error'}` };
+          }
+        }, teachingBoards()) : explainOnWhiteboard((input, callId) => board.start(input, { requestedAt: lesson.requestedAt, callId, messageId }), {
           update: (callId, partial) => board.preview(callId, partial, { requestedAt: lesson.requestedAt, messageId }), end: (callId, end) => board.endStream(callId, end) })] : []),
         ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions),
           reorder({ orders: () => taskMemory.orders(),
@@ -283,7 +312,18 @@ export function startVoiceService() {
   ipcMain.on('guide:control', (event, action: unknown) => { if (trusted(event, 'overlay') && guideActions.includes(action as GuideAction)) guide.control(action as GuideAction); });
   ipcMain.on('task:control', (event, action: unknown) => { if (trusted(event, 'overlay') && taskActions.includes(action as TaskAction)) agent.control(action as TaskAction); });
   ipcMain.on('task:choose', (event, index: unknown, remember: unknown) => { if (trusted(event, 'overlay') && Number.isInteger(index)) agent.choose(index as number, remember === true); });
-  ipcMain.on('board:control', (event, action: unknown) => { if (trusted(event, 'overlay') && boardActions.includes(action as BoardAction)) board.control(action as BoardAction); });
+  ipcMain.on('board:control', (event, action: unknown) => {
+    if (!trusted(event, 'overlay')) return;
+    if (typeof action === 'string' && (boardActions as readonly string[]).includes(action)) board.control(action as BoardAction);
+    else if (action && typeof action === 'object' && teachingBoards()) {
+      const a = action as { type?: string; beat?: number; speed?: number };
+      if (a.type === 'jump' && Number.isInteger(a.beat) && a.beat >= 0 && a.beat < 32) board.control({ type: 'jump', beat: a.beat });
+      if (a.type === 'speed' && Number.isFinite(a.speed) && a.speed >= 0.75 && a.speed <= 1.5) board.control({ type: 'speed', speed: a.speed });
+    }
+  });
+  ipcMain.on('board:cue', (event, id: number, key: number, expected: number, actual: number) => {
+    if (trusted(event, 'overlay') && teachingBoards() && [id, key, expected, actual].every(Number.isFinite) && expected >= 0 && actual >= 0 && expected < 120000 && actual < 120000) board.cue(id, key, expected, actual);
+  });
   ipcMain.on('board:drawn', (event, id: unknown, key: unknown) => { if (trusted(event, 'overlay') && Number.isSafeInteger(id) && Number.isSafeInteger(key)) board.drawn(id as number, key as number); });
   ipcMain.on('board:started', (event, id: unknown, key: unknown) => { if (trusted(event, 'overlay') && Number.isSafeInteger(id) && Number.isSafeInteger(key)) board.started(id as number, key as number); });
   ipcMain.handle('dev:boardDemo', (event): OperationResult => {

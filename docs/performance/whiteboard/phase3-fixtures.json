@@ -1,0 +1,4294 @@
+{
+  "phase": 3,
+  "updated": "2026-10-08T07:38:03.320Z",
+  "display": {
+    "width": 1920,
+    "height": 1080
+  },
+  "panel": {
+    "width": 1400,
+    "height": 900
+  },
+  "about": "Deterministic local teaching fixtures, not provider generations. Synthetic renderer checks are in phase3-renderer.json; real audio measurements are in phase3-live.json.",
+  "models": [
+    {
+      "model": "local:teaching-fixtures",
+      "label": "Teaching fixtures",
+      "runs": [
+        {
+          "id": "sort-an-array",
+          "family": "data",
+          "turns": [
+            {
+              "kind": "first",
+              "script": {
+                "version": 2,
+                "title": "Sort an array",
+                "family": "data",
+                "collection": "array",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "a",
+                    "label": "7",
+                    "index": 0
+                  },
+                  {
+                    "id": "b",
+                    "label": "3",
+                    "index": 1
+                  },
+                  {
+                    "id": "c",
+                    "label": "5",
+                    "index": 2
+                  }
+                ],
+                "edges": [],
+                "beats": [
+                  {
+                    "say": "The array contains seven, three and five.",
+                    "reveal": [
+                      "a",
+                      "b",
+                      "c"
+                    ],
+                    "cues": {
+                      "a": "seven",
+                      "b": "three",
+                      "c": "five"
+                    }
+                  },
+                  {
+                    "say": "Swap seven and three so the smaller value comes first.",
+                    "reveal": [],
+                    "changes": [
+                      {
+                        "kind": "swap",
+                        "a": "a",
+                        "b": "b"
+                      }
+                    ],
+                    "effects": [
+                      {
+                        "kind": "pulse",
+                        "ids": [
+                          "a",
+                          "b"
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Three is now first.",
+                    "reveal": [],
+                    "highlight": [
+                      "b"
+                    ],
+                    "ask": "Which two values should we swap next?"
+                  },
+                  {
+                    "say": "Swap seven and five. The array is now sorted.",
+                    "reveal": [],
+                    "changes": [
+                      {
+                        "kind": "swap",
+                        "a": "a",
+                        "b": "c"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The sorted values are three, five, seven.",
+                    "reveal": [],
+                    "recap": true,
+                    "highlight": [
+                      "a",
+                      "b",
+                      "c"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "Sort an array",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "The array contains seven, three and five.",
+                    "draw": [
+                      {
+                        "id": "board_title_840216645",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "Sort an array",
+                        "size": "title"
+                      },
+                      {
+                        "id": "a",
+                        "type": "rectangle",
+                        "label": "7",
+                        "x": 80,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "a_index",
+                        "type": "text",
+                        "text": "0",
+                        "x": 140,
+                        "y": 124,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      },
+                      {
+                        "id": "b",
+                        "type": "rectangle",
+                        "label": "3",
+                        "x": 280,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "b_index",
+                        "type": "text",
+                        "text": "1",
+                        "x": 340,
+                        "y": 124,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      },
+                      {
+                        "id": "c",
+                        "type": "rectangle",
+                        "label": "5",
+                        "x": 480,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "c_index",
+                        "type": "text",
+                        "text": "2",
+                        "x": 540,
+                        "y": 124,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      }
+                    ],
+                    "cues": {
+                      "a": "seven",
+                      "b": "three",
+                      "c": "five"
+                    }
+                  },
+                  {
+                    "say": "Swap seven and three so the smaller value comes first.",
+                    "draw": [
+                      {
+                        "id": "a",
+                        "type": "rectangle",
+                        "label": "7",
+                        "x": 280,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "b",
+                        "type": "rectangle",
+                        "label": "3",
+                        "x": 80,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      }
+                    ],
+                    "effects": [
+                      {
+                        "kind": "pulse",
+                        "ids": [
+                          "a",
+                          "b"
+                        ]
+                      }
+                    ],
+                    "changes": [
+                      {
+                        "kind": "swap",
+                        "a": "a",
+                        "b": "b"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Three is now first.",
+                    "draw": [],
+                    "highlight": [
+                      "b"
+                    ],
+                    "ask": "Which two values should we swap next?"
+                  },
+                  {
+                    "say": "Swap seven and five. The array is now sorted.",
+                    "draw": [
+                      {
+                        "id": "a",
+                        "type": "rectangle",
+                        "label": "7",
+                        "x": 480,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "c",
+                        "type": "rectangle",
+                        "label": "5",
+                        "x": 280,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      }
+                    ],
+                    "changes": [
+                      {
+                        "kind": "swap",
+                        "a": "a",
+                        "b": "c"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The sorted values are three, five, seven.",
+                    "draw": [],
+                    "highlight": [
+                      "a",
+                      "b",
+                      "c"
+                    ],
+                    "recap": true
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "Sort an array",
+                  "family": "data",
+                  "collection": "array",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "a",
+                      "label": "7",
+                      "index": 0
+                    },
+                    {
+                      "id": "b",
+                      "label": "3",
+                      "index": 1
+                    },
+                    {
+                      "id": "c",
+                      "label": "5",
+                      "index": 2
+                    }
+                  ],
+                  "edges": [],
+                  "beats": [
+                    {
+                      "say": "The array contains seven, three and five.",
+                      "reveal": [
+                        "a",
+                        "b",
+                        "c"
+                      ],
+                      "cues": {
+                        "a": "seven",
+                        "b": "three",
+                        "c": "five"
+                      }
+                    },
+                    {
+                      "say": "Swap seven and three so the smaller value comes first.",
+                      "reveal": [],
+                      "changes": [
+                        {
+                          "kind": "swap",
+                          "a": "a",
+                          "b": "b"
+                        }
+                      ],
+                      "effects": [
+                        {
+                          "kind": "pulse",
+                          "ids": [
+                            "a",
+                            "b"
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "say": "Three is now first.",
+                      "reveal": [],
+                      "highlight": [
+                        "b"
+                      ],
+                      "ask": "Which two values should we swap next?"
+                    },
+                    {
+                      "say": "Swap seven and five. The array is now sorted.",
+                      "reveal": [],
+                      "changes": [
+                        {
+                          "kind": "swap",
+                          "a": "a",
+                          "b": "c"
+                        }
+                      ]
+                    },
+                    {
+                      "say": "The sorted values are three, five, seven.",
+                      "reveal": [],
+                      "recap": true,
+                      "highlight": [
+                        "a",
+                        "b",
+                        "c"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 7,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 7,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 2,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.3
+                },
+                "issues": [],
+                "beats": 5,
+                "newPerBeat": {
+                  "max": 7,
+                  "mean": 1.4
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "a-pointer-traverses-a-linked-list",
+          "family": "data",
+          "turns": [
+            {
+              "kind": "first",
+              "script": {
+                "version": 2,
+                "title": "A pointer traverses a linked list",
+                "family": "data",
+                "collection": "linked-list",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "a",
+                    "label": "10"
+                  },
+                  {
+                    "id": "b",
+                    "label": "20"
+                  },
+                  {
+                    "id": "c",
+                    "label": "30"
+                  },
+                  {
+                    "id": "p",
+                    "label": "current",
+                    "role": "pointer",
+                    "relative": "a",
+                    "side": "below"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "ab",
+                    "from": "a",
+                    "to": "b",
+                    "label": "next"
+                  },
+                  {
+                    "id": "bc",
+                    "from": "b",
+                    "to": "c",
+                    "label": "next"
+                  },
+                  {
+                    "id": "ref",
+                    "from": "p",
+                    "to": "a"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "Current points to the first node.",
+                    "reveal": [
+                      "a",
+                      "b",
+                      "c",
+                      "p",
+                      "ab",
+                      "bc",
+                      "ref"
+                    ]
+                  },
+                  {
+                    "say": "Move current to the next node.",
+                    "reveal": [],
+                    "changes": [
+                      {
+                        "kind": "move",
+                        "id": "p",
+                        "relative": "b",
+                        "side": "below"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Follow next until the final node.",
+                    "reveal": [],
+                    "changes": [
+                      {
+                        "kind": "move",
+                        "id": "p",
+                        "relative": "c",
+                        "side": "below"
+                      }
+                    ],
+                    "recap": true,
+                    "highlight": [
+                      "c"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "A pointer traverses a linked list",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "Current points to the first node.",
+                    "draw": [
+                      {
+                        "id": "board_title_718177154",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "A pointer traverses a linked list",
+                        "size": "title"
+                      },
+                      {
+                        "id": "a",
+                        "type": "rectangle",
+                        "label": "10",
+                        "x": 80,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "a_index",
+                        "type": "text",
+                        "text": "0",
+                        "x": 140,
+                        "y": 124,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      },
+                      {
+                        "id": "b",
+                        "type": "rectangle",
+                        "label": "20",
+                        "x": 340,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "b_index",
+                        "type": "text",
+                        "text": "1",
+                        "x": 400,
+                        "y": 124,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      },
+                      {
+                        "id": "c",
+                        "type": "rectangle",
+                        "label": "30",
+                        "x": 600,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "c_index",
+                        "type": "text",
+                        "text": "2",
+                        "x": 660,
+                        "y": 124,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      },
+                      {
+                        "id": "p",
+                        "type": "rectangle",
+                        "label": "current",
+                        "x": 80,
+                        "y": 340,
+                        "color": "blue",
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "ab",
+                        "type": "arrow",
+                        "from": "a",
+                        "to": "b",
+                        "label": "next",
+                        "points": [
+                          {
+                            "x": 208,
+                            "y": 200
+                          },
+                          {
+                            "x": 332,
+                            "y": 200
+                          }
+                        ]
+                      },
+                      {
+                        "id": "bc",
+                        "type": "arrow",
+                        "from": "b",
+                        "to": "c",
+                        "label": "next",
+                        "points": [
+                          {
+                            "x": 468,
+                            "y": 200
+                          },
+                          {
+                            "x": 592,
+                            "y": 200
+                          }
+                        ]
+                      },
+                      {
+                        "id": "ref",
+                        "type": "arrow",
+                        "from": "p",
+                        "to": "a",
+                        "points": [
+                          {
+                            "x": 140,
+                            "y": 332
+                          },
+                          {
+                            "x": 140,
+                            "y": 248
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Move current to the next node.",
+                    "draw": [
+                      {
+                        "id": "p",
+                        "type": "rectangle",
+                        "label": "current",
+                        "x": 340,
+                        "y": 320,
+                        "color": "blue",
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "ref",
+                        "type": "arrow",
+                        "from": "p",
+                        "to": "b"
+                      }
+                    ],
+                    "changes": [
+                      {
+                        "kind": "move",
+                        "id": "p",
+                        "relative": "b",
+                        "side": "below"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Follow next until the final node.",
+                    "draw": [
+                      {
+                        "id": "p",
+                        "type": "rectangle",
+                        "label": "current",
+                        "x": 600,
+                        "y": 320,
+                        "color": "blue",
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "ref",
+                        "type": "arrow",
+                        "from": "p",
+                        "to": "c"
+                      }
+                    ],
+                    "highlight": [
+                      "c"
+                    ],
+                    "changes": [
+                      {
+                        "kind": "move",
+                        "id": "p",
+                        "relative": "c",
+                        "side": "below"
+                      }
+                    ],
+                    "recap": true
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "A pointer traverses a linked list",
+                  "family": "data",
+                  "collection": "linked-list",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "a",
+                      "label": "10"
+                    },
+                    {
+                      "id": "b",
+                      "label": "20"
+                    },
+                    {
+                      "id": "c",
+                      "label": "30"
+                    },
+                    {
+                      "id": "p",
+                      "label": "current",
+                      "role": "pointer",
+                      "relative": "a",
+                      "side": "below"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "ab",
+                      "from": "a",
+                      "to": "b",
+                      "label": "next"
+                    },
+                    {
+                      "id": "bc",
+                      "from": "b",
+                      "to": "c",
+                      "label": "next"
+                    },
+                    {
+                      "id": "ref",
+                      "from": "p",
+                      "to": "a"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "Current points to the first node.",
+                      "reveal": [
+                        "a",
+                        "b",
+                        "c",
+                        "p",
+                        "ab",
+                        "bc",
+                        "ref"
+                      ]
+                    },
+                    {
+                      "say": "Move current to the next node.",
+                      "reveal": [],
+                      "changes": [
+                        {
+                          "kind": "move",
+                          "id": "p",
+                          "relative": "b",
+                          "side": "below"
+                        }
+                      ]
+                    },
+                    {
+                      "say": "Follow next until the final node.",
+                      "reveal": [],
+                      "changes": [
+                        {
+                          "kind": "move",
+                          "id": "p",
+                          "relative": "c",
+                          "side": "below"
+                        }
+                      ],
+                      "recap": true,
+                      "highlight": [
+                        "c"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 11,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 10,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 3,
+                "labelWords": {
+                  "max": 6,
+                  "mean": 1.5
+                },
+                "issues": [],
+                "beats": 3,
+                "newPerBeat": {
+                  "max": 11,
+                  "mean": 3.7
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "update-and-erase-a-value",
+          "family": "data",
+          "turns": [
+            {
+              "kind": "first",
+              "script": {
+                "version": 2,
+                "title": "Update and erase a value",
+                "family": "data",
+                "collection": "stack",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "a",
+                    "label": "2"
+                  },
+                  {
+                    "id": "b",
+                    "label": "4"
+                  }
+                ],
+                "edges": [],
+                "beats": [
+                  {
+                    "say": "The stack contains two and four.",
+                    "reveal": [
+                      "a",
+                      "b"
+                    ]
+                  },
+                  {
+                    "say": "Replace four with six.",
+                    "reveal": [],
+                    "changes": [
+                      {
+                        "kind": "value",
+                        "id": "b",
+                        "value": "6"
+                      }
+                    ],
+                    "effects": [
+                      {
+                        "kind": "badge",
+                        "id": "b",
+                        "number": 1
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Pop six from the stack. Two remains.",
+                    "reveal": [],
+                    "erase": [
+                      "b"
+                    ],
+                    "effects": [
+                      {
+                        "kind": "underline",
+                        "ids": [
+                          "a"
+                        ]
+                      },
+                      {
+                        "kind": "dim",
+                        "ids": [
+                          "a"
+                        ]
+                      }
+                    ],
+                    "recap": true,
+                    "highlight": [
+                      "a"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "Update and erase a value",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "The stack contains two and four.",
+                    "draw": [
+                      {
+                        "id": "board_title_2886175537",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "Update and erase a value",
+                        "size": "title"
+                      },
+                      {
+                        "id": "a",
+                        "type": "rectangle",
+                        "label": "2",
+                        "x": 80,
+                        "y": 160,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "a_index",
+                        "type": "text",
+                        "text": "0",
+                        "x": 140,
+                        "y": 124,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      },
+                      {
+                        "id": "b",
+                        "type": "rectangle",
+                        "label": "4",
+                        "x": 80,
+                        "y": 340,
+                        "width": 120,
+                        "height": 80
+                      },
+                      {
+                        "id": "b_index",
+                        "type": "text",
+                        "text": "1",
+                        "x": 140,
+                        "y": 304,
+                        "align": "center",
+                        "size": "small",
+                        "color": "gray"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Replace four with six.",
+                    "draw": [
+                      {
+                        "id": "b",
+                        "type": "rectangle",
+                        "label": "6",
+                        "x": 80,
+                        "y": 340,
+                        "width": 120,
+                        "height": 80
+                      }
+                    ],
+                    "effects": [
+                      {
+                        "kind": "badge",
+                        "id": "b",
+                        "number": 1
+                      }
+                    ],
+                    "changes": [
+                      {
+                        "kind": "value",
+                        "id": "b",
+                        "value": "6"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Pop six from the stack. Two remains.",
+                    "draw": [],
+                    "highlight": [
+                      "a"
+                    ],
+                    "erase": [
+                      "b"
+                    ],
+                    "effects": [
+                      {
+                        "kind": "underline",
+                        "ids": [
+                          "a"
+                        ]
+                      },
+                      {
+                        "kind": "dim",
+                        "ids": [
+                          "a"
+                        ]
+                      }
+                    ],
+                    "recap": true
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "Update and erase a value",
+                  "family": "data",
+                  "collection": "stack",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "a",
+                      "label": "2"
+                    },
+                    {
+                      "id": "b",
+                      "label": "4"
+                    }
+                  ],
+                  "edges": [],
+                  "beats": [
+                    {
+                      "say": "The stack contains two and four.",
+                      "reveal": [
+                        "a",
+                        "b"
+                      ]
+                    },
+                    {
+                      "say": "Replace four with six.",
+                      "reveal": [],
+                      "changes": [
+                        {
+                          "kind": "value",
+                          "id": "b",
+                          "value": "6"
+                        }
+                      ],
+                      "effects": [
+                        {
+                          "kind": "badge",
+                          "id": "b",
+                          "number": 1
+                        }
+                      ]
+                    },
+                    {
+                      "say": "Pop six from the stack. Two remains.",
+                      "reveal": [],
+                      "erase": [
+                        "b"
+                      ],
+                      "effects": [
+                        {
+                          "kind": "underline",
+                          "ids": [
+                            "a"
+                          ]
+                        },
+                        {
+                          "kind": "dim",
+                          "ids": [
+                            "a"
+                          ]
+                        }
+                      ],
+                      "recap": true,
+                      "highlight": [
+                        "a"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 4,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 4,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 2,
+                "labelWords": {
+                  "max": 5,
+                  "mean": 2
+                },
+                "issues": [],
+                "beats": 3,
+                "newPerBeat": {
+                  "max": 5,
+                  "mean": 1.7
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "solve-for-x",
+          "family": "steps",
+          "turns": [
+            {
+              "kind": "first",
+              "script": {
+                "version": 2,
+                "title": "Solve for x",
+                "family": "steps",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "eq",
+                    "label": "Start",
+                    "tex": "x+2=5"
+                  },
+                  {
+                    "id": "answer",
+                    "label": "Subtract two",
+                    "tex": "x=5-2=3"
+                  }
+                ],
+                "edges": [],
+                "beats": [
+                  {
+                    "say": "Start with x plus two equals five.",
+                    "reveal": [
+                      "eq"
+                    ]
+                  },
+                  {
+                    "say": "Subtract two from both sides. x equals three.",
+                    "reveal": [
+                      "answer"
+                    ]
+                  },
+                  {
+                    "say": "Substitute three back in: three plus two equals five.",
+                    "reveal": [],
+                    "recap": true,
+                    "highlight": [
+                      "eq",
+                      "answer"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "Solve for x",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "Start with x plus two equals five.",
+                    "draw": [
+                      {
+                        "id": "board_title_2103835439",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "Solve for x",
+                        "size": "title"
+                      },
+                      {
+                        "id": "eq",
+                        "type": "formula",
+                        "label": "5",
+                        "x": 360,
+                        "y": 150,
+                        "formula": {
+                          "paths": [
+                            {
+                              "d": "M118 315C123 315 129 319 134 326C164 371 205 393 257 393C292 393 319 373 337 332C348 305 354 264 354 209C354 146 346 102 331 76C306 35 272 14 229 14C162 14 109 62 91 114C94 113 96 114 100 114C130 114 155 137 155 167C155 198 130 219 100 219C65 219 50 200 50 163C50 63 131-22 231-22C292-22 344 0 386 44C428 88 449 141 449 202C449 260 432 310 398 353C361 400 315 423 259 423C212 423 171 408 138 378L138 556C165 548 191 544 218 544C264 544 304 555 338 578C369 597 390 616 402 634C408 642 411 648 411 651C411 661 406 666 396 666C341 645 294 634 256 634C211 634 168 643 127 662C122 664 118 665 114 665C105 665 100 656 100 637L100 345C100 324 100 315 118 315Z",
+                              "transform": "scale(1,-1)"
+                            }
+                          ],
+                          "box": {
+                            "x": 0,
+                            "y": -666,
+                            "width": 500,
+                            "height": 688
+                          }
+                        },
+                        "width": 15,
+                        "height": 20.64
+                      },
+                      {
+                        "id": "eq_lhs",
+                        "type": "formula",
+                        "label": "x+2",
+                        "x": 191.168,
+                        "y": 150,
+                        "formula": {
+                          "paths": [
+                            {
+                              "d": "M527 373C527 419 482 442 432 442C389 442 355 419 329 373C308 419 273 442 222 442C173 442 133 419 101 374C74 335 60 306 60 287C60 278 65 273 75 273C84 273 90 278 92 287C111 345 153 413 220 413C253 413 269 392 269 351C269 330 251 252 216 118C199 51 169 18 126 18C112 18 99 21 88 26C114 36 127 54 127 80C127 106 114 119 87 119C54 119 29 91 29 58C29 12 76-11 125-11C167-11 201 12 228 58C247 12 283-11 335-11C383-11 423 12 455 57C482 96 496 125 496 144C496 153 491 158 481 158C472 158 467 153 464 144C447 87 402 18 337 18C304 18 287 38 287 79C287 92 292 120 303 165L337 300C356 375 387 413 431 413C445 413 458 410 469 405C442 396 429 378 429 351C429 325 443 312 470 312C502 312 527 341 527 373Z",
+                              "transform": "scale(1,-1)"
+                            },
+                            {
+                              "d": "M698 274L413 274L413 559C413 575 405 583 389 583C373 583 365 575 365 559L365 274L80 274C64 274 56 266 56 250C56 234 64 226 80 226L365 226L365-59C365-75 373-83 389-83C405-83 413-75 413-59L413 226L698 226C714 226 722 234 722 250C722 263 711 274 698 274Z",
+                              "transform": "scale(1,-1) translate(794.2,0)"
+                            },
+                            {
+                              "d": "M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z",
+                              "transform": "scale(1,-1) translate(1794.4,0)"
+                            }
+                          ],
+                          "box": {
+                            "x": 0,
+                            "y": -666,
+                            "width": 2294.4,
+                            "height": 749
+                          }
+                        },
+                        "width": 68.832,
+                        "height": 22.47
+                      },
+                      {
+                        "id": "eq_eq",
+                        "type": "formula",
+                        "label": "=",
+                        "x": 290,
+                        "y": 158.97,
+                        "formula": {
+                          "paths": [
+                            {
+                              "d": "M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z",
+                              "transform": "scale(1,-1)"
+                            }
+                          ],
+                          "box": {
+                            "x": 0,
+                            "y": -367,
+                            "width": 778,
+                            "height": 234
+                          }
+                        },
+                        "width": 23.34,
+                        "height": 7.02
+                      },
+                      {
+                        "id": "eq_note",
+                        "type": "text",
+                        "text": "Start",
+                        "x": 435,
+                        "y": 149.98,
+                        "width": 260,
+                        "size": "small",
+                        "color": "gray"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Subtract two from both sides. x equals three.",
+                    "draw": [
+                      {
+                        "id": "answer",
+                        "type": "formula",
+                        "label": "5-2=3",
+                        "x": 360,
+                        "y": 290,
+                        "formula": {
+                          "paths": [
+                            {
+                              "d": "M118 315C123 315 129 319 134 326C164 371 205 393 257 393C292 393 319 373 337 332C348 305 354 264 354 209C354 146 346 102 331 76C306 35 272 14 229 14C162 14 109 62 91 114C94 113 96 114 100 114C130 114 155 137 155 167C155 198 130 219 100 219C65 219 50 200 50 163C50 63 131-22 231-22C292-22 344 0 386 44C428 88 449 141 449 202C449 260 432 310 398 353C361 400 315 423 259 423C212 423 171 408 138 378L138 556C165 548 191 544 218 544C264 544 304 555 338 578C369 597 390 616 402 634C408 642 411 648 411 651C411 661 406 666 396 666C341 645 294 634 256 634C211 634 168 643 127 662C122 664 118 665 114 665C105 665 100 656 100 637L100 345C100 324 100 315 118 315Z",
+                              "transform": "scale(1,-1)"
+                            },
+                            {
+                              "d": "M698 270L80 270C64 270 56 263 56 250C56 237 64 230 80 230L698 230C714 230 722 237 722 250C722 262 710 270 698 270Z",
+                              "transform": "scale(1,-1) translate(722.2,0)"
+                            },
+                            {
+                              "d": "M237 666C186 666 143 648 106 612C69 576 50 534 50 483C50 449 75 424 106 424C136 424 161 450 161 480C161 513 137 536 105 536C102 536 100 536 98 535C117 584 161 627 224 627C306 627 352 556 352 470C352 403 318 331 250 255L62 43C49 28 50 29 50 0L421 0L450 180L417 180C409 129 402 100 396 91C391 86 361 84 306 84L139 84L236 179C304 243 390 312 419 365C439 400 449 435 449 470C449 588 357 666 237 666Z",
+                              "transform": "scale(1,-1) translate(1722.4,0)"
+                            },
+                            {
+                              "d": "M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z",
+                              "transform": "scale(1,-1) translate(2500.2,0)"
+                            },
+                            {
+                              "d": "M303 353C369 378 431 441 431 526C431 569 410 604 369 631C333 654 292 666 246 666C201 666 162 654 127 631C88 605 68 571 68 528C68 495 90 472 122 472C154 472 176 495 176 527C176 560 157 578 119 580C145 615 186 633 242 633C302 633 332 598 332 527C332 485 324 450 309 421C282 373 245 364 183 364C171 362 165 357 165 348C165 333 172 333 192 333L235 333C310 333 348 280 348 173C348 88 317 14 241 14C176 14 128 36 99 80C134 79 160 105 160 139C160 173 135 198 101 198C62 198 42 178 42 137C42 88 64 49 108 18C147-9 193-22 244-22C301-22 350-3 393 34C436 71 457 117 457 173C457 267 383 332 303 353Z",
+                              "transform": "scale(1,-1) translate(3556,0)"
+                            }
+                          ],
+                          "box": {
+                            "x": 0,
+                            "y": -666,
+                            "width": 4056,
+                            "height": 749
+                          }
+                        },
+                        "width": 121.67999999999999,
+                        "height": 22.47
+                      },
+                      {
+                        "id": "answer_lhs",
+                        "type": "formula",
+                        "label": "x",
+                        "x": 242.84,
+                        "y": 296.72,
+                        "formula": {
+                          "paths": [
+                            {
+                              "d": "M527 373C527 419 482 442 432 442C389 442 355 419 329 373C308 419 273 442 222 442C173 442 133 419 101 374C74 335 60 306 60 287C60 278 65 273 75 273C84 273 90 278 92 287C111 345 153 413 220 413C253 413 269 392 269 351C269 330 251 252 216 118C199 51 169 18 126 18C112 18 99 21 88 26C114 36 127 54 127 80C127 106 114 119 87 119C54 119 29 91 29 58C29 12 76-11 125-11C167-11 201 12 228 58C247 12 283-11 335-11C383-11 423 12 455 57C482 96 496 125 496 144C496 153 491 158 481 158C472 158 467 153 464 144C447 87 402 18 337 18C304 18 287 38 287 79C287 92 292 120 303 165L337 300C356 375 387 413 431 413C445 413 458 410 469 405C442 396 429 378 429 351C429 325 443 312 470 312C502 312 527 341 527 373Z",
+                              "transform": "scale(1,-1)"
+                            }
+                          ],
+                          "box": {
+                            "x": 0,
+                            "y": -442,
+                            "width": 572,
+                            "height": 453
+                          }
+                        },
+                        "width": 17.16,
+                        "height": 13.59
+                      },
+                      {
+                        "id": "answer_eq",
+                        "type": "formula",
+                        "label": "=",
+                        "x": 290,
+                        "y": 298.97,
+                        "formula": {
+                          "paths": [
+                            {
+                              "d": "M698 367L80 367C64 367 56 359 56 344C56 329 64 321 80 321L698 321C714 321 722 329 722 344C722 356 711 367 698 367M698 179L80 179C64 179 56 171 56 156C56 141 64 133 80 133L698 133C714 133 722 141 722 156C722 169 711 179 698 179Z",
+                              "transform": "scale(1,-1)"
+                            }
+                          ],
+                          "box": {
+                            "x": 0,
+                            "y": -367,
+                            "width": 778,
+                            "height": 234
+                          }
+                        },
+                        "width": 23.34,
+                        "height": 7.02
+                      },
+                      {
+                        "id": "answer_note",
+                        "type": "text",
+                        "text": "Subtract two",
+                        "x": 541.6800000000001,
+                        "y": 289.98,
+                        "width": 260,
+                        "size": "small",
+                        "color": "gray"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Substitute three back in: three plus two equals five.",
+                    "draw": [],
+                    "highlight": [
+                      "eq",
+                      "answer"
+                    ],
+                    "recap": true
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "Solve for x",
+                  "family": "steps",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "eq",
+                      "label": "Start",
+                      "tex": "x+2=5"
+                    },
+                    {
+                      "id": "answer",
+                      "label": "Subtract two",
+                      "tex": "x=5-2=3"
+                    }
+                  ],
+                  "edges": [],
+                  "beats": [
+                    {
+                      "say": "Start with x plus two equals five.",
+                      "reveal": [
+                        "eq"
+                      ]
+                    },
+                    {
+                      "say": "Subtract two from both sides. x equals three.",
+                      "reveal": [
+                        "answer"
+                      ]
+                    },
+                    {
+                      "say": "Substitute three back in: three plus two equals five.",
+                      "reveal": [],
+                      "recap": true,
+                      "highlight": [
+                        "eq",
+                        "answer"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 9,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 9,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 2,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.3
+                },
+                "issues": [],
+                "beats": 3,
+                "newPerBeat": {
+                  "max": 5,
+                  "mean": 3
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "the-parabola-y-x-",
+          "family": "plot",
+          "turns": [
+            {
+              "kind": "first",
+              "script": {
+                "version": 2,
+                "title": "The parabola y = x²",
+                "family": "plot",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "p",
+                    "label": "y = x²",
+                    "plot": {
+                      "expression": "x^2",
+                      "xmin": -3,
+                      "xmax": 3,
+                      "ymin": -1,
+                      "ymax": 9,
+                      "points": [
+                        {
+                          "x": 0,
+                          "y": 0
+                        }
+                      ],
+                      "shade": true
+                    }
+                  }
+                ],
+                "edges": [],
+                "beats": [
+                  {
+                    "say": "This parabola has its minimum at zero, zero.",
+                    "reveal": [
+                      "p"
+                    ]
+                  },
+                  {
+                    "say": "The shaded area lies between the curve and the x axis.",
+                    "reveal": [],
+                    "recap": true,
+                    "highlight": [
+                      "p"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "The parabola y = x²",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "This parabola has its minimum at zero, zero.",
+                    "draw": [
+                      {
+                        "id": "board_title_3705733896",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "The parabola y = x²",
+                        "size": "title"
+                      },
+                      {
+                        "id": "p",
+                        "type": "line",
+                        "points": [
+                          {
+                            "x": 100,
+                            "y": 180
+                          },
+                          {
+                            "x": 102.25,
+                            "y": 184.48593749999992
+                          },
+                          {
+                            "x": 104.5,
+                            "y": 188.94375000000002
+                          },
+                          {
+                            "x": 106.75,
+                            "y": 193.37343749999997
+                          },
+                          {
+                            "x": 109,
+                            "y": 197.77500000000003
+                          },
+                          {
+                            "x": 111.25,
+                            "y": 202.1484375
+                          },
+                          {
+                            "x": 113.5,
+                            "y": 206.49374999999998
+                          },
+                          {
+                            "x": 115.75,
+                            "y": 210.81093749999997
+                          },
+                          {
+                            "x": 118,
+                            "y": 215.10000000000002
+                          },
+                          {
+                            "x": 120.25,
+                            "y": 219.36093750000003
+                          },
+                          {
+                            "x": 122.5,
+                            "y": 223.59375
+                          },
+                          {
+                            "x": 124.75,
+                            "y": 227.79843749999998
+                          },
+                          {
+                            "x": 127,
+                            "y": 231.97500000000008
+                          },
+                          {
+                            "x": 129.25,
+                            "y": 236.1234374999999
+                          },
+                          {
+                            "x": 131.5,
+                            "y": 240.2437500000001
+                          },
+                          {
+                            "x": 133.75,
+                            "y": 244.3359375
+                          },
+                          {
+                            "x": 136,
+                            "y": 248.39999999999998
+                          },
+                          {
+                            "x": 138.25,
+                            "y": 252.43593750000002
+                          },
+                          {
+                            "x": 140.5,
+                            "y": 256.44374999999997
+                          },
+                          {
+                            "x": 142.75,
+                            "y": 260.42343750000003
+                          },
+                          {
+                            "x": 145,
+                            "y": 264.375
+                          },
+                          {
+                            "x": 147.25,
+                            "y": 268.2984375
+                          },
+                          {
+                            "x": 149.5,
+                            "y": 272.19375
+                          },
+                          {
+                            "x": 151.75,
+                            "y": 276.06093749999997
+                          },
+                          {
+                            "x": 154,
+                            "y": 279.90000000000003
+                          },
+                          {
+                            "x": 156.25,
+                            "y": 283.7109375
+                          },
+                          {
+                            "x": 158.5,
+                            "y": 287.49375
+                          },
+                          {
+                            "x": 160.75,
+                            "y": 291.2484375
+                          },
+                          {
+                            "x": 163,
+                            "y": 294.975
+                          },
+                          {
+                            "x": 165.25,
+                            "y": 298.67343750000003
+                          },
+                          {
+                            "x": 167.5,
+                            "y": 302.34375
+                          },
+                          {
+                            "x": 169.75,
+                            "y": 305.9859375
+                          },
+                          {
+                            "x": 172,
+                            "y": 309.6
+                          },
+                          {
+                            "x": 174.25,
+                            "y": 313.18593749999997
+                          },
+                          {
+                            "x": 176.5,
+                            "y": 316.74375000000003
+                          },
+                          {
+                            "x": 178.75,
+                            "y": 320.2734375
+                          },
+                          {
+                            "x": 181,
+                            "y": 323.775
+                          },
+                          {
+                            "x": 183.25,
+                            "y": 327.2484375
+                          },
+                          {
+                            "x": 185.5,
+                            "y": 330.69375
+                          },
+                          {
+                            "x": 187.75,
+                            "y": 334.11093750000003
+                          },
+                          {
+                            "x": 190,
+                            "y": 337.5
+                          },
+                          {
+                            "x": 192.25,
+                            "y": 340.8609375
+                          },
+                          {
+                            "x": 194.5,
+                            "y": 344.19375
+                          },
+                          {
+                            "x": 196.75,
+                            "y": 347.4984375
+                          },
+                          {
+                            "x": 199,
+                            "y": 350.77500000000003
+                          },
+                          {
+                            "x": 201.25,
+                            "y": 354.0234375
+                          },
+                          {
+                            "x": 203.5,
+                            "y": 357.24375
+                          },
+                          {
+                            "x": 205.75,
+                            "y": 360.4359375
+                          },
+                          {
+                            "x": 208,
+                            "y": 363.6
+                          },
+                          {
+                            "x": 210.25,
+                            "y": 366.73593750000003
+                          },
+                          {
+                            "x": 212.5,
+                            "y": 369.84375
+                          },
+                          {
+                            "x": 214.75,
+                            "y": 372.9234375
+                          },
+                          {
+                            "x": 217,
+                            "y": 375.975
+                          },
+                          {
+                            "x": 219.25,
+                            "y": 378.99843749999997
+                          },
+                          {
+                            "x": 221.5,
+                            "y": 381.99375000000003
+                          },
+                          {
+                            "x": 223.75,
+                            "y": 384.9609375
+                          },
+                          {
+                            "x": 226,
+                            "y": 387.9
+                          },
+                          {
+                            "x": 228.25,
+                            "y": 390.8109375
+                          },
+                          {
+                            "x": 230.5,
+                            "y": 393.69374999999997
+                          },
+                          {
+                            "x": 232.75,
+                            "y": 396.5484375000001
+                          },
+                          {
+                            "x": 235,
+                            "y": 399.375
+                          },
+                          {
+                            "x": 237.25,
+                            "y": 402.1734375
+                          },
+                          {
+                            "x": 239.5,
+                            "y": 404.94375
+                          },
+                          {
+                            "x": 241.75,
+                            "y": 407.6859375
+                          },
+                          {
+                            "x": 244,
+                            "y": 410.40000000000003
+                          },
+                          {
+                            "x": 246.25,
+                            "y": 413.0859375
+                          },
+                          {
+                            "x": 248.5,
+                            "y": 415.74375
+                          },
+                          {
+                            "x": 250.75,
+                            "y": 418.3734375
+                          },
+                          {
+                            "x": 253,
+                            "y": 420.975
+                          },
+                          {
+                            "x": 255.25,
+                            "y": 423.5484375
+                          },
+                          {
+                            "x": 257.5,
+                            "y": 426.09375
+                          },
+                          {
+                            "x": 259.75,
+                            "y": 428.6109375
+                          },
+                          {
+                            "x": 262,
+                            "y": 431.1
+                          },
+                          {
+                            "x": 264.25,
+                            "y": 433.5609375
+                          },
+                          {
+                            "x": 266.5,
+                            "y": 435.99375000000003
+                          },
+                          {
+                            "x": 268.75,
+                            "y": 438.3984375
+                          },
+                          {
+                            "x": 271,
+                            "y": 440.775
+                          },
+                          {
+                            "x": 273.25,
+                            "y": 443.1234375
+                          },
+                          {
+                            "x": 275.5,
+                            "y": 445.44374999999997
+                          },
+                          {
+                            "x": 277.75,
+                            "y": 447.73593750000003
+                          },
+                          {
+                            "x": 280,
+                            "y": 450
+                          },
+                          {
+                            "x": 282.25,
+                            "y": 452.2359375
+                          },
+                          {
+                            "x": 284.5,
+                            "y": 454.44374999999997
+                          },
+                          {
+                            "x": 286.75,
+                            "y": 456.6234375
+                          },
+                          {
+                            "x": 289,
+                            "y": 458.77500000000003
+                          },
+                          {
+                            "x": 291.25,
+                            "y": 460.8984375
+                          },
+                          {
+                            "x": 293.5,
+                            "y": 462.99375
+                          },
+                          {
+                            "x": 295.75,
+                            "y": 465.0609375
+                          },
+                          {
+                            "x": 298,
+                            "y": 467.1
+                          },
+                          {
+                            "x": 300.25,
+                            "y": 469.11093750000003
+                          },
+                          {
+                            "x": 302.5,
+                            "y": 471.09375
+                          },
+                          {
+                            "x": 304.75,
+                            "y": 473.0484375
+                          },
+                          {
+                            "x": 307,
+                            "y": 474.975
+                          },
+                          {
+                            "x": 309.25,
+                            "y": 476.8734375
+                          },
+                          {
+                            "x": 311.5,
+                            "y": 478.74375
+                          },
+                          {
+                            "x": 313.75,
+                            "y": 480.5859375
+                          },
+                          {
+                            "x": 316,
+                            "y": 482.4
+                          },
+                          {
+                            "x": 318.25,
+                            "y": 484.1859375
+                          },
+                          {
+                            "x": 320.5,
+                            "y": 485.94375
+                          },
+                          {
+                            "x": 322.75,
+                            "y": 487.67343750000003
+                          },
+                          {
+                            "x": 325,
+                            "y": 489.375
+                          },
+                          {
+                            "x": 327.25,
+                            "y": 491.0484375
+                          },
+                          {
+                            "x": 329.5,
+                            "y": 492.69375
+                          },
+                          {
+                            "x": 331.75,
+                            "y": 494.3109375
+                          },
+                          {
+                            "x": 334,
+                            "y": 495.90000000000003
+                          },
+                          {
+                            "x": 336.25,
+                            "y": 497.4609375
+                          },
+                          {
+                            "x": 338.5,
+                            "y": 498.99375
+                          },
+                          {
+                            "x": 340.75,
+                            "y": 500.49843749999997
+                          },
+                          {
+                            "x": 343,
+                            "y": 501.975
+                          },
+                          {
+                            "x": 345.25,
+                            "y": 503.4234375
+                          },
+                          {
+                            "x": 347.5,
+                            "y": 504.84375
+                          },
+                          {
+                            "x": 349.75,
+                            "y": 506.2359375
+                          },
+                          {
+                            "x": 352,
+                            "y": 507.59999999999997
+                          },
+                          {
+                            "x": 354.25,
+                            "y": 508.9359375
+                          },
+                          {
+                            "x": 356.5,
+                            "y": 510.24375000000003
+                          },
+                          {
+                            "x": 358.75,
+                            "y": 511.5234375
+                          },
+                          {
+                            "x": 361,
+                            "y": 512.775
+                          },
+                          {
+                            "x": 363.25,
+                            "y": 513.9984374999999
+                          },
+                          {
+                            "x": 365.5,
+                            "y": 515.19375
+                          },
+                          {
+                            "x": 367.75,
+                            "y": 516.3609375
+                          },
+                          {
+                            "x": 370,
+                            "y": 517.5
+                          },
+                          {
+                            "x": 372.25,
+                            "y": 518.6109375
+                          },
+                          {
+                            "x": 374.5,
+                            "y": 519.6937499999999
+                          },
+                          {
+                            "x": 376.75,
+                            "y": 520.7484375
+                          },
+                          {
+                            "x": 379,
+                            "y": 521.775
+                          },
+                          {
+                            "x": 381.25,
+                            "y": 522.7734375
+                          },
+                          {
+                            "x": 383.5,
+                            "y": 523.74375
+                          },
+                          {
+                            "x": 385.75,
+                            "y": 524.6859374999999
+                          },
+                          {
+                            "x": 388,
+                            "y": 525.6
+                          },
+                          {
+                            "x": 390.25,
+                            "y": 526.4859375
+                          },
+                          {
+                            "x": 392.5,
+                            "y": 527.34375
+                          },
+                          {
+                            "x": 394.75,
+                            "y": 528.1734375
+                          },
+                          {
+                            "x": 397,
+                            "y": 528.9749999999999
+                          },
+                          {
+                            "x": 399.25,
+                            "y": 529.7484375
+                          },
+                          {
+                            "x": 401.5,
+                            "y": 530.49375
+                          },
+                          {
+                            "x": 403.75,
+                            "y": 531.2109375
+                          },
+                          {
+                            "x": 406,
+                            "y": 531.9
+                          },
+                          {
+                            "x": 408.25,
+                            "y": 532.5609374999999
+                          },
+                          {
+                            "x": 410.5,
+                            "y": 533.19375
+                          },
+                          {
+                            "x": 412.75,
+                            "y": 533.7984375
+                          },
+                          {
+                            "x": 415,
+                            "y": 534.375
+                          },
+                          {
+                            "x": 417.25,
+                            "y": 534.9234375
+                          },
+                          {
+                            "x": 419.5,
+                            "y": 535.4437499999999
+                          },
+                          {
+                            "x": 421.75,
+                            "y": 535.9359375
+                          },
+                          {
+                            "x": 424,
+                            "y": 536.4
+                          },
+                          {
+                            "x": 426.25,
+                            "y": 536.8359375
+                          },
+                          {
+                            "x": 428.5,
+                            "y": 537.24375
+                          },
+                          {
+                            "x": 430.75,
+                            "y": 537.6234375
+                          },
+                          {
+                            "x": 433,
+                            "y": 537.975
+                          },
+                          {
+                            "x": 435.25,
+                            "y": 538.2984375
+                          },
+                          {
+                            "x": 437.5,
+                            "y": 538.59375
+                          },
+                          {
+                            "x": 439.75,
+                            "y": 538.8609375
+                          },
+                          {
+                            "x": 442,
+                            "y": 539.1
+                          },
+                          {
+                            "x": 444.25,
+                            "y": 539.3109375
+                          },
+                          {
+                            "x": 446.5,
+                            "y": 539.49375
+                          },
+                          {
+                            "x": 448.75,
+                            "y": 539.6484375
+                          },
+                          {
+                            "x": 451,
+                            "y": 539.775
+                          },
+                          {
+                            "x": 453.25,
+                            "y": 539.8734375
+                          },
+                          {
+                            "x": 455.5,
+                            "y": 539.94375
+                          },
+                          {
+                            "x": 457.75,
+                            "y": 539.9859375
+                          },
+                          {
+                            "x": 460,
+                            "y": 540
+                          },
+                          {
+                            "x": 462.25000000000006,
+                            "y": 539.9859375
+                          },
+                          {
+                            "x": 464.5,
+                            "y": 539.94375
+                          },
+                          {
+                            "x": 466.75,
+                            "y": 539.8734375
+                          },
+                          {
+                            "x": 468.99999999999994,
+                            "y": 539.775
+                          },
+                          {
+                            "x": 471.25,
+                            "y": 539.6484375
+                          },
+                          {
+                            "x": 473.50000000000006,
+                            "y": 539.49375
+                          },
+                          {
+                            "x": 475.75,
+                            "y": 539.3109375
+                          },
+                          {
+                            "x": 478,
+                            "y": 539.1
+                          },
+                          {
+                            "x": 480.24999999999994,
+                            "y": 538.8609375
+                          },
+                          {
+                            "x": 482.5,
+                            "y": 538.59375
+                          },
+                          {
+                            "x": 484.75000000000006,
+                            "y": 538.2984375
+                          },
+                          {
+                            "x": 487,
+                            "y": 537.975
+                          },
+                          {
+                            "x": 489.25,
+                            "y": 537.6234375
+                          },
+                          {
+                            "x": 491.49999999999994,
+                            "y": 537.24375
+                          },
+                          {
+                            "x": 493.75,
+                            "y": 536.8359375
+                          },
+                          {
+                            "x": 496.00000000000006,
+                            "y": 536.4
+                          },
+                          {
+                            "x": 498.25,
+                            "y": 535.9359375
+                          },
+                          {
+                            "x": 500.5,
+                            "y": 535.4437499999999
+                          },
+                          {
+                            "x": 502.74999999999994,
+                            "y": 534.9234375
+                          },
+                          {
+                            "x": 505,
+                            "y": 534.375
+                          },
+                          {
+                            "x": 507.25000000000006,
+                            "y": 533.7984375
+                          },
+                          {
+                            "x": 509.5,
+                            "y": 533.19375
+                          },
+                          {
+                            "x": 511.75,
+                            "y": 532.5609374999999
+                          },
+                          {
+                            "x": 514,
+                            "y": 531.9000000000001
+                          },
+                          {
+                            "x": 516.25,
+                            "y": 531.2109375
+                          },
+                          {
+                            "x": 518.5,
+                            "y": 530.49375
+                          },
+                          {
+                            "x": 520.75,
+                            "y": 529.7484375
+                          },
+                          {
+                            "x": 523,
+                            "y": 528.9749999999999
+                          },
+                          {
+                            "x": 525.25,
+                            "y": 528.1734375
+                          },
+                          {
+                            "x": 527.5,
+                            "y": 527.34375
+                          },
+                          {
+                            "x": 529.75,
+                            "y": 526.4859375
+                          },
+                          {
+                            "x": 532,
+                            "y": 525.6
+                          },
+                          {
+                            "x": 534.25,
+                            "y": 524.6859374999999
+                          },
+                          {
+                            "x": 536.5,
+                            "y": 523.7437500000001
+                          },
+                          {
+                            "x": 538.75,
+                            "y": 522.7734375
+                          },
+                          {
+                            "x": 541,
+                            "y": 521.775
+                          },
+                          {
+                            "x": 543.25,
+                            "y": 520.7484375
+                          },
+                          {
+                            "x": 545.5,
+                            "y": 519.6937499999999
+                          },
+                          {
+                            "x": 547.75,
+                            "y": 518.6109375000001
+                          },
+                          {
+                            "x": 550,
+                            "y": 517.5
+                          },
+                          {
+                            "x": 552.25,
+                            "y": 516.3609375
+                          },
+                          {
+                            "x": 554.5,
+                            "y": 515.19375
+                          },
+                          {
+                            "x": 556.75,
+                            "y": 513.9984374999999
+                          },
+                          {
+                            "x": 559,
+                            "y": 512.7750000000001
+                          },
+                          {
+                            "x": 561.25,
+                            "y": 511.5234375
+                          },
+                          {
+                            "x": 563.5,
+                            "y": 510.24375
+                          },
+                          {
+                            "x": 565.75,
+                            "y": 508.9359375
+                          },
+                          {
+                            "x": 568,
+                            "y": 507.59999999999997
+                          },
+                          {
+                            "x": 570.25,
+                            "y": 506.23593750000003
+                          },
+                          {
+                            "x": 572.5,
+                            "y": 504.84375
+                          },
+                          {
+                            "x": 574.75,
+                            "y": 503.4234375
+                          },
+                          {
+                            "x": 577,
+                            "y": 501.975
+                          },
+                          {
+                            "x": 579.25,
+                            "y": 500.49843749999997
+                          },
+                          {
+                            "x": 581.5,
+                            "y": 498.9937500000001
+                          },
+                          {
+                            "x": 583.75,
+                            "y": 497.4609375
+                          },
+                          {
+                            "x": 586,
+                            "y": 495.8999999999999
+                          },
+                          {
+                            "x": 588.25,
+                            "y": 494.3109375
+                          },
+                          {
+                            "x": 590.5,
+                            "y": 492.69374999999997
+                          },
+                          {
+                            "x": 592.75,
+                            "y": 491.0484375000001
+                          },
+                          {
+                            "x": 595,
+                            "y": 489.375
+                          },
+                          {
+                            "x": 597.25,
+                            "y": 487.6734374999999
+                          },
+                          {
+                            "x": 599.5,
+                            "y": 485.94375
+                          },
+                          {
+                            "x": 601.75,
+                            "y": 484.18593749999997
+                          },
+                          {
+                            "x": 604,
+                            "y": 482.4000000000001
+                          },
+                          {
+                            "x": 606.25,
+                            "y": 480.5859375
+                          },
+                          {
+                            "x": 608.5,
+                            "y": 478.7437499999999
+                          },
+                          {
+                            "x": 610.75,
+                            "y": 476.8734375
+                          },
+                          {
+                            "x": 613,
+                            "y": 474.9749999999999
+                          },
+                          {
+                            "x": 615.25,
+                            "y": 473.0484375000001
+                          },
+                          {
+                            "x": 617.5,
+                            "y": 471.09375
+                          },
+                          {
+                            "x": 619.75,
+                            "y": 469.1109374999999
+                          },
+                          {
+                            "x": 622,
+                            "y": 467.1
+                          },
+                          {
+                            "x": 624.25,
+                            "y": 465.06093749999997
+                          },
+                          {
+                            "x": 626.5,
+                            "y": 462.9937500000001
+                          },
+                          {
+                            "x": 628.75,
+                            "y": 460.8984375
+                          },
+                          {
+                            "x": 631,
+                            "y": 458.7749999999999
+                          },
+                          {
+                            "x": 633.25,
+                            "y": 456.6234375
+                          },
+                          {
+                            "x": 635.5,
+                            "y": 454.44374999999997
+                          },
+                          {
+                            "x": 637.75,
+                            "y": 452.2359375000001
+                          },
+                          {
+                            "x": 640,
+                            "y": 450
+                          },
+                          {
+                            "x": 642.25,
+                            "y": 447.7359374999999
+                          },
+                          {
+                            "x": 644.5,
+                            "y": 445.44375
+                          },
+                          {
+                            "x": 646.75,
+                            "y": 443.12343749999997
+                          },
+                          {
+                            "x": 649,
+                            "y": 440.7750000000001
+                          },
+                          {
+                            "x": 651.25,
+                            "y": 438.3984375
+                          },
+                          {
+                            "x": 653.5,
+                            "y": 435.9937499999999
+                          },
+                          {
+                            "x": 655.75,
+                            "y": 433.5609375
+                          },
+                          {
+                            "x": 658,
+                            "y": 431.09999999999997
+                          },
+                          {
+                            "x": 660.25,
+                            "y": 428.6109375000001
+                          },
+                          {
+                            "x": 662.5,
+                            "y": 426.09375
+                          },
+                          {
+                            "x": 664.75,
+                            "y": 423.54843749999986
+                          },
+                          {
+                            "x": 667,
+                            "y": 420.975
+                          },
+                          {
+                            "x": 669.25,
+                            "y": 418.37343749999997
+                          },
+                          {
+                            "x": 671.5,
+                            "y": 415.7437500000001
+                          },
+                          {
+                            "x": 673.75,
+                            "y": 413.0859375
+                          },
+                          {
+                            "x": 676,
+                            "y": 410.3999999999999
+                          },
+                          {
+                            "x": 678.25,
+                            "y": 407.6859375
+                          },
+                          {
+                            "x": 680.5,
+                            "y": 404.94374999999997
+                          },
+                          {
+                            "x": 682.75,
+                            "y": 402.1734375000001
+                          },
+                          {
+                            "x": 685,
+                            "y": 399.375
+                          },
+                          {
+                            "x": 687.25,
+                            "y": 396.54843749999986
+                          },
+                          {
+                            "x": 689.5,
+                            "y": 393.69375
+                          },
+                          {
+                            "x": 691.75,
+                            "y": 390.8109374999999
+                          },
+                          {
+                            "x": 694,
+                            "y": 387.9000000000001
+                          },
+                          {
+                            "x": 696.25,
+                            "y": 384.9609375
+                          },
+                          {
+                            "x": 698.5,
+                            "y": 381.99374999999986
+                          },
+                          {
+                            "x": 700.75,
+                            "y": 378.9984375
+                          },
+                          {
+                            "x": 703,
+                            "y": 375.9749999999999
+                          },
+                          {
+                            "x": 705.25,
+                            "y": 372.9234375000001
+                          },
+                          {
+                            "x": 707.5,
+                            "y": 369.84375
+                          },
+                          {
+                            "x": 709.75,
+                            "y": 366.73593749999986
+                          },
+                          {
+                            "x": 712,
+                            "y": 363.6000000000001
+                          },
+                          {
+                            "x": 714.25,
+                            "y": 360.4359374999999
+                          },
+                          {
+                            "x": 716.5,
+                            "y": 357.24375000000015
+                          },
+                          {
+                            "x": 718.75,
+                            "y": 354.0234375
+                          },
+                          {
+                            "x": 721,
+                            "y": 350.77499999999986
+                          },
+                          {
+                            "x": 723.25,
+                            "y": 347.4984375
+                          },
+                          {
+                            "x": 725.5,
+                            "y": 344.19374999999997
+                          },
+                          {
+                            "x": 727.75,
+                            "y": 340.8609375000001
+                          },
+                          {
+                            "x": 730,
+                            "y": 337.5
+                          },
+                          {
+                            "x": 732.25,
+                            "y": 334.11093749999986
+                          },
+                          {
+                            "x": 734.5,
+                            "y": 330.6937500000001
+                          },
+                          {
+                            "x": 736.75,
+                            "y": 327.24843749999997
+                          },
+                          {
+                            "x": 739,
+                            "y": 323.7750000000001
+                          },
+                          {
+                            "x": 741.25,
+                            "y": 320.2734375
+                          },
+                          {
+                            "x": 743.5,
+                            "y": 316.74374999999986
+                          },
+                          {
+                            "x": 745.75,
+                            "y": 313.1859375
+                          },
+                          {
+                            "x": 748,
+                            "y": 309.5999999999999
+                          },
+                          {
+                            "x": 750.25,
+                            "y": 305.98593750000015
+                          },
+                          {
+                            "x": 752.5,
+                            "y": 302.34375
+                          },
+                          {
+                            "x": 754.75,
+                            "y": 298.67343749999986
+                          },
+                          {
+                            "x": 757,
+                            "y": 294.975
+                          },
+                          {
+                            "x": 759.25,
+                            "y": 291.2484374999999
+                          },
+                          {
+                            "x": 761.5,
+                            "y": 287.49375000000015
+                          },
+                          {
+                            "x": 763.75,
+                            "y": 283.7109375
+                          },
+                          {
+                            "x": 766,
+                            "y": 279.8999999999998
+                          },
+                          {
+                            "x": 768.25,
+                            "y": 276.0609375000001
+                          },
+                          {
+                            "x": 770.5,
+                            "y": 272.19374999999997
+                          },
+                          {
+                            "x": 772.75,
+                            "y": 268.29843750000015
+                          },
+                          {
+                            "x": 775,
+                            "y": 264.375
+                          },
+                          {
+                            "x": 777.25,
+                            "y": 260.42343749999986
+                          },
+                          {
+                            "x": 779.5,
+                            "y": 256.4437500000001
+                          },
+                          {
+                            "x": 781.75,
+                            "y": 252.4359374999999
+                          },
+                          {
+                            "x": 784,
+                            "y": 248.4000000000002
+                          },
+                          {
+                            "x": 786.25,
+                            "y": 244.3359375
+                          },
+                          {
+                            "x": 788.5,
+                            "y": 240.24374999999986
+                          },
+                          {
+                            "x": 790.75,
+                            "y": 236.12343750000008
+                          },
+                          {
+                            "x": 793,
+                            "y": 231.9749999999999
+                          },
+                          {
+                            "x": 795.25,
+                            "y": 227.7984375000001
+                          },
+                          {
+                            "x": 797.5,
+                            "y": 223.59375
+                          },
+                          {
+                            "x": 799.75,
+                            "y": 219.3609374999998
+                          },
+                          {
+                            "x": 802,
+                            "y": 215.10000000000002
+                          },
+                          {
+                            "x": 804.25,
+                            "y": 210.81093749999997
+                          },
+                          {
+                            "x": 806.5,
+                            "y": 206.4937500000001
+                          },
+                          {
+                            "x": 808.75,
+                            "y": 202.1484375
+                          },
+                          {
+                            "x": 811,
+                            "y": 197.7749999999998
+                          },
+                          {
+                            "x": 813.25,
+                            "y": 193.37343750000008
+                          },
+                          {
+                            "x": 815.5,
+                            "y": 188.9437499999999
+                          },
+                          {
+                            "x": 817.75,
+                            "y": 184.48593750000015
+                          },
+                          {
+                            "x": 820,
+                            "y": 180
+                          }
+                        ],
+                        "color": "blue"
+                      },
+                      {
+                        "id": "p_xaxis",
+                        "type": "line",
+                        "points": [
+                          {
+                            "x": 100,
+                            "y": 540
+                          },
+                          {
+                            "x": 820,
+                            "y": 540
+                          }
+                        ],
+                        "color": "gray"
+                      },
+                      {
+                        "id": "p_yaxis",
+                        "type": "line",
+                        "points": [
+                          {
+                            "x": 460,
+                            "y": 180
+                          },
+                          {
+                            "x": 460,
+                            "y": 580
+                          }
+                        ],
+                        "color": "gray"
+                      },
+                      {
+                        "id": "p_label",
+                        "type": "text",
+                        "text": "y = x²   x: -3…3   y: -1…9",
+                        "x": 100,
+                        "y": 130
+                      },
+                      {
+                        "id": "p_shade_0",
+                        "type": "line",
+                        "points": [
+                          {
+                            "x": 100,
+                            "y": 540
+                          },
+                          {
+                            "x": 100,
+                            "y": 180
+                          },
+                          {
+                            "x": 102.25,
+                            "y": 184.48593749999992
+                          },
+                          {
+                            "x": 104.5,
+                            "y": 188.94375000000002
+                          },
+                          {
+                            "x": 106.75,
+                            "y": 193.37343749999997
+                          },
+                          {
+                            "x": 109,
+                            "y": 197.77500000000003
+                          },
+                          {
+                            "x": 111.25,
+                            "y": 202.1484375
+                          },
+                          {
+                            "x": 113.5,
+                            "y": 206.49374999999998
+                          },
+                          {
+                            "x": 115.75,
+                            "y": 210.81093749999997
+                          },
+                          {
+                            "x": 118,
+                            "y": 215.10000000000002
+                          },
+                          {
+                            "x": 120.25,
+                            "y": 219.36093750000003
+                          },
+                          {
+                            "x": 122.5,
+                            "y": 223.59375
+                          },
+                          {
+                            "x": 124.75,
+                            "y": 227.79843749999998
+                          },
+                          {
+                            "x": 127,
+                            "y": 231.97500000000008
+                          },
+                          {
+                            "x": 129.25,
+                            "y": 236.1234374999999
+                          },
+                          {
+                            "x": 131.5,
+                            "y": 240.2437500000001
+                          },
+                          {
+                            "x": 133.75,
+                            "y": 244.3359375
+                          },
+                          {
+                            "x": 136,
+                            "y": 248.39999999999998
+                          },
+                          {
+                            "x": 138.25,
+                            "y": 252.43593750000002
+                          },
+                          {
+                            "x": 140.5,
+                            "y": 256.44374999999997
+                          },
+                          {
+                            "x": 142.75,
+                            "y": 260.42343750000003
+                          },
+                          {
+                            "x": 145,
+                            "y": 264.375
+                          },
+                          {
+                            "x": 147.25,
+                            "y": 268.2984375
+                          },
+                          {
+                            "x": 149.5,
+                            "y": 272.19375
+                          },
+                          {
+                            "x": 151.75,
+                            "y": 276.06093749999997
+                          },
+                          {
+                            "x": 154,
+                            "y": 279.90000000000003
+                          },
+                          {
+                            "x": 156.25,
+                            "y": 283.7109375
+                          },
+                          {
+                            "x": 158.5,
+                            "y": 287.49375
+                          },
+                          {
+                            "x": 160.75,
+                            "y": 291.2484375
+                          },
+                          {
+                            "x": 163,
+                            "y": 294.975
+                          },
+                          {
+                            "x": 165.25,
+                            "y": 298.67343750000003
+                          },
+                          {
+                            "x": 167.5,
+                            "y": 302.34375
+                          },
+                          {
+                            "x": 169.75,
+                            "y": 305.9859375
+                          },
+                          {
+                            "x": 172,
+                            "y": 309.6
+                          },
+                          {
+                            "x": 174.25,
+                            "y": 313.18593749999997
+                          },
+                          {
+                            "x": 176.5,
+                            "y": 316.74375000000003
+                          },
+                          {
+                            "x": 178.75,
+                            "y": 320.2734375
+                          },
+                          {
+                            "x": 181,
+                            "y": 323.775
+                          },
+                          {
+                            "x": 183.25,
+                            "y": 327.2484375
+                          },
+                          {
+                            "x": 185.5,
+                            "y": 330.69375
+                          },
+                          {
+                            "x": 187.75,
+                            "y": 334.11093750000003
+                          },
+                          {
+                            "x": 190,
+                            "y": 337.5
+                          },
+                          {
+                            "x": 192.25,
+                            "y": 340.8609375
+                          },
+                          {
+                            "x": 194.5,
+                            "y": 344.19375
+                          },
+                          {
+                            "x": 196.75,
+                            "y": 347.4984375
+                          },
+                          {
+                            "x": 199,
+                            "y": 350.77500000000003
+                          },
+                          {
+                            "x": 201.25,
+                            "y": 354.0234375
+                          },
+                          {
+                            "x": 203.5,
+                            "y": 357.24375
+                          },
+                          {
+                            "x": 205.75,
+                            "y": 360.4359375
+                          },
+                          {
+                            "x": 208,
+                            "y": 363.6
+                          },
+                          {
+                            "x": 210.25,
+                            "y": 366.73593750000003
+                          },
+                          {
+                            "x": 212.5,
+                            "y": 369.84375
+                          },
+                          {
+                            "x": 214.75,
+                            "y": 372.9234375
+                          },
+                          {
+                            "x": 217,
+                            "y": 375.975
+                          },
+                          {
+                            "x": 219.25,
+                            "y": 378.99843749999997
+                          },
+                          {
+                            "x": 221.5,
+                            "y": 381.99375000000003
+                          },
+                          {
+                            "x": 223.75,
+                            "y": 384.9609375
+                          },
+                          {
+                            "x": 226,
+                            "y": 387.9
+                          },
+                          {
+                            "x": 228.25,
+                            "y": 390.8109375
+                          },
+                          {
+                            "x": 230.5,
+                            "y": 393.69374999999997
+                          },
+                          {
+                            "x": 232.75,
+                            "y": 396.5484375000001
+                          },
+                          {
+                            "x": 235,
+                            "y": 399.375
+                          },
+                          {
+                            "x": 237.25,
+                            "y": 402.1734375
+                          },
+                          {
+                            "x": 239.5,
+                            "y": 404.94375
+                          },
+                          {
+                            "x": 241.75,
+                            "y": 407.6859375
+                          },
+                          {
+                            "x": 244,
+                            "y": 410.40000000000003
+                          },
+                          {
+                            "x": 246.25,
+                            "y": 413.0859375
+                          },
+                          {
+                            "x": 248.5,
+                            "y": 415.74375
+                          },
+                          {
+                            "x": 250.75,
+                            "y": 418.3734375
+                          },
+                          {
+                            "x": 253,
+                            "y": 420.975
+                          },
+                          {
+                            "x": 255.25,
+                            "y": 423.5484375
+                          },
+                          {
+                            "x": 257.5,
+                            "y": 426.09375
+                          },
+                          {
+                            "x": 259.75,
+                            "y": 428.6109375
+                          },
+                          {
+                            "x": 262,
+                            "y": 431.1
+                          },
+                          {
+                            "x": 264.25,
+                            "y": 433.5609375
+                          },
+                          {
+                            "x": 266.5,
+                            "y": 435.99375000000003
+                          },
+                          {
+                            "x": 268.75,
+                            "y": 438.3984375
+                          },
+                          {
+                            "x": 271,
+                            "y": 440.775
+                          },
+                          {
+                            "x": 273.25,
+                            "y": 443.1234375
+                          },
+                          {
+                            "x": 275.5,
+                            "y": 445.44374999999997
+                          },
+                          {
+                            "x": 277.75,
+                            "y": 447.73593750000003
+                          },
+                          {
+                            "x": 280,
+                            "y": 450
+                          },
+                          {
+                            "x": 282.25,
+                            "y": 452.2359375
+                          },
+                          {
+                            "x": 284.5,
+                            "y": 454.44374999999997
+                          },
+                          {
+                            "x": 286.75,
+                            "y": 456.6234375
+                          },
+                          {
+                            "x": 289,
+                            "y": 458.77500000000003
+                          },
+                          {
+                            "x": 291.25,
+                            "y": 460.8984375
+                          },
+                          {
+                            "x": 293.5,
+                            "y": 462.99375
+                          },
+                          {
+                            "x": 295.75,
+                            "y": 465.0609375
+                          },
+                          {
+                            "x": 298,
+                            "y": 467.1
+                          },
+                          {
+                            "x": 300.25,
+                            "y": 469.11093750000003
+                          },
+                          {
+                            "x": 302.5,
+                            "y": 471.09375
+                          },
+                          {
+                            "x": 304.75,
+                            "y": 473.0484375
+                          },
+                          {
+                            "x": 307,
+                            "y": 474.975
+                          },
+                          {
+                            "x": 309.25,
+                            "y": 476.8734375
+                          },
+                          {
+                            "x": 311.5,
+                            "y": 478.74375
+                          },
+                          {
+                            "x": 313.75,
+                            "y": 480.5859375
+                          },
+                          {
+                            "x": 316,
+                            "y": 482.4
+                          },
+                          {
+                            "x": 318.25,
+                            "y": 484.1859375
+                          },
+                          {
+                            "x": 320.5,
+                            "y": 485.94375
+                          },
+                          {
+                            "x": 322.75,
+                            "y": 487.67343750000003
+                          },
+                          {
+                            "x": 325,
+                            "y": 489.375
+                          },
+                          {
+                            "x": 327.25,
+                            "y": 491.0484375
+                          },
+                          {
+                            "x": 329.5,
+                            "y": 492.69375
+                          },
+                          {
+                            "x": 331.75,
+                            "y": 494.3109375
+                          },
+                          {
+                            "x": 334,
+                            "y": 495.90000000000003
+                          },
+                          {
+                            "x": 336.25,
+                            "y": 497.4609375
+                          },
+                          {
+                            "x": 338.5,
+                            "y": 498.99375
+                          },
+                          {
+                            "x": 340.75,
+                            "y": 500.49843749999997
+                          },
+                          {
+                            "x": 343,
+                            "y": 501.975
+                          },
+                          {
+                            "x": 345.25,
+                            "y": 503.4234375
+                          },
+                          {
+                            "x": 347.5,
+                            "y": 504.84375
+                          },
+                          {
+                            "x": 349.75,
+                            "y": 506.2359375
+                          },
+                          {
+                            "x": 352,
+                            "y": 507.59999999999997
+                          },
+                          {
+                            "x": 354.25,
+                            "y": 508.9359375
+                          },
+                          {
+                            "x": 356.5,
+                            "y": 510.24375000000003
+                          },
+                          {
+                            "x": 358.75,
+                            "y": 511.5234375
+                          },
+                          {
+                            "x": 361,
+                            "y": 512.775
+                          },
+                          {
+                            "x": 363.25,
+                            "y": 513.9984374999999
+                          },
+                          {
+                            "x": 365.5,
+                            "y": 515.19375
+                          },
+                          {
+                            "x": 367.75,
+                            "y": 516.3609375
+                          },
+                          {
+                            "x": 370,
+                            "y": 517.5
+                          },
+                          {
+                            "x": 372.25,
+                            "y": 518.6109375
+                          },
+                          {
+                            "x": 374.5,
+                            "y": 519.6937499999999
+                          },
+                          {
+                            "x": 376.75,
+                            "y": 520.7484375
+                          },
+                          {
+                            "x": 379,
+                            "y": 521.775
+                          },
+                          {
+                            "x": 381.25,
+                            "y": 522.7734375
+                          },
+                          {
+                            "x": 383.5,
+                            "y": 523.74375
+                          },
+                          {
+                            "x": 385.75,
+                            "y": 524.6859374999999
+                          },
+                          {
+                            "x": 388,
+                            "y": 525.6
+                          },
+                          {
+                            "x": 390.25,
+                            "y": 526.4859375
+                          },
+                          {
+                            "x": 392.5,
+                            "y": 527.34375
+                          },
+                          {
+                            "x": 394.75,
+                            "y": 528.1734375
+                          },
+                          {
+                            "x": 397,
+                            "y": 528.9749999999999
+                          },
+                          {
+                            "x": 399.25,
+                            "y": 529.7484375
+                          },
+                          {
+                            "x": 401.5,
+                            "y": 530.49375
+                          },
+                          {
+                            "x": 403.75,
+                            "y": 531.2109375
+                          },
+                          {
+                            "x": 406,
+                            "y": 531.9
+                          },
+                          {
+                            "x": 408.25,
+                            "y": 532.5609374999999
+                          },
+                          {
+                            "x": 410.5,
+                            "y": 533.19375
+                          },
+                          {
+                            "x": 412.75,
+                            "y": 533.7984375
+                          },
+                          {
+                            "x": 415,
+                            "y": 534.375
+                          },
+                          {
+                            "x": 417.25,
+                            "y": 534.9234375
+                          },
+                          {
+                            "x": 419.5,
+                            "y": 535.4437499999999
+                          },
+                          {
+                            "x": 421.75,
+                            "y": 535.9359375
+                          },
+                          {
+                            "x": 424,
+                            "y": 536.4
+                          },
+                          {
+                            "x": 426.25,
+                            "y": 536.8359375
+                          },
+                          {
+                            "x": 428.5,
+                            "y": 537.24375
+                          },
+                          {
+                            "x": 430.75,
+                            "y": 537.6234375
+                          },
+                          {
+                            "x": 433,
+                            "y": 537.975
+                          },
+                          {
+                            "x": 435.25,
+                            "y": 538.2984375
+                          },
+                          {
+                            "x": 437.5,
+                            "y": 538.59375
+                          },
+                          {
+                            "x": 439.75,
+                            "y": 538.8609375
+                          },
+                          {
+                            "x": 442,
+                            "y": 539.1
+                          },
+                          {
+                            "x": 444.25,
+                            "y": 539.3109375
+                          },
+                          {
+                            "x": 446.5,
+                            "y": 539.49375
+                          },
+                          {
+                            "x": 448.75,
+                            "y": 539.6484375
+                          },
+                          {
+                            "x": 451,
+                            "y": 539.775
+                          },
+                          {
+                            "x": 453.25,
+                            "y": 539.8734375
+                          },
+                          {
+                            "x": 455.5,
+                            "y": 539.94375
+                          },
+                          {
+                            "x": 457.75,
+                            "y": 539.9859375
+                          },
+                          {
+                            "x": 460,
+                            "y": 540
+                          },
+                          {
+                            "x": 462.25000000000006,
+                            "y": 539.9859375
+                          },
+                          {
+                            "x": 464.5,
+                            "y": 539.94375
+                          },
+                          {
+                            "x": 466.75,
+                            "y": 539.8734375
+                          },
+                          {
+                            "x": 468.99999999999994,
+                            "y": 539.775
+                          },
+                          {
+                            "x": 471.25,
+                            "y": 539.6484375
+                          },
+                          {
+                            "x": 473.50000000000006,
+                            "y": 539.49375
+                          },
+                          {
+                            "x": 475.75,
+                            "y": 539.3109375
+                          },
+                          {
+                            "x": 478,
+                            "y": 539.1
+                          },
+                          {
+                            "x": 480.24999999999994,
+                            "y": 538.8609375
+                          },
+                          {
+                            "x": 482.5,
+                            "y": 538.59375
+                          },
+                          {
+                            "x": 484.75000000000006,
+                            "y": 538.2984375
+                          },
+                          {
+                            "x": 487,
+                            "y": 537.975
+                          },
+                          {
+                            "x": 489.25,
+                            "y": 537.6234375
+                          },
+                          {
+                            "x": 491.49999999999994,
+                            "y": 537.24375
+                          },
+                          {
+                            "x": 493.75,
+                            "y": 536.8359375
+                          },
+                          {
+                            "x": 496.00000000000006,
+                            "y": 536.4
+                          },
+                          {
+                            "x": 498.25,
+                            "y": 535.9359375
+                          },
+                          {
+                            "x": 500.5,
+                            "y": 535.4437499999999
+                          },
+                          {
+                            "x": 502.74999999999994,
+                            "y": 534.9234375
+                          },
+                          {
+                            "x": 505,
+                            "y": 534.375
+                          },
+                          {
+                            "x": 507.25000000000006,
+                            "y": 533.7984375
+                          },
+                          {
+                            "x": 509.5,
+                            "y": 533.19375
+                          },
+                          {
+                            "x": 511.75,
+                            "y": 532.5609374999999
+                          },
+                          {
+                            "x": 514,
+                            "y": 531.9000000000001
+                          },
+                          {
+                            "x": 516.25,
+                            "y": 531.2109375
+                          },
+                          {
+                            "x": 518.5,
+                            "y": 530.49375
+                          },
+                          {
+                            "x": 520.75,
+                            "y": 529.7484375
+                          },
+                          {
+                            "x": 523,
+                            "y": 528.9749999999999
+                          },
+                          {
+                            "x": 525.25,
+                            "y": 528.1734375
+                          },
+                          {
+                            "x": 527.5,
+                            "y": 527.34375
+                          },
+                          {
+                            "x": 529.75,
+                            "y": 526.4859375
+                          },
+                          {
+                            "x": 532,
+                            "y": 525.6
+                          },
+                          {
+                            "x": 534.25,
+                            "y": 524.6859374999999
+                          },
+                          {
+                            "x": 536.5,
+                            "y": 523.7437500000001
+                          },
+                          {
+                            "x": 538.75,
+                            "y": 522.7734375
+                          },
+                          {
+                            "x": 541,
+                            "y": 521.775
+                          },
+                          {
+                            "x": 543.25,
+                            "y": 520.7484375
+                          },
+                          {
+                            "x": 545.5,
+                            "y": 519.6937499999999
+                          },
+                          {
+                            "x": 547.75,
+                            "y": 518.6109375000001
+                          },
+                          {
+                            "x": 550,
+                            "y": 517.5
+                          },
+                          {
+                            "x": 552.25,
+                            "y": 516.3609375
+                          },
+                          {
+                            "x": 554.5,
+                            "y": 515.19375
+                          },
+                          {
+                            "x": 556.75,
+                            "y": 513.9984374999999
+                          },
+                          {
+                            "x": 559,
+                            "y": 512.7750000000001
+                          },
+                          {
+                            "x": 561.25,
+                            "y": 511.5234375
+                          },
+                          {
+                            "x": 563.5,
+                            "y": 510.24375
+                          },
+                          {
+                            "x": 565.75,
+                            "y": 508.9359375
+                          },
+                          {
+                            "x": 568,
+                            "y": 507.59999999999997
+                          },
+                          {
+                            "x": 570.25,
+                            "y": 506.23593750000003
+                          },
+                          {
+                            "x": 572.5,
+                            "y": 504.84375
+                          },
+                          {
+                            "x": 574.75,
+                            "y": 503.4234375
+                          },
+                          {
+                            "x": 577,
+                            "y": 501.975
+                          },
+                          {
+                            "x": 579.25,
+                            "y": 500.49843749999997
+                          },
+                          {
+                            "x": 581.5,
+                            "y": 498.9937500000001
+                          },
+                          {
+                            "x": 583.75,
+                            "y": 497.4609375
+                          },
+                          {
+                            "x": 586,
+                            "y": 495.8999999999999
+                          },
+                          {
+                            "x": 588.25,
+                            "y": 494.3109375
+                          },
+                          {
+                            "x": 590.5,
+                            "y": 492.69374999999997
+                          },
+                          {
+                            "x": 592.75,
+                            "y": 491.0484375000001
+                          },
+                          {
+                            "x": 595,
+                            "y": 489.375
+                          },
+                          {
+                            "x": 597.25,
+                            "y": 487.6734374999999
+                          },
+                          {
+                            "x": 599.5,
+                            "y": 485.94375
+                          },
+                          {
+                            "x": 601.75,
+                            "y": 484.18593749999997
+                          },
+                          {
+                            "x": 604,
+                            "y": 482.4000000000001
+                          },
+                          {
+                            "x": 606.25,
+                            "y": 480.5859375
+                          },
+                          {
+                            "x": 608.5,
+                            "y": 478.7437499999999
+                          },
+                          {
+                            "x": 610.75,
+                            "y": 476.8734375
+                          },
+                          {
+                            "x": 613,
+                            "y": 474.9749999999999
+                          },
+                          {
+                            "x": 615.25,
+                            "y": 473.0484375000001
+                          },
+                          {
+                            "x": 617.5,
+                            "y": 471.09375
+                          },
+                          {
+                            "x": 619.75,
+                            "y": 469.1109374999999
+                          },
+                          {
+                            "x": 622,
+                            "y": 467.1
+                          },
+                          {
+                            "x": 624.25,
+                            "y": 465.06093749999997
+                          },
+                          {
+                            "x": 626.5,
+                            "y": 462.9937500000001
+                          },
+                          {
+                            "x": 628.75,
+                            "y": 460.8984375
+                          },
+                          {
+                            "x": 631,
+                            "y": 458.7749999999999
+                          },
+                          {
+                            "x": 633.25,
+                            "y": 456.6234375
+                          },
+                          {
+                            "x": 635.5,
+                            "y": 454.44374999999997
+                          },
+                          {
+                            "x": 637.75,
+                            "y": 452.2359375000001
+                          },
+                          {
+                            "x": 640,
+                            "y": 450
+                          },
+                          {
+                            "x": 642.25,
+                            "y": 447.7359374999999
+                          },
+                          {
+                            "x": 644.5,
+                            "y": 445.44375
+                          },
+                          {
+                            "x": 646.75,
+                            "y": 443.12343749999997
+                          },
+                          {
+                            "x": 649,
+                            "y": 440.7750000000001
+                          },
+                          {
+                            "x": 651.25,
+                            "y": 438.3984375
+                          },
+                          {
+                            "x": 653.5,
+                            "y": 435.9937499999999
+                          },
+                          {
+                            "x": 655.75,
+                            "y": 433.5609375
+                          },
+                          {
+                            "x": 658,
+                            "y": 431.09999999999997
+                          },
+                          {
+                            "x": 660.25,
+                            "y": 428.6109375000001
+                          },
+                          {
+                            "x": 662.5,
+                            "y": 426.09375
+                          },
+                          {
+                            "x": 664.75,
+                            "y": 423.54843749999986
+                          },
+                          {
+                            "x": 667,
+                            "y": 420.975
+                          },
+                          {
+                            "x": 669.25,
+                            "y": 418.37343749999997
+                          },
+                          {
+                            "x": 671.5,
+                            "y": 415.7437500000001
+                          },
+                          {
+                            "x": 673.75,
+                            "y": 413.0859375
+                          },
+                          {
+                            "x": 676,
+                            "y": 410.3999999999999
+                          },
+                          {
+                            "x": 678.25,
+                            "y": 407.6859375
+                          },
+                          {
+                            "x": 680.5,
+                            "y": 404.94374999999997
+                          },
+                          {
+                            "x": 682.75,
+                            "y": 402.1734375000001
+                          },
+                          {
+                            "x": 685,
+                            "y": 399.375
+                          },
+                          {
+                            "x": 687.25,
+                            "y": 396.54843749999986
+                          },
+                          {
+                            "x": 689.5,
+                            "y": 393.69375
+                          },
+                          {
+                            "x": 691.75,
+                            "y": 390.8109374999999
+                          },
+                          {
+                            "x": 694,
+                            "y": 387.9000000000001
+                          },
+                          {
+                            "x": 696.25,
+                            "y": 384.9609375
+                          },
+                          {
+                            "x": 698.5,
+                            "y": 381.99374999999986
+                          },
+                          {
+                            "x": 700.75,
+                            "y": 378.9984375
+                          },
+                          {
+                            "x": 703,
+                            "y": 375.9749999999999
+                          },
+                          {
+                            "x": 705.25,
+                            "y": 372.9234375000001
+                          },
+                          {
+                            "x": 707.5,
+                            "y": 369.84375
+                          },
+                          {
+                            "x": 709.75,
+                            "y": 366.73593749999986
+                          },
+                          {
+                            "x": 712,
+                            "y": 363.6000000000001
+                          },
+                          {
+                            "x": 714.25,
+                            "y": 360.4359374999999
+                          },
+                          {
+                            "x": 716.5,
+                            "y": 357.24375000000015
+                          },
+                          {
+                            "x": 718.75,
+                            "y": 354.0234375
+                          },
+                          {
+                            "x": 721,
+                            "y": 350.77499999999986
+                          },
+                          {
+                            "x": 723.25,
+                            "y": 347.4984375
+                          },
+                          {
+                            "x": 725.5,
+                            "y": 344.19374999999997
+                          },
+                          {
+                            "x": 727.75,
+                            "y": 340.8609375000001
+                          },
+                          {
+                            "x": 730,
+                            "y": 337.5
+                          },
+                          {
+                            "x": 732.25,
+                            "y": 334.11093749999986
+                          },
+                          {
+                            "x": 734.5,
+                            "y": 330.6937500000001
+                          },
+                          {
+                            "x": 736.75,
+                            "y": 327.24843749999997
+                          },
+                          {
+                            "x": 739,
+                            "y": 323.7750000000001
+                          },
+                          {
+                            "x": 741.25,
+                            "y": 320.2734375
+                          },
+                          {
+                            "x": 743.5,
+                            "y": 316.74374999999986
+                          },
+                          {
+                            "x": 745.75,
+                            "y": 313.1859375
+                          },
+                          {
+                            "x": 748,
+                            "y": 309.5999999999999
+                          },
+                          {
+                            "x": 750.25,
+                            "y": 305.98593750000015
+                          },
+                          {
+                            "x": 752.5,
+                            "y": 302.34375
+                          },
+                          {
+                            "x": 754.75,
+                            "y": 298.67343749999986
+                          },
+                          {
+                            "x": 757,
+                            "y": 294.975
+                          },
+                          {
+                            "x": 759.25,
+                            "y": 291.2484374999999
+                          },
+                          {
+                            "x": 761.5,
+                            "y": 287.49375000000015
+                          },
+                          {
+                            "x": 763.75,
+                            "y": 283.7109375
+                          },
+                          {
+                            "x": 766,
+                            "y": 279.8999999999998
+                          },
+                          {
+                            "x": 768.25,
+                            "y": 276.0609375000001
+                          },
+                          {
+                            "x": 770.5,
+                            "y": 272.19374999999997
+                          },
+                          {
+                            "x": 772.75,
+                            "y": 268.29843750000015
+                          },
+                          {
+                            "x": 775,
+                            "y": 264.375
+                          },
+                          {
+                            "x": 777.25,
+                            "y": 260.42343749999986
+                          },
+                          {
+                            "x": 779.5,
+                            "y": 256.4437500000001
+                          },
+                          {
+                            "x": 781.75,
+                            "y": 252.4359374999999
+                          },
+                          {
+                            "x": 784,
+                            "y": 248.4000000000002
+                          },
+                          {
+                            "x": 786.25,
+                            "y": 244.3359375
+                          },
+                          {
+                            "x": 788.5,
+                            "y": 240.24374999999986
+                          },
+                          {
+                            "x": 790.75,
+                            "y": 236.12343750000008
+                          },
+                          {
+                            "x": 793,
+                            "y": 231.9749999999999
+                          },
+                          {
+                            "x": 795.25,
+                            "y": 227.7984375000001
+                          },
+                          {
+                            "x": 797.5,
+                            "y": 223.59375
+                          },
+                          {
+                            "x": 799.75,
+                            "y": 219.3609374999998
+                          },
+                          {
+                            "x": 802,
+                            "y": 215.10000000000002
+                          },
+                          {
+                            "x": 804.25,
+                            "y": 210.81093749999997
+                          },
+                          {
+                            "x": 806.5,
+                            "y": 206.4937500000001
+                          },
+                          {
+                            "x": 808.75,
+                            "y": 202.1484375
+                          },
+                          {
+                            "x": 811,
+                            "y": 197.7749999999998
+                          },
+                          {
+                            "x": 813.25,
+                            "y": 193.37343750000008
+                          },
+                          {
+                            "x": 815.5,
+                            "y": 188.9437499999999
+                          },
+                          {
+                            "x": 817.75,
+                            "y": 184.48593750000015
+                          },
+                          {
+                            "x": 820,
+                            "y": 180
+                          },
+                          {
+                            "x": 820,
+                            "y": 540
+                          },
+                          {
+                            "x": 100,
+                            "y": 540
+                          }
+                        ],
+                        "color": "blue",
+                        "fill": "solid"
+                      },
+                      {
+                        "id": "p_point_0",
+                        "type": "line",
+                        "points": [
+                          {
+                            "x": 467,
+                            "y": 540
+                          },
+                          {
+                            "x": 466.467156727579,
+                            "y": 542.6787840265556
+                          },
+                          {
+                            "x": 464.9497474683058,
+                            "y": 544.9497474683059
+                          },
+                          {
+                            "x": 462.6787840265556,
+                            "y": 546.467156727579
+                          },
+                          {
+                            "x": 460,
+                            "y": 547
+                          },
+                          {
+                            "x": 457.3212159734444,
+                            "y": 546.467156727579
+                          },
+                          {
+                            "x": 455.0502525316942,
+                            "y": 544.9497474683059
+                          },
+                          {
+                            "x": 453.532843272421,
+                            "y": 542.6787840265556
+                          },
+                          {
+                            "x": 453,
+                            "y": 540
+                          },
+                          {
+                            "x": 453.532843272421,
+                            "y": 537.3212159734444
+                          },
+                          {
+                            "x": 455.0502525316942,
+                            "y": 535.0502525316941
+                          },
+                          {
+                            "x": 457.3212159734444,
+                            "y": 533.532843272421
+                          },
+                          {
+                            "x": 460,
+                            "y": 533
+                          },
+                          {
+                            "x": 462.6787840265556,
+                            "y": 533.532843272421
+                          },
+                          {
+                            "x": 464.9497474683058,
+                            "y": 535.0502525316941
+                          },
+                          {
+                            "x": 466.467156727579,
+                            "y": 537.3212159734444
+                          },
+                          {
+                            "x": 467,
+                            "y": 540
+                          }
+                        ],
+                        "color": "red",
+                        "fill": "solid"
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The shaded area lies between the curve and the x axis.",
+                    "draw": [],
+                    "highlight": [
+                      "p"
+                    ],
+                    "recap": true
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "The parabola y = x²",
+                  "family": "plot",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "p",
+                      "label": "y = x²",
+                      "plot": {
+                        "expression": "x^2",
+                        "xmin": -3,
+                        "xmax": 3,
+                        "ymin": -1,
+                        "ymax": 9,
+                        "points": [
+                          {
+                            "x": 0,
+                            "y": 0
+                          }
+                        ],
+                        "shade": true
+                      }
+                    }
+                  ],
+                  "edges": [],
+                  "beats": [
+                    {
+                      "say": "This parabola has its minimum at zero, zero.",
+                      "reveal": [
+                        "p"
+                      ]
+                    },
+                    {
+                      "say": "The shaded area lies between the curve and the x axis.",
+                      "reveal": [],
+                      "recap": true,
+                      "highlight": [
+                        "p"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 7,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 2,
+                "minTextPx": 16.2,
+                "smallText": 0,
+                "overviewTextPx": 16.2,
+                "colors": 4,
+                "labelWords": {
+                  "max": 7,
+                  "mean": 6
+                },
+                "issues": [],
+                "beats": 2,
+                "newPerBeat": {
+                  "max": 7,
+                  "mean": 3.5
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        }
+      ],
+      "summary": {
+        "drew": 5,
+        "lintClean": 1
+      }
+    }
+  ],
+  "beatCount": 16,
+  "fixtureBeatCount": 16,
+  "gate": {
+    "liveWordSync": "passed six-cue live fixture sample",
+    "liveDeadAir": "passed three-beat live fixture sample",
+    "providerClarity": "pending human comparison"
+  }
+}

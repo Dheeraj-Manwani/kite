@@ -21,6 +21,7 @@ const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,e
 contextBridge.exposeInMainWorld('kite',{
 listBoards:async()=>[{id:'saved-tcp',messageId:42,title:'TCP diagram',createdAt:Date.now(),thumbnail:null}],reopenBoard:async()=>({ok:true}),boardThumbnail:(id,png)=>ipcRenderer.send('test:thumbnail',id,png),
 boardStarted:(id,key)=>ipcRenderer.send('test:boardStarted',id,key),
+boardCue:(id,key,expected,actual)=>ipcRenderer.send('test:boardCue',id,key,expected,actual),
 listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyScreenshot:async id=>id===42?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==':null,historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,attachments:1,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:a=>ipcRenderer.send('test:about',a),openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:view=>ipcRenderer.send('test:openView',view),
 listMemory:()=>ipcRenderer.invoke('test:memoryList'),editMemory:(id,patch)=>ipcRenderer.invoke('test:memoryEdit',id,patch),deleteMemory:id=>ipcRenderer.invoke('test:memoryDelete',id),exportMemory:async()=>({ok:true}),
 undoMemory:token=>ipcRenderer.invoke('test:memoryUndo',token),onMemoryChanged:cb=>subscribe('memory:changed',cb),letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
@@ -98,6 +99,13 @@ app.whenReady().then(async()=>{
     await key('[role=listbox]','Enter');await delay(100);
     assert.equal(await sjs("document.activeElement.classList.contains('model-picker-button')"),true);
     assert.equal(await sjs("document.querySelectorAll('.model-picker-button')[1].querySelector('.model-name').textContent"),lastVision);
+    snapshot.boardPlannerEnabled=true;settings.webContents.send('settings:changed',snapshot);await delay(100);
+    assert.equal(await sjs("document.querySelectorAll('.model-picker').length"),5,'specialist picker appears only when enabled');
+    await sjs("document.querySelector('button[aria-label^=\"Whiteboard model:\"]').click()");await delay(60);
+    await sjs("[...document.querySelectorAll('[role=option]')].find(o=>o.querySelector('.model-name').textContent==='GPT OSS 20B').click()");await delay(80);
+    assert.equal(snapshot.settings.boardModel.id,'openai/gpt-oss-20b');
+    await sjs("[...document.querySelectorAll('.setting-row')].find(r=>r.querySelector('.row-label').textContent==='Whiteboard model').querySelector('button.link').click()");await delay(60);
+    assert.equal(snapshot.settings.boardModel,null);snapshot.boardPlannerEnabled=false;settings.webContents.send('settings:changed',snapshot);await delay(80);
     fs.writeFileSync(path.join(temporary,'settings.png'),(await settings.webContents.capturePage()).toPNG());
     await sjs("[...document.querySelectorAll('.side-item')].find(b=>b.textContent==='Voice').click()");await delay(120);
     assert.equal(await sjs("document.querySelectorAll('.provider-row').length"),1);
@@ -516,6 +524,37 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('board:state',null);await delay(100);
     assert.equal(await js("document.querySelector('.board')"),null);
     assert.equal(boardBounds.at(-1),null,'hit-test bounds cleared with the board');
+    // Phase 3: actual SVG cue onsets, simultaneous swaps/bound arrows, erasure, formulas and navigation.
+    const cueAcks=[];ipcMain.on('test:boardCue',(_e,id,key,expected,actual)=>cueAcks.push({id,key,expected,actual,errorMs:Math.abs(actual-expected)}));
+    const input=[{id:'a',type:'rectangle',label:'7',x:80,y:160,width:160,height:80},{id:'b',type:'rectangle',label:'3',x:380,y:160,width:160,height:80},{id:'edge',type:'arrow',from:'a',to:'b'}];
+    const teach={id:30,title:'Array values',status:'playing',beat:0,total:3,caption:'Seven precedes three.',note:null,elements:layoutScene(input),highlight:[],teaching:true,speed:1,
+      drawing:{key:30,beat:0,ids:['a','b','edge'],durationMs:1500,cues:[{id:'a',startMs:200,durationMs:500},{id:'b',startMs:700,durationMs:500},{id:'edge',startMs:1200,durationMs:300}]}};
+    overlay.webContents.send('board:state',teach);
+    for(let i=0;i<100&&!drawnAcks.some(a=>a[0]===30&&a[1]===30);i++)await delay(30);
+    assert.equal(cueAcks.filter(a=>a.key===30).length,3);assert.ok(cueAcks.filter(a=>a.key===30).every(a=>a.errorMs<=250),'cue onset follows the drawing clock within 250 ms: '+JSON.stringify(cueAcks));
+    assert.equal(await js("document.querySelectorAll('.board-beats button').length"),3);
+    await js("document.querySelector('.board-beats button:last-child').click(); document.querySelector('[aria-label=\"Lesson speed\"]').value='1.5';document.querySelector('[aria-label=\"Lesson speed\"]').dispatchEvent(new Event('change',{bubbles:true}))");
+    assert.deepEqual(boardActions.at(-2),{type:'jump',beat:2});assert.deepEqual(boardActions.at(-1),{type:'speed',speed:1.5});
+    const swapped=input.map(e=>e.id==='a'?{...e,x:380}:e.id==='b'?{...e,x:80}:e);
+    overlay.webContents.send('board:state',{...teach,beat:1,elements:layoutScene(swapped),drawing:{key:31,beat:1,ids:['a','b','edge'],durationMs:700,cues:[{id:'a',startMs:0,durationMs:300},{id:'b',startMs:0,durationMs:300},{id:'edge',startMs:0,durationMs:300}]},transition:{before:layoutScene(input),erased:[],changed:['a','b','edge']},effects:[{kind:'dim',ids:['a']},{kind:'pulse',ids:['a']},{kind:'badge',id:'a',number:1}]});
+    await delay(100);assert.ok(await js("!!document.querySelector('[data-el=a]').getAttribute('transform')&&!!document.querySelector('[data-el=b]').getAttribute('transform')"),'both values move in the same frame');
+    fs.writeFileSync(path.join(temporary,'board-teaching.png'),(await overlay.webContents.capturePage()).toPNG());
+    for(let i=0;i<100&&!drawnAcks.some(a=>a[1]===31);i++)await delay(30);
+    assert.ok(drawnAcks.some(a=>a[1]===31),'swap and emphasis finish');
+    const final=[{...swapped[0],label:'4'}];
+    overlay.webContents.send('board:state',{...teach,beat:2,elements:layoutScene(final),drawing:{key:32,beat:2,ids:['a'],durationMs:900,cues:[{id:'a',startMs:0,durationMs:500}]},transition:{before:layoutScene(swapped),erased:['b','edge'],changed:['a']},effects:[{kind:'underline',ids:['a']},{kind:'strike',ids:['a']}],recap:true,highlight:['a']});
+    await delay(100);assert.ok(await js("!!document.querySelector('[data-el=b]')"),'erased values remain for the eraser animation');
+    for(let i=0;i<100&&!drawnAcks.some(a=>a[1]===32);i++)await delay(30);
+    assert.ok(drawnAcks.some(a=>a[1]===32));
+    overlay.webContents.send('board:state',{...teach,status:'asking',beat:2,elements:layoutScene(final),drawing:null,note:'Which value remains?',breadcrumbs:['Sorting']});await delay(100);
+    assert.match(await js("document.querySelector('.board-caption').textContent"),/Sorting.*Which value remains/);assert.equal(await js("document.querySelector('[data-el=b]')"),null);
+    await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Go back').click()");assert.equal(boardActions.at(-1),'back');
+    const {compileScript}=require('../src/shared/board/compile.ts'),{formulaPaths,closeMathWorker}=require('../src/main/board/math.ts');
+    let maths;try{maths=await compileScript({version:2,title:'Solve for x',family:'steps',mode:'new',nodes:[{id:'eq',label:'Subtract two',tex:'x+2=5'},{id:'answer',label:'Answer',tex:'x=3'}],edges:[],beats:[{say:'Subtract two.',reveal:['eq','answer']}]},{formula:formulaPaths});}finally{closeMathWorker();}
+    const mathElements=layoutScene(maths.beats.reduce(applyBeat,[]));overlay.webContents.send('board:state',{...teach,id:31,title:maths.title,status:'done',beat:0,total:1,elements:mathElements,drawing:null,note:'x equals three.'});await delay(200);
+    assert.ok(await js("document.querySelector('[data-el=eq] path').getTotalLength()>0"));fs.writeFileSync(path.join(temporary,'board-maths.png'),(await overlay.webContents.capturePage()).toPNG());
+    if(process.env.KITE_BOARD_PHASE3_REPORT){const out=path.resolve(process.env.KITE_BOARD_PHASE3_REPORT);fs.mkdirSync(path.dirname(out),{recursive:true});fs.writeFileSync(out,JSON.stringify({checkedAt:new Date().toISOString(),conditions:'Real offscreen overlay, ordinary motion, synthetic cue timings with voice off. Measures SVG onset against its local drawing clock, not live Cartesia word accuracy or network dead air.',cueAcks,medianCueErrorMs:cueAcks.filter(a=>a.key===30).map(a=>a.errorMs).sort((a,b)=>a-b)[1],liveVoiceGate:'Measured separately in phase3-live.json; this report uses synthetic cue timings',clarityGate:'pending human/provider comparison'},null,2)+'\n');}
+    overlay.webContents.send('board:state',null);await delay(80);
     // Tasks: the approval card offers task-wide or step-by-step trust; the task card shows progress, confirmations, and Stop.
     const taskActions=[],taskBounds=[];ipcMain.on('test:task',(_e,a)=>taskActions.push(a));ipcMain.on('test:taskBounds',(_e,b)=>taskBounds.push(b));
     overlay.webContents.send('test:voice',{id:300,type:'model:changed',text:'Preview'});await delay(50);

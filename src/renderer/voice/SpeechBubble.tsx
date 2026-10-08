@@ -76,6 +76,7 @@ export function SpeechBubble() {
     });
     voiceRuntime.tickAudio = dt => {
       recorder.sample(dt); runtime.speechLevel = player.sample(dt);
+      voiceRuntime.audioId = state.current.id; voiceRuntime.audioMs = speaking ? player.elapsed * 1000 : -1;
       if (speaking && words.length && !state.current.approval) {
         const elapsed = player.elapsed;
         let reveal = state.current.revealed === Infinity ? 0 : state.current.revealed;

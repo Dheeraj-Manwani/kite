@@ -13,10 +13,35 @@ export class TTSService {
   private idle?: ReturnType<typeof setTimeout>;
   private job?: Job;
   private generation = 0;
+  private prepared?: { text: string; voice: string; speed: number; engine: TTSService; events: VoiceEvent[]; bytes: number; failed: boolean; playing?: number };
+  private preparedPlaying?: { id: number; engine: TTSService };
   constructor(private getKey: () => string | undefined, private emit: (event: VoiceEvent) => void,
     private createSocket: SocketFactory = key => new WebSocket('wss://api.cartesia.ai/tts/websocket', {
       headers: { Authorization: `Bearer ${key}`, 'Cartesia-Version': cartesiaVersion }, handshakeTimeout: 10000,
     })) {}
+  /** One upcoming caption only; no audio reaches playback until its beat begins. */
+  prefetch(text: string, settings: AppSettings) {
+    this.clearPrefetch(); if (!settings.ttsEnabled || !settings.voiceId || !this.getKey()) return;
+    const prepared = { text, voice: settings.voiceId, speed: settings.speed, engine: undefined as TTSService, events: [] as VoiceEvent[], bytes: 0, failed: false, playing: undefined as number | undefined };
+    const engine = new TTSService(this.getKey, event => {
+      if (event.type === 'tts:error') prepared.failed = true;
+      prepared.bytes += event.audio?.byteLength ?? 0;
+      if (prepared.bytes > 12_000_000) { prepared.failed = true; engine.close(); return; }
+      if (prepared.playing !== undefined) this.emit({ ...event, id: prepared.playing }); else prepared.events.push(event);
+    }, this.createSocket);
+    prepared.engine = engine; this.prepared = prepared;
+    engine.start(-1, settings); engine.push(-1, text); engine.finish(-1);
+  }
+  clearPrefetch() { const prepared = this.prepared; this.prepared = undefined; prepared?.engine.close(); }
+  /** Adopt a prefetched stream (including a still-arriving tail), or synthesize normally. */
+  speak(id: number, settings: AppSettings, text: string) {
+    const ready = this.prepared; this.prepared = undefined;
+    if (ready && !ready.failed && ready.text === text && ready.voice === settings.voiceId && ready.speed === settings.speed) {
+      this.cancel(); ready.playing = id; this.preparedPlaying = { id, engine: ready.engine };
+      for (const event of ready.events) this.emit({ ...event, id }); ready.events = []; return;
+    }
+    ready?.engine.close(); this.start(id, settings); this.push(id, text); this.finish(id);
+  }
   private async connect(): Promise<WebSocket> {
     clearTimeout(this.idle);
     if (this.socket?.readyState === WebSocket.OPEN) return this.socket;
@@ -83,8 +108,9 @@ export class TTSService {
       this.emit({ type: 'tts:chunk', id: job.id, audio: bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer });
     } else if (event.type === 'timestamps' && event.word_timestamps) {
       const t = event.word_timestamps;
-      if (Array.isArray(t.words) && Array.isArray(t.start) && Array.isArray(t.end) && t.words.length === t.start.length
-        && t.words.every(w => typeof w === 'string') && t.start.every(n => Number.isFinite(n) && n >= 0))
+      if (Array.isArray(t.words) && Array.isArray(t.start) && Array.isArray(t.end) && t.words.length === t.start.length && t.words.length === t.end.length
+        && t.words.every(w => typeof w === 'string') && t.start.every(n => Number.isFinite(n) && n >= 0)
+        && t.end.every((n, i) => Number.isFinite(n) && n >= t.start[i]))
         this.emit({ type: 'tts:timestamps', id: job.id, timestamps: t });
     } else if (event.type === 'error') this.fail(job);
     else if (event.type === 'done') { job.finished = true; clearTimeout(job.timer); this.emit({ type: 'tts:done', id: job.id }); this.armIdle(); }
@@ -94,6 +120,7 @@ export class TTSService {
     this.emit({ type: 'tts:error', id: job.id, text: 'Voice is unavailable. Showing the reply as text.' }); this.cancel();
   }
   cancel() {
+    const playing = this.preparedPlaying; this.preparedPlaying = undefined; if (playing) { playing.engine.close(); this.emit({ type: 'tts:stop', id: playing.id }); }
     const job = this.job;
     if (job && !job.cancelled) {
       job.cancelled = true; clearTimeout(job.timer);
@@ -105,5 +132,5 @@ export class TTSService {
     this.job = undefined; this.armIdle();
   }
   private armIdle() { clearTimeout(this.idle); this.idle = setTimeout(() => this.close(), ttsConfig.idleMs); }
-  close() { this.cancel(); clearTimeout(this.idle); this.generation++; this.socket?.terminate(); this.socket = undefined; this.connecting = undefined; }
+  close() { this.clearPrefetch(); this.cancel(); clearTimeout(this.idle); this.generation++; this.socket?.terminate(); this.socket = undefined; this.connecting = undefined; }
 }

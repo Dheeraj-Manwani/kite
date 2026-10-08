@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 /** Vite externals and the packaging dependency roots share this source of truth. */
-export const runtimeModules = ['better-sqlite3', 'uiohook-napi', 'ws', 'electron-log', 'update-electron-app'];
+export const runtimeModules = ['better-sqlite3', 'uiohook-napi', 'ws', 'electron-log', 'update-electron-app', 'elkjs', '@mathjax/src'];
 async function packageRoot(name: string, from: string) {
   try { return path.dirname(require.resolve(`${name}/package.json`, { paths: [from] })); }
   catch {

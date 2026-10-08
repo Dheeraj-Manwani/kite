@@ -1,0 +1,4823 @@
+{
+  "phase": 2,
+  "about": "Fresh phase-2 specialist generations, recompiled through the current deterministic layout. Ready time is not renderer first stroke. Failed calls count against the full prompt denominator; crossings are recorded separately from the lint-clean gate.",
+  "updated": "2026-10-08T04:57:46.491Z",
+  "revalidatedAt": "2026-10-08T05:14:04.678Z",
+  "display": {
+    "width": 1920,
+    "height": 1080
+  },
+  "panel": {
+    "width": 1400,
+    "height": 900
+  },
+  "models": [
+    {
+      "model": "deepseek:deepseek-flash:lines",
+      "label": "deepseek:deepseek-flash (lines)",
+      "ranAt": "2026-10-08T04:57:46.491Z",
+      "runs": [
+        {
+          "id": "tcp-handshake",
+          "family": "sequence",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "Explain how the TCP three-way handshake works.",
+              "outputTokens": 266,
+              "firstBeatMs": 1245,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "TCP Three-Way Handshake",
+                "family": "sequence",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "client",
+                    "label": "Client"
+                  },
+                  {
+                    "id": "server",
+                    "label": "Server"
+                  },
+                  {
+                    "id": "syn",
+                    "label": "SYN sent"
+                  },
+                  {
+                    "id": "synack",
+                    "label": "SYN-ACK sent"
+                  },
+                  {
+                    "id": "ack",
+                    "label": "ACK sent"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "client",
+                    "to": "syn",
+                    "label": "SYN"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "syn",
+                    "to": "server",
+                    "label": "SYN"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "server",
+                    "to": "synack",
+                    "label": "SYN-ACK"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "synack",
+                    "to": "client",
+                    "label": "SYN-ACK"
+                  },
+                  {
+                    "id": "e4",
+                    "from": "client",
+                    "to": "ack",
+                    "label": "ACK"
+                  },
+                  {
+                    "id": "e5",
+                    "from": "ack",
+                    "to": "server",
+                    "label": "ACK"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "Both sides start out disconnected. The client wants to open a connection to the server.",
+                    "reveal": [
+                      "client",
+                      "server"
+                    ]
+                  },
+                  {
+                    "say": "The client sends a SYN packet to the server to request a connection.",
+                    "reveal": [
+                      "syn",
+                      "e0",
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "The server replies with a SYN-ACK, acknowledging the request and asking for confirmation.",
+                    "reveal": [
+                      "synack",
+                      "e2",
+                      "e3"
+                    ]
+                  },
+                  {
+                    "say": "The client sends an ACK back, confirming the server's response.",
+                    "reveal": [
+                      "ack",
+                      "e4",
+                      "e5"
+                    ]
+                  },
+                  {
+                    "say": "After these three steps, both sides agree the connection is open and data can flow.",
+                    "reveal": [
+                      "client",
+                      "server",
+                      "syn",
+                      "synack",
+                      "ack"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "TCP Three-Way Handshake",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "Both sides start out disconnected. The client wants to open a connection to the server.",
+                    "draw": [
+                      {
+                        "id": "board_title_1219880883",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "TCP Three-Way Handshake",
+                        "size": "title"
+                      },
+                      {
+                        "id": "client",
+                        "type": "rectangle",
+                        "label": "Client",
+                        "x": 60,
+                        "y": 140,
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "client_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 120,
+                            "y": 220
+                          },
+                          {
+                            "x": 120,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "server",
+                        "type": "rectangle",
+                        "label": "Server",
+                        "x": 400,
+                        "y": 140,
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "server_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 460,
+                            "y": 220
+                          },
+                          {
+                            "x": 460,
+                            "y": 834
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The client sends a SYN packet to the server to request a connection.",
+                    "draw": [
+                      {
+                        "id": "syn",
+                        "type": "rectangle",
+                        "label": "SYN sent",
+                        "x": 740,
+                        "y": 140,
+                        "width": 120,
+                        "height": 76
+                      },
+                      {
+                        "id": "syn_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 801.77,
+                            "y": 220
+                          },
+                          {
+                            "x": 801.77,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "label": "SYN",
+                        "points": [
+                          {
+                            "x": 120,
+                            "y": 294
+                          },
+                          {
+                            "x": 801.77,
+                            "y": 294
+                          }
+                        ],
+                        "halo": true
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "label": "SYN",
+                        "points": [
+                          {
+                            "x": 801.77,
+                            "y": 384
+                          },
+                          {
+                            "x": 460,
+                            "y": 384
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The server replies with a SYN-ACK, acknowledging the request and asking for confirmation.",
+                    "draw": [
+                      {
+                        "id": "synack",
+                        "type": "rectangle",
+                        "label": "SYN-ACK sent",
+                        "x": 1083.54,
+                        "y": 140,
+                        "width": 121,
+                        "height": 76
+                      },
+                      {
+                        "id": "synack_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1168.6,
+                            "y": 220
+                          },
+                          {
+                            "x": 1168.6,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "label": "SYN-ACK",
+                        "points": [
+                          {
+                            "x": 460,
+                            "y": 474
+                          },
+                          {
+                            "x": 1168.6,
+                            "y": 474
+                          }
+                        ],
+                        "halo": true
+                      },
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "label": "SYN-ACK",
+                        "points": [
+                          {
+                            "x": 1168.6,
+                            "y": 564
+                          },
+                          {
+                            "x": 120,
+                            "y": 564
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The client sends an ACK back, confirming the server's response.",
+                    "draw": [
+                      {
+                        "id": "ack",
+                        "type": "rectangle",
+                        "label": "ACK sent",
+                        "x": 1473.6599999999999,
+                        "y": 140,
+                        "width": 120,
+                        "height": 76
+                      },
+                      {
+                        "id": "ack_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1536.4299999999998,
+                            "y": 220
+                          },
+                          {
+                            "x": 1536.4299999999998,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e4",
+                        "type": "arrow",
+                        "label": "ACK",
+                        "points": [
+                          {
+                            "x": 120,
+                            "y": 654
+                          },
+                          {
+                            "x": 1536.4299999999998,
+                            "y": 654
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e5",
+                        "type": "arrow",
+                        "label": "ACK",
+                        "points": [
+                          {
+                            "x": 1536.4299999999998,
+                            "y": 744
+                          },
+                          {
+                            "x": 460,
+                            "y": 744
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "After these three steps, both sides agree the connection is open and data can flow.",
+                    "draw": []
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "TCP Three-Way Handshake",
+                  "family": "sequence",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "client",
+                      "label": "Client"
+                    },
+                    {
+                      "id": "server",
+                      "label": "Server"
+                    },
+                    {
+                      "id": "syn",
+                      "label": "SYN sent"
+                    },
+                    {
+                      "id": "synack",
+                      "label": "SYN-ACK sent"
+                    },
+                    {
+                      "id": "ack",
+                      "label": "ACK sent"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "client",
+                      "to": "syn",
+                      "label": "SYN"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "syn",
+                      "to": "server",
+                      "label": "SYN"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "server",
+                      "to": "synack",
+                      "label": "SYN-ACK"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "synack",
+                      "to": "client",
+                      "label": "SYN-ACK"
+                    },
+                    {
+                      "id": "e4",
+                      "from": "client",
+                      "to": "ack",
+                      "label": "ACK"
+                    },
+                    {
+                      "id": "e5",
+                      "from": "ack",
+                      "to": "server",
+                      "label": "ACK"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "Both sides start out disconnected. The client wants to open a connection to the server.",
+                      "reveal": [
+                        "client",
+                        "server"
+                      ]
+                    },
+                    {
+                      "say": "The client sends a SYN packet to the server to request a connection.",
+                      "reveal": [
+                        "syn",
+                        "e0",
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "The server replies with a SYN-ACK, acknowledging the request and asking for confirmation.",
+                      "reveal": [
+                        "synack",
+                        "e2",
+                        "e3"
+                      ]
+                    },
+                    {
+                      "say": "The client sends an ACK back, confirming the server's response.",
+                      "reveal": [
+                        "ack",
+                        "e4",
+                        "e5"
+                      ]
+                    },
+                    {
+                      "say": "After these three steps, both sides agree the connection is open and data can flow.",
+                      "reveal": [
+                        "client",
+                        "server",
+                        "syn",
+                        "synack",
+                        "ack"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 17,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 12,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 1,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.4
+                },
+                "issues": [],
+                "beats": 5,
+                "newPerBeat": {
+                  "max": 5,
+                  "mean": 3.4
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "react-rendering",
+          "family": "flow",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "How does React decide what to re-render?",
+              "outputTokens": 282,
+              "firstBeatMs": 2104,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "React Re-render Decision",
+                "family": "flow",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "State or props change"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "Render phase runs"
+                  },
+                  {
+                    "id": "n2",
+                    "label": "Compare output"
+                  },
+                  {
+                    "id": "n3",
+                    "label": "DOM updated"
+                  },
+                  {
+                    "id": "n4",
+                    "label": "Reconciliation"
+                  },
+                  {
+                    "id": "n5",
+                    "label": "Key match?"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n2"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n2",
+                    "to": "n3"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "n2",
+                    "to": "n4"
+                  },
+                  {
+                    "id": "e4",
+                    "from": "n4",
+                    "to": "n5"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "A re-render starts when state or props change.",
+                    "reveal": [
+                      "n0"
+                    ],
+                    "highlight": [
+                      "n0"
+                    ]
+                  },
+                  {
+                    "say": "React runs the render phase.",
+                    "reveal": [
+                      "n0",
+                      "n1",
+                      "e0"
+                    ],
+                    "highlight": [
+                      "n1"
+                    ]
+                  },
+                  {
+                    "say": "It compares the new output to the previous output.",
+                    "reveal": [
+                      "n1",
+                      "n2",
+                      "e1"
+                    ],
+                    "highlight": [
+                      "n2"
+                    ]
+                  },
+                  {
+                    "say": "If something changed, the DOM is updated.",
+                    "reveal": [
+                      "n2",
+                      "n3",
+                      "e2"
+                    ],
+                    "highlight": [
+                      "n3"
+                    ]
+                  },
+                  {
+                    "say": "The reconciliation step walks the element tree.",
+                    "reveal": [
+                      "n2",
+                      "n4",
+                      "e3"
+                    ],
+                    "highlight": [
+                      "n4"
+                    ]
+                  },
+                  {
+                    "say": "Keys and component identity decide what is kept.",
+                    "reveal": [
+                      "n4",
+                      "n5",
+                      "e4"
+                    ],
+                    "highlight": [
+                      "n5",
+                      "n4"
+                    ]
+                  },
+                  {
+                    "say": "So React skips unchanged parts and updates only what differs.",
+                    "reveal": [
+                      "n0",
+                      "n1",
+                      "n2",
+                      "n3",
+                      "n4",
+                      "n5"
+                    ],
+                    "highlight": [
+                      "n2",
+                      "n5"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "React Re-render Decision",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "A re-render starts when state or props change.",
+                    "draw": [
+                      {
+                        "id": "board_title_483394446",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "React Re-render Decision",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "rectangle",
+                        "label": "State or props change",
+                        "x": 100,
+                        "y": 292,
+                        "width": 255,
+                        "height": 64
+                      }
+                    ],
+                    "highlight": [
+                      "n0"
+                    ]
+                  },
+                  {
+                    "say": "React runs the render phase.",
+                    "draw": [
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "Render phase runs",
+                        "x": 534.94,
+                        "y": 292,
+                        "width": 215,
+                        "height": 64
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "from": "n0",
+                        "to": "n1",
+                        "points": [
+                          {
+                            "x": 363,
+                            "y": 324
+                          },
+                          {
+                            "x": 526.94,
+                            "y": 324
+                          }
+                        ]
+                      }
+                    ],
+                    "highlight": [
+                      "n1"
+                    ]
+                  },
+                  {
+                    "say": "It compares the new output to the previous output.",
+                    "draw": [
+                      {
+                        "id": "n2",
+                        "type": "rectangle",
+                        "label": "Compare output",
+                        "x": 929.7800000000001,
+                        "y": 292,
+                        "width": 190,
+                        "height": 64
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "from": "n1",
+                        "to": "n2",
+                        "points": [
+                          {
+                            "x": 757.94,
+                            "y": 324
+                          },
+                          {
+                            "x": 921.7800000000002,
+                            "y": 324
+                          }
+                        ]
+                      }
+                    ],
+                    "highlight": [
+                      "n2"
+                    ]
+                  },
+                  {
+                    "say": "If something changed, the DOM is updated.",
+                    "draw": [
+                      {
+                        "id": "n3",
+                        "type": "rectangle",
+                        "label": "DOM updated",
+                        "x": 1299.64,
+                        "y": 210,
+                        "width": 170,
+                        "height": 64
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "from": "n2",
+                        "to": "n3",
+                        "points": [
+                          {
+                            "x": 1127.5800608792592,
+                            "y": 300.5753209801055
+                          },
+                          {
+                            "x": 1291.839939120741,
+                            "y": 263.14601509503484
+                          }
+                        ]
+                      }
+                    ],
+                    "highlight": [
+                      "n3"
+                    ]
+                  },
+                  {
+                    "say": "The reconciliation step walks the element tree.",
+                    "draw": [
+                      {
+                        "id": "n4",
+                        "type": "rectangle",
+                        "label": "Reconciliation",
+                        "x": 1300.19,
+                        "y": 374,
+                        "width": 171,
+                        "height": 64
+                      },
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "from": "n2",
+                        "to": "n4",
+                        "points": [
+                          {
+                            "x": 1127.581179611507,
+                            "y": 347.35678348658547
+                          },
+                          {
+                            "x": 1292.3888203884933,
+                            "y": 384.80164936370966
+                          }
+                        ]
+                      }
+                    ],
+                    "highlight": [
+                      "n4"
+                    ]
+                  },
+                  {
+                    "say": "Keys and component identity decide what is kept.",
+                    "draw": [
+                      {
+                        "id": "n5",
+                        "type": "rectangle",
+                        "label": "Key match?",
+                        "x": 1649.1200000000001,
+                        "y": 292,
+                        "width": 145,
+                        "height": 64
+                      },
+                      {
+                        "id": "e4",
+                        "type": "arrow",
+                        "from": "n4",
+                        "to": "n5",
+                        "points": [
+                          {
+                            "x": 1478.9618118469002,
+                            "y": 383.2324931639157
+                          },
+                          {
+                            "x": 1641.3481881531,
+                            "y": 343.5942266884345
+                          }
+                        ]
+                      }
+                    ],
+                    "highlight": [
+                      "n5",
+                      "n4"
+                    ]
+                  },
+                  {
+                    "say": "So React skips unchanged parts and updates only what differs.",
+                    "draw": [],
+                    "highlight": [
+                      "n2",
+                      "n5"
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "React Re-render Decision",
+                  "family": "flow",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "State or props change"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "Render phase runs"
+                    },
+                    {
+                      "id": "n2",
+                      "label": "Compare output"
+                    },
+                    {
+                      "id": "n3",
+                      "label": "DOM updated"
+                    },
+                    {
+                      "id": "n4",
+                      "label": "Reconciliation"
+                    },
+                    {
+                      "id": "n5",
+                      "label": "Key match?"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n2"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n2",
+                      "to": "n3"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "n2",
+                      "to": "n4"
+                    },
+                    {
+                      "id": "e4",
+                      "from": "n4",
+                      "to": "n5"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "A re-render starts when state or props change.",
+                      "reveal": [
+                        "n0"
+                      ],
+                      "highlight": [
+                        "n0"
+                      ]
+                    },
+                    {
+                      "say": "React runs the render phase.",
+                      "reveal": [
+                        "n0",
+                        "n1",
+                        "e0"
+                      ],
+                      "highlight": [
+                        "n1"
+                      ]
+                    },
+                    {
+                      "say": "It compares the new output to the previous output.",
+                      "reveal": [
+                        "n1",
+                        "n2",
+                        "e1"
+                      ],
+                      "highlight": [
+                        "n2"
+                      ]
+                    },
+                    {
+                      "say": "If something changed, the DOM is updated.",
+                      "reveal": [
+                        "n2",
+                        "n3",
+                        "e2"
+                      ],
+                      "highlight": [
+                        "n3"
+                      ]
+                    },
+                    {
+                      "say": "The reconciliation step walks the element tree.",
+                      "reveal": [
+                        "n2",
+                        "n4",
+                        "e3"
+                      ],
+                      "highlight": [
+                        "n4"
+                      ]
+                    },
+                    {
+                      "say": "Keys and component identity decide what is kept.",
+                      "reveal": [
+                        "n4",
+                        "n5",
+                        "e4"
+                      ],
+                      "highlight": [
+                        "n5",
+                        "n4"
+                      ]
+                    },
+                    {
+                      "say": "So React skips unchanged parts and updates only what differs.",
+                      "reveal": [
+                        "n0",
+                        "n1",
+                        "n2",
+                        "n3",
+                        "n4",
+                        "n5"
+                      ],
+                      "highlight": [
+                        "n2",
+                        "n5"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 12,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 7,
+                "minTextPx": 14.9,
+                "smallText": 0,
+                "overviewTextPx": 14.9,
+                "colors": 1,
+                "labelWords": {
+                  "max": 4,
+                  "mean": 2.4
+                },
+                "issues": [],
+                "beats": 7,
+                "newPerBeat": {
+                  "max": 2,
+                  "mean": 1.7
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        }
+      ],
+      "prompts": 2,
+      "summary": {
+        "prompts": 2,
+        "drew": 2,
+        "validFirstTry": 1,
+        "repairs": 0,
+        "lintClean": 1,
+        "medianMs": {
+          "firstBeat": 1674.5,
+          "firstToken": null,
+          "firstStroke": null,
+          "total": null
+        },
+        "medianOutputTokens": 274,
+        "mean": {
+          "overlaps": 0,
+          "through": 0,
+          "crossings": 0
+        },
+        "minTextPx": {
+          "median": 14.45
+        },
+        "smallTextShare": 0
+      }
+    },
+    {
+      "model": "deepseek:deepseek-flash:json",
+      "label": "deepseek:deepseek-flash (json)",
+      "ranAt": "2026-10-08T04:57:46.491Z",
+      "runs": [
+        {
+          "id": "tcp-handshake",
+          "family": "sequence",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "Explain how the TCP three-way handshake works.",
+              "outputTokens": 210,
+              "firstBeatMs": 1330,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "TCP Three-Way Handshake",
+                "family": "sequence",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "Client",
+                    "icon": "device-laptop"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "Server",
+                    "icon": "server"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1",
+                    "label": "SYN"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n0",
+                    "label": "SYN-ACK"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n0",
+                    "to": "n1",
+                    "label": "ACK"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "Before sending data, the client asks to connect by sending a SYN packet.",
+                    "reveal": [
+                      "n0",
+                      "n1",
+                      "e0"
+                    ]
+                  },
+                  {
+                    "say": "The server acknowledges and replies with its own SYN-ACK.",
+                    "reveal": [
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "The client confirms with an ACK. The connection is now open in both directions.",
+                    "reveal": [
+                      "e2"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "TCP Three-Way Handshake",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "Before sending data, the client asks to connect by sending a SYN packet.",
+                    "draw": [
+                      {
+                        "id": "board_title_1219880883",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "TCP Three-Way Handshake",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "rectangle",
+                        "label": "Client",
+                        "x": 60,
+                        "y": 140,
+                        "icon": "device-laptop",
+                        "width": 153,
+                        "height": 64
+                      },
+                      {
+                        "id": "n0_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 220
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 564
+                          }
+                        ]
+                      },
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "Server",
+                        "x": 430.28,
+                        "y": 140,
+                        "icon": "server",
+                        "width": 159,
+                        "height": 64
+                      },
+                      {
+                        "id": "n1_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 508.72999999999996,
+                            "y": 220
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 564
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "label": "SYN",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 294
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 294
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The server acknowledges and replies with its own SYN-ACK.",
+                    "draw": [
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "label": "SYN-ACK",
+                        "points": [
+                          {
+                            "x": 508.72999999999996,
+                            "y": 384
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 384
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The client confirms with an ACK. The connection is now open in both directions.",
+                    "draw": [
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "label": "ACK",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 474
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 474
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "TCP Three-Way Handshake",
+                  "family": "sequence",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "Client",
+                      "icon": "device-laptop"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "Server",
+                      "icon": "server"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1",
+                      "label": "SYN"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n0",
+                      "label": "SYN-ACK"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n0",
+                      "to": "n1",
+                      "label": "ACK"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "Before sending data, the client asks to connect by sending a SYN packet.",
+                      "reveal": [
+                        "n0",
+                        "n1",
+                        "e0"
+                      ]
+                    },
+                    {
+                      "say": "The server acknowledges and replies with its own SYN-ACK.",
+                      "reveal": [
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "The client confirms with an ACK. The connection is now open in both directions.",
+                      "reveal": [
+                        "e2"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 8,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 6,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 1,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.3
+                },
+                "issues": [],
+                "beats": 3,
+                "newPerBeat": {
+                  "max": 6,
+                  "mean": 2.7
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "react-rendering",
+          "family": "flow",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "How does React decide what to re-render?",
+              "outputTokens": 368,
+              "firstBeatMs": 1872,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "React re-render decision",
+                "family": "flow",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "State or props change",
+                    "icon": "git-branch",
+                    "shape": "ellipse"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "New element tree",
+                    "icon": "code"
+                  },
+                  {
+                    "id": "n2",
+                    "label": "Compare with previous",
+                    "icon": "search"
+                  },
+                  {
+                    "id": "n3",
+                    "label": "Changed?",
+                    "icon": "git-branch",
+                    "shape": "diamond"
+                  },
+                  {
+                    "id": "n4",
+                    "label": "Update DOM",
+                    "icon": "device-laptop"
+                  },
+                  {
+                    "id": "n5",
+                    "label": "Keep DOM",
+                    "icon": "lock"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n2"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n2",
+                    "to": "n3"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "n3",
+                    "to": "n4",
+                    "label": "yes"
+                  },
+                  {
+                    "id": "e4",
+                    "from": "n3",
+                    "to": "n5",
+                    "label": "no"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "React re-renders when state or props change. It builds a new element tree.",
+                    "reveal": [
+                      "n0",
+                      "n1",
+                      "e0"
+                    ]
+                  },
+                  {
+                    "say": "Then it compares that tree with the previous one.",
+                    "reveal": [
+                      "n2",
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "For each node it asks: did anything actually change?",
+                    "reveal": [
+                      "n3",
+                      "e2"
+                    ]
+                  },
+                  {
+                    "say": "If yes, it updates that part of the real DOM.",
+                    "reveal": [
+                      "n4",
+                      "e3"
+                    ]
+                  },
+                  {
+                    "say": "If no, the DOM is left alone — that's the saving.",
+                    "reveal": [
+                      "n5",
+                      "e4"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "React re-render decision",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "React re-renders when state or props change. It builds a new element tree.",
+                    "draw": [
+                      {
+                        "id": "board_title_2197500686",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "React re-render decision",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "ellipse",
+                        "label": "State or props change",
+                        "x": 100,
+                        "y": 282,
+                        "icon": "git-branch",
+                        "width": 448,
+                        "height": 84
+                      },
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "New element tree",
+                        "x": 727.2148000000001,
+                        "y": 292,
+                        "icon": "code",
+                        "width": 262,
+                        "height": 64
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "from": "n0",
+                        "to": "n1",
+                        "points": [
+                          {
+                            "x": 556,
+                            "y": 324
+                          },
+                          {
+                            "x": 719.2148000000001,
+                            "y": 324
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Then it compares that tree with the previous one.",
+                    "draw": [
+                      {
+                        "id": "n2",
+                        "type": "rectangle",
+                        "label": "Compare with previous",
+                        "x": 1168.7948000000001,
+                        "y": 292,
+                        "icon": "search",
+                        "width": 312,
+                        "height": 64
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "from": "n1",
+                        "to": "n2",
+                        "points": [
+                          {
+                            "x": 997.2148000000001,
+                            "y": 324
+                          },
+                          {
+                            "x": 1160.7948000000001,
+                            "y": 324
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "For each node it asks: did anything actually change?",
+                    "draw": [
+                      {
+                        "id": "n3",
+                        "type": "diamond",
+                        "label": "Changed?",
+                        "x": 1659.9348,
+                        "y": 272,
+                        "icon": "git-branch",
+                        "width": 356,
+                        "height": 104
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "from": "n2",
+                        "to": "n3",
+                        "points": [
+                          {
+                            "x": 1488.7948000000001,
+                            "y": 324
+                          },
+                          {
+                            "x": 1651.9348,
+                            "y": 324
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "If yes, it updates that part of the real DOM.",
+                    "draw": [
+                      {
+                        "id": "n4",
+                        "type": "rectangle",
+                        "label": "Update DOM",
+                        "x": 2397.6128000000003,
+                        "y": 210,
+                        "icon": "device-laptop",
+                        "width": 222,
+                        "height": 64
+                      },
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "from": "n3",
+                        "to": "n4",
+                        "label": "yes",
+                        "points": [
+                          {
+                            "x": 1971.3585455989662,
+                            "y": 307.68703440531044
+                          },
+                          {
+                            "x": 2389.671932135127,
+                            "y": 256.5422261724995
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "If no, the DOM is left alone — that's the saving.",
+                    "draw": [
+                      {
+                        "id": "n5",
+                        "type": "rectangle",
+                        "label": "Keep DOM",
+                        "x": 2397.6128000000003,
+                        "y": 374,
+                        "icon": "lock",
+                        "width": 195,
+                        "height": 64
+                      },
+                      {
+                        "id": "e4",
+                        "type": "arrow",
+                        "from": "n3",
+                        "to": "n5",
+                        "label": "no",
+                        "points": [
+                          {
+                            "x": 1970.6001715089126,
+                            "y": 340.55344589096234
+                          },
+                          {
+                            "x": 2389.6743582601207,
+                            "y": 392.8438197525326
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "React re-render decision",
+                  "family": "flow",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "State or props change",
+                      "icon": "git-branch",
+                      "shape": "ellipse"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "New element tree",
+                      "icon": "code"
+                    },
+                    {
+                      "id": "n2",
+                      "label": "Compare with previous",
+                      "icon": "search"
+                    },
+                    {
+                      "id": "n3",
+                      "label": "Changed?",
+                      "icon": "git-branch",
+                      "shape": "diamond"
+                    },
+                    {
+                      "id": "n4",
+                      "label": "Update DOM",
+                      "icon": "device-laptop"
+                    },
+                    {
+                      "id": "n5",
+                      "label": "Keep DOM",
+                      "icon": "lock"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n2"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n2",
+                      "to": "n3"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "n3",
+                      "to": "n4",
+                      "label": "yes"
+                    },
+                    {
+                      "id": "e4",
+                      "from": "n3",
+                      "to": "n5",
+                      "label": "no"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "React re-renders when state or props change. It builds a new element tree.",
+                      "reveal": [
+                        "n0",
+                        "n1",
+                        "e0"
+                      ]
+                    },
+                    {
+                      "say": "Then it compares that tree with the previous one.",
+                      "reveal": [
+                        "n2",
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "For each node it asks: did anything actually change?",
+                      "reveal": [
+                        "n3",
+                        "e2"
+                      ]
+                    },
+                    {
+                      "say": "If yes, it updates that part of the real DOM.",
+                      "reveal": [
+                        "n4",
+                        "e3"
+                      ]
+                    },
+                    {
+                      "say": "If no, the DOM is left alone — that's the saving.",
+                      "reveal": [
+                        "n5",
+                        "e4"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 12,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 9,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 8.3,
+                "colors": 1,
+                "labelWords": {
+                  "max": 4,
+                  "mean": 2.2
+                },
+                "issues": [],
+                "beats": 5,
+                "newPerBeat": {
+                  "max": 4,
+                  "mean": 2.4
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        }
+      ],
+      "prompts": 2,
+      "summary": {
+        "prompts": 2,
+        "drew": 2,
+        "validFirstTry": 1,
+        "repairs": 0,
+        "lintClean": 1,
+        "medianMs": {
+          "firstBeat": 1601,
+          "firstToken": null,
+          "firstStroke": null,
+          "total": null
+        },
+        "medianOutputTokens": 289,
+        "mean": {
+          "overlaps": 0,
+          "through": 0,
+          "crossings": 0
+        },
+        "minTextPx": {
+          "median": 14
+        },
+        "smallTextShare": 0
+      }
+    },
+    {
+      "model": "groq:openai/gpt-oss-120b:lines",
+      "label": "groq:openai/gpt-oss-120b (lines)",
+      "ranAt": "2026-10-08T04:57:46.491Z",
+      "runs": [
+        {
+          "id": "tcp-handshake",
+          "family": "sequence",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "Explain how the TCP three-way handshake works.",
+              "outputTokens": 346,
+              "firstBeatMs": 1104,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "TCP three-way handshake",
+                "family": "sequence",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "Client",
+                    "icon": "device-laptop"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "SYN",
+                    "icon": "message"
+                  },
+                  {
+                    "id": "n2",
+                    "label": "Server",
+                    "icon": "device-server"
+                  },
+                  {
+                    "id": "n3",
+                    "label": "SYN‑ACK",
+                    "icon": "message"
+                  },
+                  {
+                    "id": "n4",
+                    "label": "ACK",
+                    "icon": "message"
+                  },
+                  {
+                    "id": "n5",
+                    "label": "Established",
+                    "icon": "settings"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1",
+                    "label": "send"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n2",
+                    "label": "receive"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n2",
+                    "to": "n3",
+                    "label": "send"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "n3",
+                    "to": "n0",
+                    "label": "receive"
+                  },
+                  {
+                    "id": "e4",
+                    "from": "n0",
+                    "to": "n4",
+                    "label": "send"
+                  },
+                  {
+                    "id": "e5",
+                    "from": "n4",
+                    "to": "n2",
+                    "label": "receive"
+                  },
+                  {
+                    "id": "e6",
+                    "from": "n2",
+                    "to": "n5",
+                    "label": "state"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "Client sends a SYN packet to initiate a connection.",
+                    "reveal": [
+                      "n0",
+                      "n1",
+                      "e0"
+                    ]
+                  },
+                  {
+                    "say": "Server receives the SYN.",
+                    "reveal": [
+                      "n1",
+                      "n2",
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "Server replies with a SYN‑ACK packet.",
+                    "reveal": [
+                      "n2",
+                      "n3",
+                      "e2"
+                    ]
+                  },
+                  {
+                    "say": "Client receives the SYN‑ACK.",
+                    "reveal": [
+                      "n3",
+                      "n0",
+                      "e3"
+                    ]
+                  },
+                  {
+                    "say": "Client sends an ACK confirming receipt.",
+                    "reveal": [
+                      "n0",
+                      "n4",
+                      "e4"
+                    ]
+                  },
+                  {
+                    "say": "Server receives the final ACK.",
+                    "reveal": [
+                      "n4",
+                      "n2",
+                      "e5"
+                    ]
+                  },
+                  {
+                    "say": "Both sides now consider the connection Established.",
+                    "reveal": [
+                      "n2",
+                      "n5",
+                      "e6"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "TCP three-way handshake",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "Client sends a SYN packet to initiate a connection.",
+                    "draw": [
+                      {
+                        "id": "board_title_864405971",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "TCP three-way handshake",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "rectangle",
+                        "label": "Client",
+                        "x": 60,
+                        "y": 140,
+                        "icon": "device-laptop",
+                        "width": 153,
+                        "height": 64
+                      },
+                      {
+                        "id": "n0_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 220
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 924
+                          }
+                        ]
+                      },
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "SYN",
+                        "x": 430.28,
+                        "y": 140,
+                        "icon": "message",
+                        "width": 135,
+                        "height": 64
+                      },
+                      {
+                        "id": "n1_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 496.46,
+                            "y": 220
+                          },
+                          {
+                            "x": 496.46,
+                            "y": 924
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "label": "send",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 294
+                          },
+                          {
+                            "x": 496.46,
+                            "y": 294
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Server receives the SYN.",
+                    "draw": [
+                      {
+                        "id": "n2",
+                        "type": "rectangle",
+                        "label": "Server",
+                        "x": 782.64,
+                        "y": 140,
+                        "icon": "device-server",
+                        "width": 159,
+                        "height": 64
+                      },
+                      {
+                        "id": "n2_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 861.09,
+                            "y": 220
+                          },
+                          {
+                            "x": 861.09,
+                            "y": 924
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "label": "receive",
+                        "points": [
+                          {
+                            "x": 496.46,
+                            "y": 384
+                          },
+                          {
+                            "x": 861.09,
+                            "y": 384
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Server replies with a SYN‑ACK packet.",
+                    "draw": [
+                      {
+                        "id": "n3",
+                        "type": "rectangle",
+                        "label": "SYN‑ACK",
+                        "x": 1159.54,
+                        "y": 140,
+                        "icon": "message",
+                        "width": 184,
+                        "height": 64
+                      },
+                      {
+                        "id": "n3_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1250.11,
+                            "y": 220
+                          },
+                          {
+                            "x": 1250.11,
+                            "y": 924
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "label": "send",
+                        "points": [
+                          {
+                            "x": 861.09,
+                            "y": 474
+                          },
+                          {
+                            "x": 1250.11,
+                            "y": 474
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Client receives the SYN‑ACK.",
+                    "draw": [
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "label": "receive",
+                        "points": [
+                          {
+                            "x": 1250.11,
+                            "y": 564
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 564
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Client sends an ACK confirming receipt.",
+                    "draw": [
+                      {
+                        "id": "n4",
+                        "type": "rectangle",
+                        "label": "ACK",
+                        "x": 1560.6799999999998,
+                        "y": 140,
+                        "icon": "message",
+                        "width": 137,
+                        "height": 64
+                      },
+                      {
+                        "id": "n4_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1627.86,
+                            "y": 220
+                          },
+                          {
+                            "x": 1627.86,
+                            "y": 924
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e4",
+                        "type": "arrow",
+                        "label": "send",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 654
+                          },
+                          {
+                            "x": 1627.86,
+                            "y": 654
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Server receives the final ACK.",
+                    "draw": [
+                      {
+                        "id": "e5",
+                        "type": "arrow",
+                        "label": "receive",
+                        "points": [
+                          {
+                            "x": 1627.86,
+                            "y": 744
+                          },
+                          {
+                            "x": 861.09,
+                            "y": 744
+                          }
+                        ],
+                        "halo": true
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Both sides now consider the connection Established.",
+                    "draw": [
+                      {
+                        "id": "n5",
+                        "type": "rectangle",
+                        "label": "Established",
+                        "x": 1915.04,
+                        "y": 140,
+                        "icon": "settings",
+                        "width": 212,
+                        "height": 64
+                      },
+                      {
+                        "id": "n5_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 2019.59,
+                            "y": 220
+                          },
+                          {
+                            "x": 2019.59,
+                            "y": 924
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e6",
+                        "type": "arrow",
+                        "label": "state",
+                        "points": [
+                          {
+                            "x": 861.09,
+                            "y": 834
+                          },
+                          {
+                            "x": 2019.59,
+                            "y": 834
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "TCP three-way handshake",
+                  "family": "sequence",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "Client",
+                      "icon": "device-laptop"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "SYN",
+                      "icon": "message"
+                    },
+                    {
+                      "id": "n2",
+                      "label": "Server",
+                      "icon": "device-server"
+                    },
+                    {
+                      "id": "n3",
+                      "label": "SYN‑ACK",
+                      "icon": "message"
+                    },
+                    {
+                      "id": "n4",
+                      "label": "ACK",
+                      "icon": "message"
+                    },
+                    {
+                      "id": "n5",
+                      "label": "Established",
+                      "icon": "settings"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1",
+                      "label": "send"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n2",
+                      "label": "receive"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n2",
+                      "to": "n3",
+                      "label": "send"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "n3",
+                      "to": "n0",
+                      "label": "receive"
+                    },
+                    {
+                      "id": "e4",
+                      "from": "n0",
+                      "to": "n4",
+                      "label": "send"
+                    },
+                    {
+                      "id": "e5",
+                      "from": "n4",
+                      "to": "n2",
+                      "label": "receive"
+                    },
+                    {
+                      "id": "e6",
+                      "from": "n2",
+                      "to": "n5",
+                      "label": "state"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "Client sends a SYN packet to initiate a connection.",
+                      "reveal": [
+                        "n0",
+                        "n1",
+                        "e0"
+                      ]
+                    },
+                    {
+                      "say": "Server receives the SYN.",
+                      "reveal": [
+                        "n1",
+                        "n2",
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "Server replies with a SYN‑ACK packet.",
+                      "reveal": [
+                        "n2",
+                        "n3",
+                        "e2"
+                      ]
+                    },
+                    {
+                      "say": "Client receives the SYN‑ACK.",
+                      "reveal": [
+                        "n3",
+                        "n0",
+                        "e3"
+                      ]
+                    },
+                    {
+                      "say": "Client sends an ACK confirming receipt.",
+                      "reveal": [
+                        "n0",
+                        "n4",
+                        "e4"
+                      ]
+                    },
+                    {
+                      "say": "Server receives the final ACK.",
+                      "reveal": [
+                        "n4",
+                        "n2",
+                        "e5"
+                      ]
+                    },
+                    {
+                      "say": "Both sides now consider the connection Established.",
+                      "reveal": [
+                        "n2",
+                        "n5",
+                        "e6"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 20,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 14,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 10.1,
+                "colors": 1,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.1
+                },
+                "issues": [],
+                "beats": 7,
+                "newPerBeat": {
+                  "max": 6,
+                  "mean": 2.9
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "react-rendering",
+          "family": "flow",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "How does React decide what to re-render?",
+              "outputTokens": 251,
+              "firstBeatMs": 1748,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "React render flow",
+                "family": "flow",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "Component render",
+                    "icon": "code"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "State/Props change",
+                    "icon": "code"
+                  },
+                  {
+                    "id": "n2",
+                    "label": "Virtual DOM diff",
+                    "icon": "code"
+                  },
+                  {
+                    "id": "n3",
+                    "label": "Reconciliation",
+                    "icon": "code"
+                  },
+                  {
+                    "id": "n4",
+                    "label": "DOM update",
+                    "icon": "device-laptop"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n2"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n2",
+                    "to": "n3"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "n3",
+                    "to": "n4"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "When a component renders and its state or props change, React marks it for update.",
+                    "reveal": [
+                      "n0",
+                      "n1"
+                    ]
+                  },
+                  {
+                    "say": "It then creates a new virtual DOM and diffs it against the previous one.",
+                    "reveal": [
+                      "n2",
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "The diff result drives reconciliation, deciding which parts actually changed.",
+                    "reveal": [
+                      "n3",
+                      "e2"
+                    ]
+                  },
+                  {
+                    "say": "Only those changed parts cause real DOM updates, minimizing work.",
+                    "reveal": [
+                      "n4",
+                      "e3"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "React render flow",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "When a component renders and its state or props change, React marks it for update.",
+                    "draw": [
+                      {
+                        "id": "board_title_3503608852",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "React render flow",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "rectangle",
+                        "label": "Component render",
+                        "x": 100,
+                        "y": 210,
+                        "icon": "code",
+                        "width": 268,
+                        "height": 76
+                      },
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "State/Props change",
+                        "x": 548,
+                        "y": 210,
+                        "icon": "code",
+                        "width": 294,
+                        "height": 64
+                      }
+                    ]
+                  },
+                  {
+                    "say": "It then creates a new virtual DOM and diffs it against the previous one.",
+                    "draw": [
+                      {
+                        "id": "n2",
+                        "type": "rectangle",
+                        "label": "Virtual DOM diff",
+                        "x": 1021.14,
+                        "y": 210,
+                        "icon": "code",
+                        "width": 259,
+                        "height": 64
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "from": "n1",
+                        "to": "n2",
+                        "points": [
+                          {
+                            "x": 850,
+                            "y": 242
+                          },
+                          {
+                            "x": 1013.1399999999999,
+                            "y": 242
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The diff result drives reconciliation, deciding which parts actually changed.",
+                    "draw": [
+                      {
+                        "id": "n3",
+                        "type": "rectangle",
+                        "label": "Reconciliation",
+                        "x": 1459.26,
+                        "y": 210,
+                        "icon": "code",
+                        "width": 231,
+                        "height": 64
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "from": "n2",
+                        "to": "n3",
+                        "points": [
+                          {
+                            "x": 1288.1399999999999,
+                            "y": 242
+                          },
+                          {
+                            "x": 1451.26,
+                            "y": 242
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Only those changed parts cause real DOM updates, minimizing work.",
+                    "draw": [
+                      {
+                        "id": "n4",
+                        "type": "rectangle",
+                        "label": "DOM update",
+                        "x": 1867.6399999999999,
+                        "y": 210,
+                        "icon": "device-laptop",
+                        "width": 218,
+                        "height": 64
+                      },
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "from": "n3",
+                        "to": "n4",
+                        "points": [
+                          {
+                            "x": 1698.26,
+                            "y": 242
+                          },
+                          {
+                            "x": 1859.6399999999999,
+                            "y": 242
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "React render flow",
+                  "family": "flow",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "Component render",
+                      "icon": "code"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "State/Props change",
+                      "icon": "code"
+                    },
+                    {
+                      "id": "n2",
+                      "label": "Virtual DOM diff",
+                      "icon": "code"
+                    },
+                    {
+                      "id": "n3",
+                      "label": "Reconciliation",
+                      "icon": "code"
+                    },
+                    {
+                      "id": "n4",
+                      "label": "DOM update",
+                      "icon": "device-laptop"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n2"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n2",
+                      "to": "n3"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "n3",
+                      "to": "n4"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "When a component renders and its state or props change, React marks it for update.",
+                      "reveal": [
+                        "n0",
+                        "n1"
+                      ]
+                    },
+                    {
+                      "say": "It then creates a new virtual DOM and diffs it against the previous one.",
+                      "reveal": [
+                        "n2",
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "The diff result drives reconciliation, deciding which parts actually changed.",
+                      "reveal": [
+                        "n3",
+                        "e2"
+                      ]
+                    },
+                    {
+                      "say": "Only those changed parts cause real DOM updates, minimizing work.",
+                      "reveal": [
+                        "n4",
+                        "e3"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 9,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 6,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 12.9,
+                "colors": 1,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 2.2
+                },
+                "issues": [],
+                "beats": 4,
+                "newPerBeat": {
+                  "max": 3,
+                  "mean": 2.3
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        }
+      ],
+      "prompts": 2,
+      "summary": {
+        "prompts": 2,
+        "drew": 2,
+        "validFirstTry": 1,
+        "repairs": 0,
+        "lintClean": 1,
+        "medianMs": {
+          "firstBeat": 1426,
+          "firstToken": null,
+          "firstStroke": null,
+          "total": null
+        },
+        "medianOutputTokens": 298.5,
+        "mean": {
+          "overlaps": 0,
+          "through": 0,
+          "crossings": 0
+        },
+        "minTextPx": {
+          "median": 14
+        },
+        "smallTextShare": 0
+      }
+    },
+    {
+      "model": "groq:openai/gpt-oss-120b:json",
+      "label": "groq:openai/gpt-oss-120b (json)",
+      "ranAt": "2026-10-08T04:57:46.491Z",
+      "runs": [
+        {
+          "id": "tcp-handshake",
+          "family": "sequence",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "Explain how the TCP three-way handshake works.",
+              "outputTokens": 479,
+              "firstBeatMs": 2000,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "TCP three‑way handshake",
+                "family": "sequence",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "c",
+                    "label": "Client"
+                  },
+                  {
+                    "id": "s",
+                    "label": "Server"
+                  },
+                  {
+                    "id": "syn",
+                    "label": "SYN"
+                  },
+                  {
+                    "id": "synack",
+                    "label": "SYN‑ACK"
+                  },
+                  {
+                    "id": "ack",
+                    "label": "ACK"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "c",
+                    "to": "syn",
+                    "label": "send"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "syn",
+                    "to": "s",
+                    "label": "to server"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "s",
+                    "to": "synack",
+                    "label": "reply"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "synack",
+                    "to": "c",
+                    "label": "to client"
+                  },
+                  {
+                    "id": "e4",
+                    "from": "c",
+                    "to": "ack",
+                    "label": "send"
+                  },
+                  {
+                    "id": "e5",
+                    "from": "ack",
+                    "to": "s",
+                    "label": "established"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "The client sends a SYN, the server replies with SYN‑ACK, and the client finishes with ACK. After this three‑step exchange the connection is established.",
+                    "reveal": [
+                      "c",
+                      "s",
+                      "syn",
+                      "synack",
+                      "ack",
+                      "e0",
+                      "e1",
+                      "e2",
+                      "e3",
+                      "e4",
+                      "e5"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "TCP three‑way handshake",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "The client sends a SYN, the server replies with SYN‑ACK, and the client finishes with ACK. After this three‑step exchange the connection is established.",
+                    "draw": [
+                      {
+                        "id": "board_title_3442906103",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "TCP three‑way handshake",
+                        "size": "title"
+                      },
+                      {
+                        "id": "c",
+                        "type": "rectangle",
+                        "label": "Client",
+                        "x": 60,
+                        "y": 140,
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "c_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 120,
+                            "y": 220
+                          },
+                          {
+                            "x": 120,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "s",
+                        "type": "rectangle",
+                        "label": "Server",
+                        "x": 400,
+                        "y": 140,
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "s_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 460,
+                            "y": 220
+                          },
+                          {
+                            "x": 460,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "syn",
+                        "type": "rectangle",
+                        "label": "SYN",
+                        "x": 740,
+                        "y": 140,
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "syn_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 800,
+                            "y": 220
+                          },
+                          {
+                            "x": 800,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "synack",
+                        "type": "rectangle",
+                        "label": "SYN‑ACK",
+                        "x": 1080,
+                        "y": 140,
+                        "width": 124,
+                        "height": 64
+                      },
+                      {
+                        "id": "synack_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1140.57,
+                            "y": 220
+                          },
+                          {
+                            "x": 1140.57,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "ack",
+                        "type": "rectangle",
+                        "label": "ACK",
+                        "x": 1421.1399999999999,
+                        "y": 140,
+                        "width": 120,
+                        "height": 64
+                      },
+                      {
+                        "id": "ack_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1481.1399999999999,
+                            "y": 220
+                          },
+                          {
+                            "x": 1481.1399999999999,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "label": "send",
+                        "points": [
+                          {
+                            "x": 120,
+                            "y": 294
+                          },
+                          {
+                            "x": 800,
+                            "y": 294
+                          }
+                        ],
+                        "halo": true
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "label": "to server",
+                        "points": [
+                          {
+                            "x": 800,
+                            "y": 384
+                          },
+                          {
+                            "x": 460,
+                            "y": 384
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "label": "reply",
+                        "points": [
+                          {
+                            "x": 460,
+                            "y": 474
+                          },
+                          {
+                            "x": 1140.57,
+                            "y": 474
+                          }
+                        ],
+                        "halo": true
+                      },
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "label": "to client",
+                        "points": [
+                          {
+                            "x": 1140.57,
+                            "y": 564
+                          },
+                          {
+                            "x": 120,
+                            "y": 564
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e4",
+                        "type": "arrow",
+                        "label": "send",
+                        "points": [
+                          {
+                            "x": 120,
+                            "y": 654
+                          },
+                          {
+                            "x": 1481.1399999999999,
+                            "y": 654
+                          }
+                        ],
+                        "halo": true
+                      },
+                      {
+                        "id": "e5",
+                        "type": "arrow",
+                        "label": "established",
+                        "points": [
+                          {
+                            "x": 1481.1399999999999,
+                            "y": 744
+                          },
+                          {
+                            "x": 460,
+                            "y": 744
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "TCP three‑way handshake",
+                  "family": "sequence",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "c",
+                      "label": "Client"
+                    },
+                    {
+                      "id": "s",
+                      "label": "Server"
+                    },
+                    {
+                      "id": "syn",
+                      "label": "SYN"
+                    },
+                    {
+                      "id": "synack",
+                      "label": "SYN‑ACK"
+                    },
+                    {
+                      "id": "ack",
+                      "label": "ACK"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "c",
+                      "to": "syn",
+                      "label": "send"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "syn",
+                      "to": "s",
+                      "label": "to server"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "s",
+                      "to": "synack",
+                      "label": "reply"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "synack",
+                      "to": "c",
+                      "label": "to client"
+                    },
+                    {
+                      "id": "e4",
+                      "from": "c",
+                      "to": "ack",
+                      "label": "send"
+                    },
+                    {
+                      "id": "e5",
+                      "from": "ack",
+                      "to": "s",
+                      "label": "established"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "The client sends a SYN, the server replies with SYN‑ACK, and the client finishes with ACK. After this three‑step exchange the connection is established.",
+                      "reveal": [
+                        "c",
+                        "s",
+                        "syn",
+                        "synack",
+                        "ack",
+                        "e0",
+                        "e1",
+                        "e2",
+                        "e3",
+                        "e4",
+                        "e5"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 17,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 12,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 1,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.3
+                },
+                "issues": [],
+                "beats": 1,
+                "newPerBeat": {
+                  "max": 17,
+                  "mean": 17
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "react-rendering",
+          "family": "flow",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "How does React decide what to re-render?",
+              "outputTokens": 394,
+              "firstBeatMs": 2385,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "React Re‑render Decision",
+                "family": "flow",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "State/Prop change",
+                    "icon": "code"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "Render phase",
+                    "icon": "terminal"
+                  },
+                  {
+                    "id": "n2",
+                    "label": "Create VDOM",
+                    "icon": "box"
+                  },
+                  {
+                    "id": "n3",
+                    "label": "Diff with previous VDOM",
+                    "icon": "search"
+                  },
+                  {
+                    "id": "n4",
+                    "label": "Apply updates to real DOM",
+                    "icon": "browser"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n2"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n2",
+                    "to": "n3"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "n3",
+                    "to": "n4"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "When state or props change, React starts a render.",
+                    "reveal": [
+                      "n0",
+                      "n1",
+                      "e0"
+                    ]
+                  },
+                  {
+                    "say": "It builds a new virtual DOM tree.",
+                    "reveal": [
+                      "n2",
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "React diffs this VDOM against the previous one.",
+                    "reveal": [
+                      "n3",
+                      "e2"
+                    ]
+                  },
+                  {
+                    "say": "Only the changed parts are patched into the real DOM.",
+                    "reveal": [
+                      "n4",
+                      "e3"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "React Re‑render Decision",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "When state or props change, React starts a render.",
+                    "draw": [
+                      {
+                        "id": "board_title_4018270074",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "React Re‑render Decision",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "rectangle",
+                        "label": "State/Prop change",
+                        "x": 100,
+                        "y": 216,
+                        "icon": "code",
+                        "width": 283,
+                        "height": 64
+                      },
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "Render phase",
+                        "x": 562.28,
+                        "y": 216,
+                        "icon": "terminal",
+                        "width": 227,
+                        "height": 64
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "from": "n0",
+                        "to": "n1",
+                        "points": [
+                          {
+                            "x": 391,
+                            "y": 248
+                          },
+                          {
+                            "x": 554.28,
+                            "y": 248
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "It builds a new virtual DOM tree.",
+                    "draw": [
+                      {
+                        "id": "n2",
+                        "type": "rectangle",
+                        "label": "Create VDOM",
+                        "x": 968.54,
+                        "y": 216,
+                        "icon": "box",
+                        "width": 227,
+                        "height": 64
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "from": "n1",
+                        "to": "n2",
+                        "points": [
+                          {
+                            "x": 797.28,
+                            "y": 248
+                          },
+                          {
+                            "x": 960.54,
+                            "y": 248
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "React diffs this VDOM against the previous one.",
+                    "draw": [
+                      {
+                        "id": "n3",
+                        "type": "rectangle",
+                        "label": "Diff with previous VDOM",
+                        "x": 1375.52,
+                        "y": 210,
+                        "icon": "search",
+                        "width": 273,
+                        "height": 76
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "from": "n2",
+                        "to": "n3",
+                        "points": [
+                          {
+                            "x": 1203.54,
+                            "y": 248
+                          },
+                          {
+                            "x": 1367.52,
+                            "y": 248
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Only the changed parts are patched into the real DOM.",
+                    "draw": [
+                      {
+                        "id": "n4",
+                        "type": "rectangle",
+                        "label": "Apply updates to real DOM",
+                        "x": 1827.94,
+                        "y": 210,
+                        "icon": "browser",
+                        "width": 307,
+                        "height": 76
+                      },
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "from": "n3",
+                        "to": "n4",
+                        "points": [
+                          {
+                            "x": 1656.52,
+                            "y": 248
+                          },
+                          {
+                            "x": 1819.94,
+                            "y": 248
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "React Re‑render Decision",
+                  "family": "flow",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "State/Prop change",
+                      "icon": "code"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "Render phase",
+                      "icon": "terminal"
+                    },
+                    {
+                      "id": "n2",
+                      "label": "Create VDOM",
+                      "icon": "box"
+                    },
+                    {
+                      "id": "n3",
+                      "label": "Diff with previous VDOM",
+                      "icon": "search"
+                    },
+                    {
+                      "id": "n4",
+                      "label": "Apply updates to real DOM",
+                      "icon": "browser"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n2"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n2",
+                      "to": "n3"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "n3",
+                      "to": "n4"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "When state or props change, React starts a render.",
+                      "reveal": [
+                        "n0",
+                        "n1",
+                        "e0"
+                      ]
+                    },
+                    {
+                      "say": "It builds a new virtual DOM tree.",
+                      "reveal": [
+                        "n2",
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "React diffs this VDOM against the previous one.",
+                      "reveal": [
+                        "n3",
+                        "e2"
+                      ]
+                    },
+                    {
+                      "say": "Only the changed parts are patched into the real DOM.",
+                      "reveal": [
+                        "n4",
+                        "e3"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 10,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 6,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 12.6,
+                "colors": 1,
+                "labelWords": {
+                  "max": 5,
+                  "mean": 3
+                },
+                "issues": [],
+                "beats": 4,
+                "newPerBeat": {
+                  "max": 4,
+                  "mean": 2.5
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        }
+      ],
+      "prompts": 2,
+      "summary": {
+        "prompts": 2,
+        "drew": 2,
+        "validFirstTry": 1,
+        "repairs": 0,
+        "lintClean": 1,
+        "medianMs": {
+          "firstBeat": 2192.5,
+          "firstToken": null,
+          "firstStroke": null,
+          "total": null
+        },
+        "medianOutputTokens": 436.5,
+        "mean": {
+          "overlaps": 0,
+          "through": 0,
+          "crossings": 0
+        },
+        "minTextPx": {
+          "median": 14
+        },
+        "smallTextShare": 0
+      }
+    },
+    {
+      "model": "moonshot:kimi-k2.6:lines",
+      "label": "moonshot:kimi-k2.6 (lines)",
+      "ranAt": "2026-10-08T04:57:46.491Z",
+      "runs": [
+        {
+          "id": "tcp-handshake",
+          "family": "sequence",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "Explain how the TCP three-way handshake works.",
+              "outputTokens": 142,
+              "firstBeatMs": 2789,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "TCP Three-Way Handshake",
+                "family": "sequence",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "Client",
+                    "icon": "device-laptop"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "Server",
+                    "icon": "server"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1",
+                    "label": "SYN"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n0",
+                    "label": "SYN-ACK"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n0",
+                    "to": "n1",
+                    "label": "ACK"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "The client and server are ready to connect.",
+                    "reveal": [
+                      "n0",
+                      "n1"
+                    ]
+                  },
+                  {
+                    "say": "The client sends SYN to initiate the connection.",
+                    "reveal": [
+                      "e0"
+                    ]
+                  },
+                  {
+                    "say": "The server replies with SYN-ACK to acknowledge.",
+                    "reveal": [
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "The client sends ACK to confirm and establish the connection.",
+                    "reveal": [
+                      "e2"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "TCP Three-Way Handshake",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "The client and server are ready to connect.",
+                    "draw": [
+                      {
+                        "id": "board_title_1219880883",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "TCP Three-Way Handshake",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "rectangle",
+                        "label": "Client",
+                        "x": 60,
+                        "y": 140,
+                        "icon": "device-laptop",
+                        "width": 153,
+                        "height": 64
+                      },
+                      {
+                        "id": "n0_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 220
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 564
+                          }
+                        ]
+                      },
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "Server",
+                        "x": 430.28,
+                        "y": 140,
+                        "icon": "server",
+                        "width": 159,
+                        "height": 64
+                      },
+                      {
+                        "id": "n1_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 508.72999999999996,
+                            "y": 220
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 564
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The client sends SYN to initiate the connection.",
+                    "draw": [
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "label": "SYN",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 294
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 294
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The server replies with SYN-ACK to acknowledge.",
+                    "draw": [
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "label": "SYN-ACK",
+                        "points": [
+                          {
+                            "x": 508.72999999999996,
+                            "y": 384
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 384
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The client sends ACK to confirm and establish the connection.",
+                    "draw": [
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "label": "ACK",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 474
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 474
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "TCP Three-Way Handshake",
+                  "family": "sequence",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "Client",
+                      "icon": "device-laptop"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "Server",
+                      "icon": "server"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1",
+                      "label": "SYN"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n0",
+                      "label": "SYN-ACK"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n0",
+                      "to": "n1",
+                      "label": "ACK"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "The client and server are ready to connect.",
+                      "reveal": [
+                        "n0",
+                        "n1"
+                      ]
+                    },
+                    {
+                      "say": "The client sends SYN to initiate the connection.",
+                      "reveal": [
+                        "e0"
+                      ]
+                    },
+                    {
+                      "say": "The server replies with SYN-ACK to acknowledge.",
+                      "reveal": [
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "The client sends ACK to confirm and establish the connection.",
+                      "reveal": [
+                        "e2"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 8,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 6,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 13,
+                "colors": 1,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.3
+                },
+                "issues": [],
+                "beats": 4,
+                "newPerBeat": {
+                  "max": 5,
+                  "mean": 2
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "react-rendering",
+          "family": "flow",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "How does React decide what to re-render?",
+              "outputTokens": 191,
+              "firstBeatMs": 3989,
+              "firstStrokeMs": null,
+              "fixes": [
+                "dropped invalid edge",
+                "dropped unknown beat reference"
+              ],
+              "script": {
+                "version": 2,
+                "title": "How does React decide what to re-render?",
+                "family": "flow",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "n0",
+                    "label": "State changes"
+                  },
+                  {
+                    "id": "n1",
+                    "label": "Re-render?"
+                  },
+                  {
+                    "id": "n2",
+                    "label": "Diff virtual DOM"
+                  },
+                  {
+                    "id": "n3",
+                    "label": "Real DOM update"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e0",
+                    "from": "n0",
+                    "to": "n1"
+                  },
+                  {
+                    "id": "e1",
+                    "from": "n1",
+                    "to": "n2",
+                    "label": "yes"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "n2",
+                    "to": "n3",
+                    "label": "changed"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "A component re-renders when its state changes.",
+                    "reveal": [
+                      "n0",
+                      "e0"
+                    ]
+                  },
+                  {
+                    "say": "React checks: should this component actually update?",
+                    "reveal": [
+                      "n1",
+                      "e0",
+                      "e1"
+                    ]
+                  },
+                  {
+                    "say": "If yes, it diffs the new virtual DOM against the old.",
+                    "reveal": [
+                      "n2",
+                      "e1",
+                      "e2"
+                    ]
+                  },
+                  {
+                    "say": "Only changed nodes get patched to the real DOM.",
+                    "reveal": [
+                      "n3",
+                      "e2"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "How does React decide what to re-render?",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "A component re-renders when its state changes.",
+                    "draw": [
+                      {
+                        "id": "board_title_270225841",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "How does React decide what to re-render?",
+                        "size": "title"
+                      },
+                      {
+                        "id": "n0",
+                        "type": "rectangle",
+                        "label": "State changes",
+                        "x": 100,
+                        "y": 210,
+                        "width": 177,
+                        "height": 64
+                      },
+                      {
+                        "id": "n1",
+                        "type": "rectangle",
+                        "label": "Re-render?",
+                        "x": 456.97999999999996,
+                        "y": 210,
+                        "width": 142,
+                        "height": 64
+                      },
+                      {
+                        "id": "e0",
+                        "type": "arrow",
+                        "from": "n0",
+                        "to": "n1",
+                        "points": [
+                          {
+                            "x": 285,
+                            "y": 242
+                          },
+                          {
+                            "x": 448.98,
+                            "y": 242
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "React checks: should this component actually update?",
+                    "draw": [
+                      {
+                        "id": "n2",
+                        "type": "rectangle",
+                        "label": "Diff virtual DOM",
+                        "x": 982.3199999999999,
+                        "y": 210,
+                        "width": 201,
+                        "height": 64
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "from": "n1",
+                        "to": "n2",
+                        "label": "yes",
+                        "points": [
+                          {
+                            "x": 606.98,
+                            "y": 242
+                          },
+                          {
+                            "x": 974.3199999999999,
+                            "y": 242
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "If yes, it diffs the new virtual DOM against the old.",
+                    "draw": [
+                      {
+                        "id": "n3",
+                        "type": "rectangle",
+                        "label": "Real DOM update",
+                        "x": 1604.52,
+                        "y": 210,
+                        "width": 207,
+                        "height": 64
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "from": "n2",
+                        "to": "n3",
+                        "label": "changed",
+                        "points": [
+                          {
+                            "x": 1191.32,
+                            "y": 242
+                          },
+                          {
+                            "x": 1596.52,
+                            "y": 242
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Only changed nodes get patched to the real DOM.",
+                    "draw": []
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "How does React decide what to re-render?",
+                  "family": "flow",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "n0",
+                      "label": "State changes"
+                    },
+                    {
+                      "id": "n1",
+                      "label": "Re-render?"
+                    },
+                    {
+                      "id": "n2",
+                      "label": "Diff virtual DOM"
+                    },
+                    {
+                      "id": "n3",
+                      "label": "Real DOM update"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e0",
+                      "from": "n0",
+                      "to": "n1"
+                    },
+                    {
+                      "id": "e1",
+                      "from": "n1",
+                      "to": "n2",
+                      "label": "yes"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "n2",
+                      "to": "n3",
+                      "label": "changed"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "A component re-renders when its state changes.",
+                      "reveal": [
+                        "n0",
+                        "e0"
+                      ]
+                    },
+                    {
+                      "say": "React checks: should this component actually update?",
+                      "reveal": [
+                        "n1",
+                        "e0",
+                        "e1"
+                      ]
+                    },
+                    {
+                      "say": "If yes, it diffs the new virtual DOM against the old.",
+                      "reveal": [
+                        "n2",
+                        "e1",
+                        "e2"
+                      ]
+                    },
+                    {
+                      "say": "Only changed nodes get patched to the real DOM.",
+                      "reveal": [
+                        "n3",
+                        "e2"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 8,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 7,
+                "minTextPx": 14,
+                "smallText": 0,
+                "overviewTextPx": 11.8,
+                "colors": 1,
+                "labelWords": {
+                  "max": 7,
+                  "mean": 2.6
+                },
+                "issues": [],
+                "beats": 4,
+                "newPerBeat": {
+                  "max": 4,
+                  "mean": 2
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        }
+      ],
+      "prompts": 2,
+      "summary": {
+        "prompts": 2,
+        "drew": 2,
+        "validFirstTry": 1,
+        "repairs": 1,
+        "lintClean": 1,
+        "medianMs": {
+          "firstBeat": 3389,
+          "firstToken": null,
+          "firstStroke": null,
+          "total": null
+        },
+        "medianOutputTokens": 166.5,
+        "mean": {
+          "overlaps": 0,
+          "through": 0,
+          "crossings": 0
+        },
+        "minTextPx": {
+          "median": 14
+        },
+        "smallTextShare": 0
+      }
+    },
+    {
+      "model": "moonshot:kimi-k2.6:json",
+      "label": "moonshot:kimi-k2.6 (json)",
+      "ranAt": "2026-10-08T04:57:46.491Z",
+      "runs": [
+        {
+          "id": "tcp-handshake",
+          "family": "sequence",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "Explain how the TCP three-way handshake works.",
+              "outputTokens": 281,
+              "firstBeatMs": 4669,
+              "firstStrokeMs": null,
+              "fixes": [],
+              "script": {
+                "version": 2,
+                "title": "TCP Three-Way Handshake",
+                "family": "sequence",
+                "mode": "new",
+                "nodes": [
+                  {
+                    "id": "client",
+                    "label": "Client",
+                    "icon": "device-laptop"
+                  },
+                  {
+                    "id": "server",
+                    "label": "Server",
+                    "icon": "server"
+                  },
+                  {
+                    "id": "syn",
+                    "label": "SYN",
+                    "icon": "message"
+                  },
+                  {
+                    "id": "synack",
+                    "label": "SYN-ACK",
+                    "icon": "message"
+                  },
+                  {
+                    "id": "ack",
+                    "label": "ACK",
+                    "icon": "message"
+                  }
+                ],
+                "edges": [
+                  {
+                    "id": "e1",
+                    "from": "client",
+                    "to": "syn"
+                  },
+                  {
+                    "id": "e2",
+                    "from": "syn",
+                    "to": "server"
+                  },
+                  {
+                    "id": "e3",
+                    "from": "server",
+                    "to": "synack"
+                  },
+                  {
+                    "id": "e4",
+                    "from": "synack",
+                    "to": "client"
+                  },
+                  {
+                    "id": "e5",
+                    "from": "client",
+                    "to": "ack"
+                  },
+                  {
+                    "id": "e6",
+                    "from": "ack",
+                    "to": "server"
+                  }
+                ],
+                "beats": [
+                  {
+                    "say": "The client wants to connect to the server.",
+                    "reveal": [
+                      "client",
+                      "server"
+                    ]
+                  },
+                  {
+                    "say": "First, the client sends a SYN to the server.",
+                    "reveal": [
+                      "syn",
+                      "e1",
+                      "e2"
+                    ]
+                  },
+                  {
+                    "say": "The server replies with SYN-ACK, acknowledging the request.",
+                    "reveal": [
+                      "synack",
+                      "e3",
+                      "e4"
+                    ]
+                  },
+                  {
+                    "say": "Finally, the client sends ACK, and the connection is established.",
+                    "reveal": [
+                      "ack",
+                      "e5",
+                      "e6"
+                    ]
+                  }
+                ]
+              },
+              "lesson": {
+                "title": "TCP Three-Way Handshake",
+                "mode": "new",
+                "beats": [
+                  {
+                    "say": "The client wants to connect to the server.",
+                    "draw": [
+                      {
+                        "id": "board_title_1219880883",
+                        "type": "text",
+                        "x": 60,
+                        "y": 40,
+                        "text": "TCP Three-Way Handshake",
+                        "size": "title"
+                      },
+                      {
+                        "id": "client",
+                        "type": "rectangle",
+                        "label": "Client",
+                        "x": 60,
+                        "y": 140,
+                        "icon": "device-laptop",
+                        "width": 153,
+                        "height": 64
+                      },
+                      {
+                        "id": "client_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 220
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "server",
+                        "type": "rectangle",
+                        "label": "Server",
+                        "x": 430.28,
+                        "y": 140,
+                        "icon": "server",
+                        "width": 159,
+                        "height": 64
+                      },
+                      {
+                        "id": "server_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 508.72999999999996,
+                            "y": 220
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 834
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "First, the client sends a SYN to the server.",
+                    "draw": [
+                      {
+                        "id": "syn",
+                        "type": "rectangle",
+                        "label": "SYN",
+                        "x": 807.18,
+                        "y": 140,
+                        "icon": "message",
+                        "width": 135,
+                        "height": 64
+                      },
+                      {
+                        "id": "syn_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 873.3599999999999,
+                            "y": 220
+                          },
+                          {
+                            "x": 873.3599999999999,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e1",
+                        "type": "arrow",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 294
+                          },
+                          {
+                            "x": 873.3599999999999,
+                            "y": 294
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e2",
+                        "type": "arrow",
+                        "points": [
+                          {
+                            "x": 873.3599999999999,
+                            "y": 384
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 384
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "The server replies with SYN-ACK, acknowledging the request.",
+                    "draw": [
+                      {
+                        "id": "synack",
+                        "type": "rectangle",
+                        "label": "SYN-ACK",
+                        "x": 1159.54,
+                        "y": 140,
+                        "icon": "message",
+                        "width": 181,
+                        "height": 64
+                      },
+                      {
+                        "id": "synack_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1249.01,
+                            "y": 220
+                          },
+                          {
+                            "x": 1249.01,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e3",
+                        "type": "arrow",
+                        "points": [
+                          {
+                            "x": 508.72999999999996,
+                            "y": 474
+                          },
+                          {
+                            "x": 1249.01,
+                            "y": 474
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e4",
+                        "type": "arrow",
+                        "points": [
+                          {
+                            "x": 1249.01,
+                            "y": 564
+                          },
+                          {
+                            "x": 135.14,
+                            "y": 564
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "say": "Finally, the client sends ACK, and the connection is established.",
+                    "draw": [
+                      {
+                        "id": "ack",
+                        "type": "rectangle",
+                        "label": "ACK",
+                        "x": 1558.48,
+                        "y": 140,
+                        "icon": "message",
+                        "width": 137,
+                        "height": 64
+                      },
+                      {
+                        "id": "ack_lifeline",
+                        "type": "line",
+                        "dashed": true,
+                        "points": [
+                          {
+                            "x": 1625.66,
+                            "y": 220
+                          },
+                          {
+                            "x": 1625.66,
+                            "y": 834
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e5",
+                        "type": "arrow",
+                        "points": [
+                          {
+                            "x": 135.14,
+                            "y": 654
+                          },
+                          {
+                            "x": 1625.66,
+                            "y": 654
+                          }
+                        ]
+                      },
+                      {
+                        "id": "e6",
+                        "type": "arrow",
+                        "points": [
+                          {
+                            "x": 1625.66,
+                            "y": 744
+                          },
+                          {
+                            "x": 508.72999999999996,
+                            "y": 744
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ],
+                "structure": {
+                  "version": 2,
+                  "title": "TCP Three-Way Handshake",
+                  "family": "sequence",
+                  "mode": "new",
+                  "nodes": [
+                    {
+                      "id": "client",
+                      "label": "Client",
+                      "icon": "device-laptop"
+                    },
+                    {
+                      "id": "server",
+                      "label": "Server",
+                      "icon": "server"
+                    },
+                    {
+                      "id": "syn",
+                      "label": "SYN",
+                      "icon": "message"
+                    },
+                    {
+                      "id": "synack",
+                      "label": "SYN-ACK",
+                      "icon": "message"
+                    },
+                    {
+                      "id": "ack",
+                      "label": "ACK",
+                      "icon": "message"
+                    }
+                  ],
+                  "edges": [
+                    {
+                      "id": "e1",
+                      "from": "client",
+                      "to": "syn"
+                    },
+                    {
+                      "id": "e2",
+                      "from": "syn",
+                      "to": "server"
+                    },
+                    {
+                      "id": "e3",
+                      "from": "server",
+                      "to": "synack"
+                    },
+                    {
+                      "id": "e4",
+                      "from": "synack",
+                      "to": "client"
+                    },
+                    {
+                      "id": "e5",
+                      "from": "client",
+                      "to": "ack"
+                    },
+                    {
+                      "id": "e6",
+                      "from": "ack",
+                      "to": "server"
+                    }
+                  ],
+                  "beats": [
+                    {
+                      "say": "The client wants to connect to the server.",
+                      "reveal": [
+                        "client",
+                        "server"
+                      ]
+                    },
+                    {
+                      "say": "First, the client sends a SYN to the server.",
+                      "reveal": [
+                        "syn",
+                        "e1",
+                        "e2"
+                      ]
+                    },
+                    {
+                      "say": "The server replies with SYN-ACK, acknowledging the request.",
+                      "reveal": [
+                        "synack",
+                        "e3",
+                        "e4"
+                      ]
+                    },
+                    {
+                      "say": "Finally, the client sends ACK, and the connection is established.",
+                      "reveal": [
+                        "ack",
+                        "e5",
+                        "e6"
+                      ]
+                    }
+                  ]
+                }
+              },
+              "metrics": {
+                "elements": 17,
+                "overlaps": 0,
+                "overlapArea": 0,
+                "overflow": 0,
+                "through": 0,
+                "crossings": 0,
+                "textOnLines": 0,
+                "textBlocks": 6,
+                "minTextPx": 15.8,
+                "smallText": 0,
+                "overviewTextPx": 15.8,
+                "colors": 1,
+                "labelWords": {
+                  "max": 3,
+                  "mean": 1.3
+                },
+                "issues": [],
+                "beats": 4,
+                "newPerBeat": {
+                  "max": 5,
+                  "mean": 4.3
+                }
+              },
+              "lintClean": true
+            }
+          ]
+        },
+        {
+          "id": "react-rendering",
+          "family": "flow",
+          "turns": [
+            {
+              "kind": "first",
+              "text": "How does React decide what to re-render?",
+              "firstStrokeMs": null,
+              "error": "429"
+            }
+          ]
+        }
+      ],
+      "prompts": 2,
+      "summary": {
+        "prompts": 2,
+        "drew": 1,
+        "validFirstTry": 0.5,
+        "repairs": 0,
+        "lintClean": 0.5,
+        "medianMs": {
+          "firstBeat": 4669,
+          "firstToken": null,
+          "firstStroke": null,
+          "total": null
+        },
+        "medianOutputTokens": 281,
+        "mean": {
+          "overlaps": 0,
+          "through": 0,
+          "crossings": 0
+        },
+        "minTextPx": {
+          "median": 15.8
+        },
+        "smallTextShare": 0
+      }
+    }
+  ],
+  "sourceReports": [
+    "phase2-format-decision.json"
+  ],
+  "beatCount": 48,
+  "gate": {
+    "threeProviderGolden": false,
+    "halfPlannerTokens": true,
+    "rendererLatency": "See phase2-live.json; routing and planner tokens are both included there."
+  }
+}

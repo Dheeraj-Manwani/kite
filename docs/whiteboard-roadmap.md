@@ -1,17 +1,17 @@
 # Whiteboard — implementation phases
 
-Plan date: **1 October 2026**, checked against the code on **8 October 2026**. Code baseline: `d701c31` on `master`, plus the phase 1 changes in this working tree.
+Plan date: **1 October 2026**, checked against the code on **8 October 2026**. Code baseline: `8a00563` on `master` (phase 1), plus the phase 2 and phase 3 changes in this working tree.
 
 This file turns the whiteboard research into the order we build it. The research, the evidence behind each problem, and the rationale for each recommendation are in [Kite whiteboard: research and plan to make it mature](https://claude.ai/code/artifact/2d56d024-83cb-43ad-b4cc-31ecf795a476). How the whiteboard works today is in [whiteboard.md](whiteboard.md) and [ADR 013](adr/013-whiteboard.md).
 
 ## Implementation status — 8 October 2026
 
-**Phase 1 is complete: 9/9 implementation items, with its layout, readability, latency and test gates verified below.** Phase 0 also has all six implementation items, but its three-provider baseline gate remains pending. Checked boxes mean the implementation exists; each phase's gate is recorded separately.
+**Phase 1 is complete. Phase 2 has 10/10 implementation items; Phase 3 has 8/8.** Phase 2's release latency gate and Phase 3's scored provider-clarity gate remain pending. Phase 0 has all six implementation items, but its original three-provider baseline gate remains pending. Checked boxes mean the implementation exists; each phase's gate is recorded separately. Phase 2 is available through `KITE_BOARD_PHASE2=1`; Phase 3 through `KITE_BOARD_PHASE3=1`. The released default retains the legacy tool.
 
 - **Phase 0 · Measure: 6/6 implemented; exit gate pending.** The 60-prompt golden set, metrics, eval runner, gallery generator, DeepSeek adapter, and lesson log exist. The frozen [baseline](performance/whiteboard/phase0-baseline.json) covers DeepSeek Flash from 2 October. A [gallery of 122 repaired boards](performance/whiteboard/index.html) is now present. The gate still requires baselines and galleries for two additional providers.
 - **Phase 1 · Readable and fast: 9/9 implemented; gates passed.** Streaming, turn ending, input repair, the 8,192-token budget, Excalifont, camera/presentation mode, captions, scene repairs, and saved boards are implemented. Repairs preserve existing placements, resize labels, separate collisions, detour obstructed arrows, and halo text on lines. Boards save locally on completion/close with thumbnails, title/label search, History replay, and cascade deletion. The latency log now waits for the renderer's first drawing frame.
-- **Phase 2 · Structure first: 0/10 implemented.** The tool still takes model-authored coordinates and beats. No specialist board planner, coordinate-free script parser, diagram-family modules, ELK worker, icon generator, or ADR 018 is present. Phase 1's partial tool-input parser is not the phase 2 script parser.
-- **Phase 3 · Teach like a person: 0/8 roadmap items complete.** Beat-level narration, highlight rings, follow-ups, and basic playback already work. Word-cued drawing, audio prefetch, richer emphasis/animation, teaching gestures, algorithm/maths families, quiz/drill-down beats, and expanded playback controls remain. The global voice-speed setting alone does not complete the playback-controls item.
+- **Phase 2 · Structure first: 10/10 implemented; release gate pending.** The small voice tool delegates to a streaming specialist with its own model setting and coordinate-free script. Nine diagram families, incremental parsing/repair, a lazy ELK worker, 60 drawable icons, pinned follow-ups, saved-board compatibility and [ADR 018](adr/018-structured-whiteboard.md) are implemented. The three-provider lint-clean and half-token gates pass. DeepSeek meets the 3 s first-stroke target; Groq's latest median is 4.01 s, so the new path stays behind the development flag.
+- **Phase 3 · Teach like a person: 8/8 implemented; clarity gate pending.** Word-cued drawing and next-beat audio prefetch, emphasis/eraser/value/move/swap animations, teacher gestures, data/steps/plot families, answer-waiting quizzes, child boards, beat navigation and lesson speed are implemented. A real Cartesia fixture measured **19.5 ms median cue error** and **406 ms maximum dead air**. Three targeted JSON probes per provider draw cleanly and sort the test array correctly, but do not establish clarity above Phase 2. See [ADR 019](adr/019-whiteboard-teaching.md).
 - **Phase 4 · Yours to keep: 1/6 roadmap items complete.** Board History/search/thumbnails/replay landed with phase 1 persistence. Structured board context, shortcut marks, PNG export, and screen-reader-aware captions are existing foundations. Vision PNG context, direct-click pointing, element editing, SVG/Excalidraw/Mermaid/PDF exports, and the element outline/keyboard walkthrough remain.
 - **Phase 5 · Delight: 0/5 implemented.** Themes, single-stroke handwriting, video export, multilingual board commands, and the background reviewer remain.
 
@@ -30,11 +30,31 @@ Verification on **8 October 2026**:
 
 The old provider generations are preserved in [phase0-baseline.json](performance/whiteboard/phase0-baseline.json). [latest.json](performance/whiteboard/latest.json) revalidates those same generations through today's deterministic repairs; it does **not** claim 122 fresh provider calls. Old token and model-generation timings remain historical. Fresh renderer latency is recorded separately. Finished-board overview text can be smaller than the 14 px explanation-camera target. Some intentional lines still cross shapes and some arrows cross; phase 1's overlap/overflow gate passes, while phase 2's 90% fully lint-clean gate is separate.
 
-**Next:** phase 2's measured format decision and specialist planner. Finish the separate phase 0 three-provider baseline/gallery gate alongside that work.
+### Phase 2 verification — 8 October 2026
+
+- **272/272 unit tests passed serially**, including parser chunk boundaries, malformed/truncated streams, all nine families with 108 randomized diagrams, nested ELK, stable follow-ups, old archives, icons, model selection and the real small-tool → planner → board-service path. The final targeted board run passed 41/41. Type checking, lint, native and renderer smoke tests, and the main production build passed.
+- **Three-provider golden gate passed.** The [phase-2 baseline](performance/whiteboard/phase2-golden.json) contains 60 attempts per provider: DeepSeek Flash 60/60 lint-clean, Groq GPT OSS 120B 60/60, Kimi K2.6 58/60 (96.7%; two rate-limit failures retained). All 178 playable lessons and 788 revealed beats are clean. Here, clean means zero overlaps, label overflow, edges through unrelated shapes and unprotected text on lines; crossings remain separately reported. The [178-board gallery](performance/whiteboard/phase2/index.html) renders the compiled lessons through the actual overlay.
+- **Half-token gate passed.** Median planner output is 234.5/275/248.5 tokens respectively, against the frozen phase-0 DeepSeek reference of 1,112. Fresh live combined routing-plus-planner medians are 341 tokens on DeepSeek and 498 on Groq, both below 556. The original phase-0 provider-specific baselines are still incomplete.
+- **Layout target passed warm.** The [60-element benchmark](performance/whiteboard/phase2-layout.json) records a 29.83 ms median and 35.78 ms maximum over ten fixed warm samples. Cold worker startup plus layout is 169.34 ms and is included in live first stroke.
+- **First-stroke release gate pending.** [Fresh live measurements](performance/whiteboard/phase2-live.json), including the small voice call, specialist, worker, font, camera and pen, give medians of **2.85 s DeepSeek / 4.01 s Groq** across TCP, OAuth and DNS. Voice is off and motion is ordinary; TTS startup is excluded. A GPT OSS 20B probe did not draw. The ≤3 s target does not pass across the checked fast providers.
+- **Measured format decision:** [lines versus JSON](performance/whiteboard/phase2-format-decision.json) covers sequence and flow on all three providers, with a separately recorded [rate-limit retry](performance/whiteboard/phase2-format-retry.json). Lines use fewer tokens and generally reach a completed beat sooner; see ADR 018 for sample sizes, manual clarity findings and the distinction between readiness and renderer first stroke.
+
+The phase-2 reports preserve original provider timings/tokens and recompile their stored scripts through the current deterministic layout. Later prompt corrections are recorded in ADR 018; these reports do not claim that all 180 calls were repeated after each prompt change. Full live provider follow-up and semantic-accuracy scores remain future evaluation work. The phase-1 `latest.json` baseline remains intact while phase 2 is opt-in.
+
+**Next:** reduce the complete Groq routing/planning/drawing path below the 3 s median gate, then enable the phase-2 default. Finish the separate historical phase-0 baseline gate before calling every earlier phase closed.
+
+### Phase 3 verification — 8 October 2026
+
+- **281/281 unit tests passed serially**, including nine teaching tests for streaming metadata, safe expressions, real MathJax worker paths, equation columns/side notes, stable indices and swaps, question waits, playback controls, stale callbacks, silent prefetch adoption and child-board restoration. Type checking, lint and main/renderer production builds passed. Native smoke covers the real Electron formula worker. Renderer smoke passed, including cue onset, simultaneous swaps and bound arrows, old-value erasure, effects, formula paths and controls. Two earlier full renderer runs hit existing kite-animation timing assertions; the isolated rerun passed.
+- **Local layout fixtures:** [five boards / 16 beats](performance/whiteboard/phase3-fixtures.json), all lint-clean at every beat. The [14-board gallery](performance/whiteboard/phase3/index.html) adds nine fresh provider probes. Finished-board overview images are not timing measurements.
+- **Live timing fixture passed:** [phase3-live.json](performance/whiteboard/phase3-live.json) uses the real 1080p offscreen overlay, Cartesia sonic-3.5 and actual Web Audio scheduling, with speaker output muted and ordinary motion. Six element cues across three fully known beats have **19.5 ms median error**; the two gaps are **406 ms and 351 ms**. Expected onset comes from final provider word timestamps, not estimated narration. This is one fixture sample; it does not cover all voices, speeds, networks or pauses while a planner is still generating the next beat. The harness waits for voice/board listeners before sending events; its initial startup attempt did not complete and is not counted as a timing pass.
+- **Synthetic renderer timing:** [phase3-renderer.json](performance/whiteboard/phase3-renderer.json) separately records onset against a supplied local cue schedule. It exercises swap/arrow animation and erasure without claiming provider word accuracy.
+- **Provider capability probes:** [the final JSON run](performance/whiteboard/phase3-provider-probe.json) covers an array quiz, worked equations and a shaded parabola on DeepSeek Flash, Groq GPT OSS 120B and Kimi K2.6. All nine lessons are lint-clean; all three array lessons emit real swaps, end at `[3, 5, 7]`, and include an `ask` pause. Formula and plotted-point metadata are present. Earlier line probes are retained separately; some described changes without emitting them or used the wrong node identities. The prompt now explains stable identities and actual action fields. Phase 3 defaults to JSON for its nested metadata; Phase 2 retains lines. These are targeted probes with prompt revisions, not a controlled format comparison or full golden set.
+- **Release gate remains pending:** no scored human comparison establishes clarity above Phase 2 on every provider. Timing passes the recorded fixture scope, but cannot establish that clarity gate. Phase 3 remains opt-in; enabling it implies Phase 2 unless `KITE_BOARD_PHASE2=0` explicitly disables the structured path.
 
 ## Start here
 
-The whiteboard's foundation is right: one planned script, speech that leads the drawing, and a kite that holds the pen. Streaming starts lessons before the model finishes, Excalifont and the beat camera keep explanations readable, and local scene repairs remove collisions and overflow. The model still writes coordinates; phase 2 replaces that contract with structure and diagram families. The original latency and text-size observations are historical, not measurements of this implementation.
+The whiteboard's foundation is right: one planned script, speech that leads the drawing, and a kite that holds the pen. Streaming starts lessons before the model finishes, Excalifont and the beat camera keep explanations readable, and local scene repairs remove collisions and overflow. The released path still uses model coordinates; the opt-in phase-2 path replaces that contract with structure and diagram families. The original latency and text-size observations are historical, not measurements of this implementation.
 
 Build in this order:
 
@@ -97,7 +117,7 @@ Phases 3 and 4 can run in either order once phase 2 lands. Sizes use the scale i
 
 **Exit gate:** baseline numbers and a gallery committed for at least three providers.
 
-**Gate status (8 Oct): pending.** All six implementation items exist and the DeepSeek gallery is present, but complete golden baselines/galleries still cover only one provider.
+**Gate status (8 Oct): pending.** All six implementation items exist and the DeepSeek gallery is present, but the original coordinate-contract baseline/gallery covers only one provider. Phase 2 now has three-provider structured-script results; those do not backfill the missing historical phase-0 controls.
 
 ## Phase 1 — Readable and fast (today's contract)
 
@@ -159,25 +179,27 @@ Phases 3 and 4 can run in either order once phase 2 lands. Sizes use the scale i
 
 **Goal:** the model says what is on the board, how it connects, and what to say. Code decides where everything goes.
 
-- [ ] **M · Decide the format by measurement.** Build the planner with both the compact line format and coordinate-free JSON for two families (sequence and flow). Run both through the harness, compare tokens, time to first stroke, repair rate and clarity, and keep the winner. Record the decision in **ADR 018**, which replaces the contract part of ADR 013. (ADRs 014–017 are taken.)
-- [ ] **S · Small tool on the voice turn.** `explain_on_whiteboard({ topic, focus?, level?, mode })`. Its description and schema shrink from about 4,200 characters, sent on every turn, to a few lines.
-- [ ] **L · Board planner.** `src/main/board/planner.ts` is a streaming call with a specialist prompt:
+- [x] **M · Decide the format by measurement.** Build the planner with both the compact line format and coordinate-free JSON for two families (sequence and flow). Run both through the harness, compare tokens, time to first stroke, repair rate and clarity, and keep the winner. Record the decision in **ADR 018**, which replaces the contract part of ADR 013. (ADRs 014–017 are taken.)
+- [x] **S · Small tool on the voice turn.** `explain_on_whiteboard({ topic, focus?, level?, mode })`. Its description and schema shrink from about 4,200 characters, sent on every turn, to a few lines.
+- [x] **L · Board planner.** `src/main/board/planner.ts` is a streaming call with a specialist prompt:
   - the diagram families, with one worked example each
   - the recent conversation
   - the current board, as structure
   - the user's level
 
   It gets its own model setting (`boardModel`), with the default chosen by the harness.
-- [ ] **M · Incremental parser.** `src/shared/boardScript.ts` takes the script line by line (or as partial JSON), repairs what it can, and emits a typed script as each part completes.
-- [ ] **XL · Diagram families.** One module per family under `src/shared/board/families/`, each with unit and property tests (random inputs never overlap and never route through shapes). In order of how often they are asked for: sequence, flow, architecture (nested groups and icons), tree, cycle, layers, compare, timeline, and freeform on a coarse grid or with relative placement.
-- [ ] **L · ELK layout.** Add elkjs (EPL-2.0; add the notice) and load it lazily in a worker. Use layered and `mrtree` layouts, orthogonal edge routing, nested nodes, and label-aware placement. Keep `@dagrejs/dagre` as the fallback only if bundle size becomes a problem.
-- [ ] **M · Stable pictures.**
+- [x] **M · Incremental parser.** `src/shared/boardScript.ts` takes the script line by line (or as partial JSON), repairs what it can, and emits a typed script as each part completes.
+- [x] **XL · Diagram families.** One module per family under `src/shared/board/families/`, each with unit and property tests (random inputs never overlap and never route through shapes). In order of how often they are asked for: sequence, flow, architecture (nested groups and icons), tree, cycle, layers, compare, timeline, and freeform on a coarse grid or with relative placement.
+- [x] **L · ELK layout.** Add elkjs (EPL-2.0; add the notice) and load it lazily in a worker. Use layered and `mrtree` layouts, orthogonal edge routing, nested nodes, and label-aware placement. Keep `@dagrejs/dagre` as the fallback only if bundle size becomes a problem.
+- [x] **M · Stable pictures.**
   - Lay out the finished picture before beat 1; beats only reveal parts of it.
   - Follow-ups pin everything already drawn and place new parts in free space beside what they relate to.
-  - An unavoidable relayout animates elements to their new places.
-- [ ] **M · Icons.** `scripts/board-icons.cjs` converts about 60 Tabler icons (MIT) into stroke plans at build time, so the pen can draw them: user, laptop, phone, server, database, cloud, lock, key, file, gear, queue, globe, and so on.
-- [ ] **S · Old boards still play.** An adapter turns saved phase-1 coordinate lessons into the new script, so history replays keep working.
-- [ ] **S · Docs.** ADR 018, `whiteboard.md`, `architecture.md`, and the tool and planner prompts.
+  - The implemented append-only policy reserves the full original graph and avoids relayout. Move animation is not implemented; it is required if later editing permits existing placements to change.
+- [x] **M · Icons.** `scripts/board-icons.cjs` converts about 60 Tabler icons (MIT) into stroke plans at build time, so the pen can draw them: user, laptop, phone, server, database, cloud, lock, key, file, gear, queue, globe, and so on.
+- [x] **S · Old boards still play.** An adapter turns saved phase-1 coordinate lessons into the new script, so history replays keep working.
+- [x] **S · Docs.** ADR 018, `whiteboard.md`, `architecture.md`, and the tool and planner prompts.
+
+*Implemented 8 Oct 2026: lines chosen after paired sequence/flow comparisons; small tool, 4,096-token specialist with model picker, typed parser, nine family modules and randomized checks, measured ELK worker/fallback, stable reveal/follow-up compilation, 60 Tabler point paths, version-1 archive adapter and ADR 018. See the verification section for evidence and limitations.*
 
 **Exit gate (harness):**
 
@@ -185,33 +207,37 @@ Phases 3 and 4 can run in either order once phase 2 lands. Sizes use the scale i
 - Output tokens per lesson are at most half the phase 0 baseline.
 - Median time to first stroke ≤ 3 s on the fast providers.
 
+**Gate status (8 Oct): pending.** Three-provider lint cleanliness and half-token checks pass. DeepSeek passes the 3 s median first-stroke target, while Groq is at 4.01 s. Phase 2 stays opt-in until that remaining gate passes.
+
 ## Phase 3 — Teach like a person
 
 **Goal:** the board feels like someone teaching at a whiteboard.
 
-- [ ] **M · Draw on the word.** Pass Cartesia word timestamps (`src/main/voice/tts.ts`) through the board's `speak` hooks. Each element starts on its cue word: an explicit `cue`, or its label's words in the spoken line. It draws until the next cue. With voice off, use reading-speed timing.
-- [ ] **S · No gaps.** Request the next beat's audio while the current beat plays.
-- [ ] **L · Emphasis and change.** In `src/renderer/board/player.ts`, add:
+- [x] **M · Draw on the word.** Cartesia timestamp batches and playback ids now reach the session and renderer. Explicit phrase cues or spoken label matches drive onset from the Web Audio clock; voice-off playback uses speed-adjusted reading timing. Phase-3 camera cuts avoid delaying cue onset with the legacy camera glide.
+- [x] **S · No gaps.** Request one known next beat's audio while the current beat plays. Its bounded PCM/timestamp cache stays silent until adoption; pause, skip, mute, close, speed and cancellation discard stale work. Question beats do not prefetch their answer.
+- [x] **L · Emphasis and change.** `src/renderer/board/player.ts` and `BoardLayer.tsx` now support:
   - underline, pulse, and dimming everything else
   - numbered badges and strike-through
   - an eraser motion instead of vanishing
   - animated move and swap
   - value changes that cross out the old value and write the new one
-- [ ] **M · The kite as teacher.** Between strokes, the kite points its nose at the element being talked about. On a recap, it circles the parts it names. When it asks a question, it turns toward the user.
-- [ ] **L · Algorithms.** A data-structures family (arrays with indices, pointers, stacks, queues, linked lists, hash buckets) whose beats change values, swap, and move pointers.
-- [ ] **L · Maths.** A steps family (worked lines with aligned `=` and side notes), with formulas from MathJax's SVG output (Apache-2.0), loaded lazily so the pen traces them. A plot family (axes, curves sampled by a small safe expression parser with no `eval`, points, and shaded areas).
-- [ ] **M · Conversation beats.**
+- [x] **M · The kite as teacher.** Between strokes, the kite aims at the current spoken cue. Recaps cycle through highlighted parts, and answer-waiting questions turn it toward the cursor/user.
+- [x] **L · Algorithms.** The data family supports arrays with fixed slot indices, pointers, stacks, queues, linked lists and hash buckets. Equal measured slots reserve future value sizes; beats update values, swap identities or move pointers while retargeting bound arrows.
+- [x] **L · Maths.** The steps family aligns equation columns and side notes, tracing paths from lazy MathJax 4 SVG conversion in a worker. The plot family draws axes, bounded sampled curves, points and shaded areas through a small expression parser with no `eval`. Invalid expressions are visible errors; unavailable formula conversion falls back to readable text.
+- [x] **M · Conversation beats.**
   - Recap beats.
   - Optional `ask` beats that wait for a spoken answer, on by default for "teach me" and "quiz me".
   - Planner commands: "simpler", "more detail on X", "give me an example", "summarize".
   - Drill-down child boards with a breadcrumb, and "go back".
-- [ ] **S · Playback controls.** Beat dots to jump between beats, "previous", and speed from 0.75× to 1.5×.
+- [x] **S · Playback controls.** Beat buttons jump between reconstructed scenes; Previous/"previous" goes back one beat. Lesson speed supports 0.75×, 1×, 1.25× and 1.5×, plus "slower"/"faster". Child boards have Go back and breadcrumbs; parents retain their scene and archive identity.
 
 **Exit gate (harness):**
 
 - Median word-sync error ≤ 250 ms.
 - Dead air between beats ≤ 700 ms.
 - Clarity score above phase 2 on every provider.
+
+**Gate status (8 Oct): timing passed on the recorded live fixture; release pending.** Six cues have a 19.5 ms median error and both between-beat gaps are below 700 ms. A scored provider-by-provider clarity comparison is still missing. Keep `KITE_BOARD_PHASE3=1` opt-in; the existing Phase 2 rollout gate remains separate.
 
 ## Phase 4 — Yours to keep
 

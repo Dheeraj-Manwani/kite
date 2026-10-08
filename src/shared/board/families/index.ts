@@ -1,0 +1,13 @@
+import { sequence } from './sequence';
+import { flow } from './flow';
+import { architecture } from './architecture';
+import { tree } from './tree';
+import { cycle } from './cycle';
+import { layers } from './layers';
+import { compare } from './compare';
+import { timeline } from './timeline';
+import { freeform } from './freeform';
+import { data } from './data';
+import { steps } from './steps';
+import { plot } from './plot';
+export const familyLayouts = { sequence, flow, architecture, tree, cycle, layers, compare, timeline, freeform, data, steps, plot };

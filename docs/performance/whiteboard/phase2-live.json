@@ -1,0 +1,140 @@
+{
+  "checkedAt": "2026-10-08T06:26:06.804Z",
+  "models": [
+    {
+      "checkedAt": "2026-10-08T04:57:47.423Z",
+      "model": "groq:openai/gpt-oss-20b",
+      "conditions": "1920x1080 real offscreen overlay, voice off, ordinary motion, font/camera/player included; small voice tool + specialist call + ELK worker included",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "firstStrokeMs": null,
+          "totalMs": 7615,
+          "drew": false
+        },
+        {
+          "prompt": "oauth",
+          "firstStrokeMs": null,
+          "totalMs": 7242,
+          "drew": false
+        },
+        {
+          "prompt": "dns",
+          "firstStrokeMs": null,
+          "totalMs": 6916,
+          "drew": false
+        }
+      ],
+      "medianFirstStrokeMs": null,
+      "targetMs": 3000
+    },
+    {
+      "checkedAt": "2026-10-08T06:22:40.073Z",
+      "model": "deepseek:deepseek-flash",
+      "conditions": "1920x1080 real offscreen overlay, voice off, ordinary motion, font/camera/player included; small voice tool + specialist call + ELK worker included",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "firstStrokeMs": 2850,
+          "totalMs": 3195,
+          "drew": true,
+          "called": [
+            "explain_on_whiteboard"
+          ],
+          "errors": [],
+          "routingTokens": 68,
+          "plannerTokens": 187,
+          "outputTokens": 255,
+          "requestReadyMs": 1375,
+          "lessonReadyMs": 2807
+        },
+        {
+          "prompt": "oauth",
+          "firstStrokeMs": 2777,
+          "totalMs": 2777,
+          "drew": true,
+          "called": [
+            "explain_on_whiteboard"
+          ],
+          "errors": [],
+          "routingTokens": 69,
+          "plannerTokens": 272,
+          "outputTokens": 341,
+          "requestReadyMs": 1018,
+          "lessonReadyMs": 2249
+        },
+        {
+          "prompt": "dns",
+          "firstStrokeMs": 3228,
+          "totalMs": 3229,
+          "drew": true,
+          "called": [
+            "explain_on_whiteboard"
+          ],
+          "errors": [],
+          "routingTokens": 81,
+          "plannerTokens": 291,
+          "outputTokens": 372,
+          "requestReadyMs": 1185,
+          "lessonReadyMs": 2708
+        }
+      ],
+      "medianFirstStrokeMs": 2850,
+      "targetMs": 3000
+    },
+    {
+      "checkedAt": "2026-10-08T06:26:06.804Z",
+      "model": "groq:openai/gpt-oss-120b",
+      "conditions": "1920x1080 real offscreen overlay, voice off, ordinary motion, font/camera/player included; small voice tool + specialist call + ELK worker included",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "firstStrokeMs": 4007,
+          "totalMs": 4048,
+          "drew": true,
+          "called": [
+            "explain_on_whiteboard"
+          ],
+          "errors": [],
+          "routingTokens": 144,
+          "plannerTokens": 175,
+          "outputTokens": 319,
+          "requestReadyMs": 1505,
+          "lessonReadyMs": 3321
+        },
+        {
+          "prompt": "oauth",
+          "firstStrokeMs": 4046,
+          "totalMs": 4057,
+          "drew": true,
+          "called": [
+            "explain_on_whiteboard"
+          ],
+          "errors": [],
+          "routingTokens": 261,
+          "plannerTokens": 260,
+          "outputTokens": 521,
+          "requestReadyMs": 1993,
+          "lessonReadyMs": 3515
+        },
+        {
+          "prompt": "dns",
+          "firstStrokeMs": 2632,
+          "totalMs": 2675,
+          "drew": true,
+          "called": [
+            "explain_on_whiteboard"
+          ],
+          "errors": [],
+          "routingTokens": 179,
+          "plannerTokens": 319,
+          "outputTokens": 498,
+          "requestReadyMs": 1217,
+          "lessonReadyMs": 2612
+        }
+      ],
+      "medianFirstStrokeMs": 4007,
+      "targetMs": 3000
+    }
+  ]
+}

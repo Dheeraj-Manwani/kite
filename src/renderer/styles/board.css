@@ -27,6 +27,14 @@
 .board.paused .board-caption, .board.done .board-caption { color: var(--text-muted); }
 .board-ring path { fill: none; stroke: var(--sun); stroke-width: 3.2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 1; animation: guide-draw .6s cubic-bezier(.3,.7,.4,1) backwards; }
 .board-ring path.pass-1 { stroke-width: 1.8; opacity: .7; animation-delay: .15s; }
+.board-speed select { padding: 5px; max-width: 64px; border: 0; border-radius: var(--radius-m); background: var(--surface-subtle); color: var(--text); }
+.board-beats { display: flex; flex: 0 0 auto; gap: 3px; max-width: 35%; overflow-x: auto; margin-right: 12px; }
+.board-beats button { min-width: 23px; height: 23px; padding: 0; font-size: 11px; border-radius: 50%; background: var(--surface-subtle); }
+.board-beats button[aria-current] { background: var(--accent); color: var(--surface); }
+.board-breadcrumb { font-size: 11px; max-width: 20%; margin-right: 10px; color: var(--text-muted); }
+.board.playing .board-pulse { animation: board-pulse 1s ease-in-out infinite; }
+@keyframes board-pulse { 50% { opacity: .4; } }
+@media (prefers-reduced-motion: reduce) { .board.playing .board-pulse { animation: none; } }
 .board-resize { position: absolute; right: 3px; bottom: 3px; width: 14px; height: 14px; cursor: nwse-resize;
   background: linear-gradient(135deg, transparent 55%, var(--border) 55%, var(--border) 65%, transparent 65%, transparent 78%, var(--border) 78%, var(--border) 88%, transparent 88%); }
 @media (prefers-color-scheme: dark) {

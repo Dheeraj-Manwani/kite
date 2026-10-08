@@ -20,8 +20,8 @@ function fitLabel(e: ElementInput): ElementInput {
   if (!['rectangle', 'ellipse', 'diamond'].includes(e.type) || !e.label) return e;
   const factor = e.type === 'ellipse' ? 1.42 : e.type === 'diamond' ? 1.9 : 1;
   const longest = Math.max(...e.label.split(/\s+/).map(w => textWidth(w) * fontSizes.medium));
-  const width = Math.ceil(Math.max(e.width ?? 0, (longest + 38) * factor, 120));
-  const lines = wrapText(e.label, width / factor - 36, fontSizes.medium);
+  const width = Math.ceil(Math.max(e.width ?? 0, (longest + 38 + (e.icon ? 60 : 0)) * factor, 120));
+  const lines = wrapText(e.label, width / factor - 36 - (e.icon ? 60 : 0), fontSizes.medium);
   const height = Math.ceil(Math.max(e.height ?? 0, (measure(lines, fontSizes.medium).height + 24) * factor, 64));
   return { ...e, width, height };
 }
@@ -49,7 +49,7 @@ function place(e: ElementInput, placed: LaidElement[], make: (input: ElementInpu
 export function fixScene(inputs: ElementInput[], pinned: ReadonlySet<string> = new Set()): ElementInput[] {
   const fixed = inputs.map(e => ({ ...fitLabel(e) }));
   const placed: LaidElement[] = [];
-  const nodes = fixed.filter(e => ['rectangle', 'ellipse', 'diamond', 'text'].includes(e.type));
+  const nodes = fixed.filter(e => ['rectangle', 'ellipse', 'diamond', 'text', 'formula'].includes(e.type));
   // Existing elements are placed first; new beats find free space around them.
   nodes.sort((a, b) => Number(pinned.has(b.id)) - Number(pinned.has(a.id)));
   for (const e of nodes) {

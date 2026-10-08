@@ -263,7 +263,7 @@ export function useKiteLoop(refs: KiteElements) {
       let rotationTarget = config.baseAngle + bank + tilt + reaction.tilt + turn.value + spinBase + lastSpin;
       if (pointing) {
         // The nose (local -y) points at the control or the nib; wrap so the kite turns the short way.
-        const aim = ink ?? pointer.aim;
+        const aim = ink ? br.pen ?? br.aim ?? ink : pointer.aim;
         const angle = Math.atan2(aim.y - body.y.value, aim.x - body.x.value) * 180 / Math.PI + 90 + reaction.tilt;
         rotationTarget = rotation.value + (((angle - rotation.value) % 360) + 540) % 360 - 180;
         if (reduced) rotation = spring(rotationTarget);
