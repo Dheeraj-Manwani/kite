@@ -16,14 +16,15 @@ export class BoardPlayer {
   private gapUntil = 0;
   private svg?: SVGSVGElement;
   private done?: () => void;
+  private onStart?: () => void;
   /** Where the nib was when the last stroke ended; the kite waits there between strokes. */
   last: CursorPoint | null = null;
   get playing() { return this.index < this.steps.length; }
   /** `groups` are the element groups to draw, in order; each holds nodes marked with data-kind and data-order. */
   /** `delayMs`: the beat is hidden at once and the pen starts after this (while the camera moves to it). */
-  play(key: number, svg: SVGSVGElement, groups: Element[], budgetMs: number, done: () => void, reduced = false, delayMs = 0) {
+  play(key: number, svg: SVGSVGElement, groups: Element[], budgetMs: number, done: () => void, reduced = false, delayMs = 0, onStart?: () => void) {
     this.cancel();
-    this.key = key; this.svg = svg; this.done = done; this.index = 0; this.startedAt = 0; this.gapUntil = delayMs ? performance.now() + delayMs : 0;
+    this.key = key; this.svg = svg; this.done = done; this.onStart = onStart; this.index = 0; this.startedAt = 0; this.gapUntil = delayMs ? performance.now() + delayMs : 0;
     this.steps = groups.flatMap((group, element) => [...group.querySelectorAll<SVGGraphicsElement>('[data-kind]')].map(node => {
       const kind = node.dataset.kind as Kind, order = Number(node.dataset.order ?? 0);
       // Text is written through a clip that grows over its real rendered extent.
@@ -65,6 +66,7 @@ export class BoardPlayer {
   tick(now: number): CursorPoint | null {
     const step = this.steps[this.index]; if (!step) return null;
     if (now < this.gapUntil) return null;
+    const started = this.onStart; this.onStart = undefined; started?.();
     if (!this.startedAt) this.startedAt = now;
     const t = step.duration ? clamp((now - this.startedAt) / step.duration, 0, 1) : 1, e = ease(t);
     let nib: CursorPoint | null = null;
@@ -93,6 +95,7 @@ export class BoardPlayer {
   }
   /** Show everything now and report the beat as drawn. */
   complete() {
+    if (this.steps.length) { const started = this.onStart; this.onStart = undefined; started?.(); }
     for (let i = this.index; i < this.steps.length; i++) this.reveal(this.steps[i]);
     this.index = this.steps.length;
     const done = this.done; this.done = undefined; done?.();
@@ -100,6 +103,6 @@ export class BoardPlayer {
   /** Show everything now without reporting (the beat was paused, skipped, or replaced). */
   cancel() {
     for (let i = this.index; i < this.steps.length; i++) this.reveal(this.steps[i]);
-    this.steps = []; this.index = 0; this.done = undefined; this.key = -1;
+    this.steps = []; this.index = 0; this.done = undefined; this.onStart = undefined; this.key = -1;
   }
 }

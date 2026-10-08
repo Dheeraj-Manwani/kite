@@ -19,6 +19,8 @@ const preload = path.join(temporary, 'preload.cjs');
 fs.writeFileSync(preload, `const {contextBridge,ipcRenderer}=require('electron');
 const subscribe=(channel,callback)=>{const fn=(_e,value,extra)=>callback(value,extra);ipcRenderer.on(channel,fn);return()=>ipcRenderer.removeListener(channel,fn);};
 contextBridge.exposeInMainWorld('kite',{
+listBoards:async()=>[{id:'saved-tcp',messageId:42,title:'TCP diagram',createdAt:Date.now(),thumbnail:null}],reopenBoard:async()=>({ok:true}),boardThumbnail:(id,png)=>ipcRenderer.send('test:thumbnail',id,png),
+boardStarted:(id,key)=>ipcRenderer.send('test:boardStarted',id,key),
 listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRenderer.listenerCount(n)])),listHistory:async()=>[{id:'history-test',started_at:Date.now(),preview:'A marked chart',models:'Test model',count:1}],historyScreenshot:async id=>id===42?'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z/C/HgAGgwJ/lK3Q6wAAAABJRU5ErkJggg==':null,historyDetail:async()=>({messages:[{id:42,role:'user',content:'What is this?',model:'Test model',total_ms:120,attachments:1,annotation_json:JSON.stringify({marks:[{markType:'enclosure'}]})}],tools:[{id:1,message_id:42,tool:'create_note',decision:'approved',duration_ms:30,summary:'Save note?',result_json:'Saved'}]}),deleteHistory:async()=>({ok:true}),exportHistory:async()=>({ok:true}),reportFrame:()=>{},logEvent:()=>{},setHotkeyRecording:()=>{},focusOverlay:()=>{},getAbout:async()=>({version:'1.0.0',updateStatus:'Up to date',updateReady:false}),aboutAction:a=>ipcRenderer.send('test:about',a),openKeyPage:()=>{},releaseOverlay:()=>{},onAppEvent:cb=>subscribe('app:event',cb),onViewChange:cb=>subscribe('view:change',cb),openView:view=>ipcRenderer.send('test:openView',view),
 listMemory:()=>ipcRenderer.invoke('test:memoryList'),editMemory:(id,patch)=>ipcRenderer.invoke('test:memoryEdit',id,patch),deleteMemory:id=>ipcRenderer.invoke('test:memoryDelete',id),exportMemory:async()=>({ok:true}),
 undoMemory:token=>ipcRenderer.invoke('test:memoryUndo',token),onMemoryChanged:cb=>subscribe('memory:changed',cb),letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
@@ -239,6 +241,9 @@ app.whenReady().then(async()=>{
     assert.ok(flights.length===1&&Math.abs(flights[0].x-finale.x)<20&&Math.abs(flights[0].y-finale.y)<20&&Math.abs(flights[0].scale-finale.scale)<.15&&flights[0].scale>1.3,'flies from the stage kite: '+JSON.stringify({flights,finale}));
     tutorial.destroy();
     const history=await create('history');await delay(200);
+    assert.equal(await history.webContents.executeJavaScript("document.querySelector('.history-boards strong').textContent"),'TCP diagram');
+    await history.webContents.executeJavaScript("document.querySelector('.history-boards button').click()");await delay(50);
+    assert.match(await history.webContents.executeJavaScript("document.querySelector('.history-view [role=status]').textContent"),/Replaying/);
     await history.webContents.executeJavaScript("document.querySelector('.history-item').click()");await delay(100);
     // Friendly day groups, human labels for marks and tools, and icon actions (UX-70 to UX-73).
     assert.equal(await history.webContents.executeJavaScript("document.querySelector('.history-day').textContent"),'Today');
@@ -456,7 +461,8 @@ app.whenReady().then(async()=>{
     ipcMain.handle('test:boardExport',(_e,action,png,title)=>{exported.push({action,png:Buffer.from(png),title});return {ok:true};});
     overlay.webContents.send('guide:state',null);overlay.webContents.send('cursor:update',{x:700,y:900},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});
     const beats=demoLesson.beats, lesson=n=>layoutScene(beats.slice(0,n).reduce(applyBeat,[]));
-    const boardView={id:3,title:'How a kite flies',status:'playing',beat:1,total:beats.length,caption:beats[1].say,note:null,elements:lesson(2),drawing:{key:1,beat:1,ids:['wind1','wind2'],durationMs:2600},highlight:['kite']};
+    const thumbnails=[];ipcMain.on('test:thumbnail',(_e,id,png)=>thumbnails.push({id,png:Buffer.from(png)}));
+    const boardView={id:3,savedId:'render-save',title:'How a kite flies',status:'playing',beat:1,total:beats.length,caption:beats[1].say,note:null,elements:lesson(2),drawing:{key:1,beat:1,ids:['wind1','wind2'],durationMs:2600},highlight:['kite']};
     overlay.webContents.send('board:state',{...boardView,beat:0,caption:beats[0].say,elements:lesson(1),drawing:{key:0,beat:0,ids:['title','kite'],durationMs:1800},highlight:[]});
     await delay(500);
     assert.equal(await js("document.querySelectorAll('.board [data-el]').length"),2);
@@ -482,6 +488,10 @@ app.whenReady().then(async()=>{
     assert.match(await js("document.querySelector('.board text').textContent"),/How a kite flies/);
     assert.ok(boardBounds.some(b=>b&&b.width>400),'board bounds reported for hit testing');
     fs.writeFileSync(path.join(temporary,'board.png'),(await overlay.webContents.capturePage()).toPNG());
+    for(let i=0;i<100&&!thumbnails.length;i++)await delay(50);
+    assert.equal(thumbnails[0].id,'render-save');
+    const thumbSize=nativeImage.createFromBuffer(thumbnails[0].png).getSize();
+    assert.ok(thumbSize.width>0&&thumbSize.height>0&&Math.max(thumbSize.width,thumbSize.height)<=420,'archive thumbnail is a small PNG');
     await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Copy').click()");
     for(let i=0;i<100&&!exported.length;i++)await delay(50);
     assert.equal(exported[0].action,'copy');assert.equal(exported[0].title,'How a kite flies');

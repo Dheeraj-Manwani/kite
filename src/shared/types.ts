@@ -48,6 +48,9 @@ export interface KiteAPI {
   /** "Let's fly": close onboarding and hand its kite (client px in this window) to the overlay. */
   letsFly(from: import('./release').StageKite): void;
   listHistory(query?: string): Promise<import('./release').ConversationSummary[]>;
+  listBoards(query?: string): Promise<import('./board').BoardSummary[]>;
+  reopenBoard(id: string): Promise<OperationResult>;
+  boardThumbnail(id: string, png: Uint8Array): void;
   historyDetail(id: string): Promise<import('./release').HistoryDetail>;
   /** The marked screenshot kept with a question, as a data URL, or null (UX-74). */
   historyScreenshot(messageId: number): Promise<string | null>;
@@ -100,6 +103,7 @@ export interface KiteAPI {
   onBoardEvent(callback: (view: import('./board').BoardView | null) => void): () => void;
   boardControl(action: import('./board').BoardAction): void;
   boardDrawn(id: number, key: number): void;
+  boardStarted(id: number, key: number): void;
   setBoardBounds(bounds: ScreenBounds | null): void;
   exportBoard(action: 'copy' | 'save', png: Uint8Array, title: string): Promise<OperationResult>;
   demoBoard(): Promise<OperationResult>;

@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Whiteboard gallery</title>
+<style>
+:root { --bg: #f6f5f2; --panel: #ffffff; --text: #1e1e1e; --muted: #5f6368; --line: #dcdad4; --bad: #c92a2a; --good: #2b8a3e; color-scheme: light dark; }
+@media (prefers-color-scheme: dark) { :root { --bg: #161616; --panel: #202020; --text: #ececec; --muted: #a0a0a0; --line: #3a3a3a; --bad: #ff8787; --good: #8ce99a; } }
+body { margin: 0; padding: 24px 16px 48px; background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, sans-serif; }
+h1 { font-size: 22px; margin: 0 0 4px; } h2 { font-size: 16px; margin: 32px 0 8px; }
+p.lede { color: var(--muted); margin: 0 0 16px; max-width: 80ch; }
+.scroll { overflow-x: auto; }
+table { border-collapse: collapse; background: var(--panel); }
+th, td { border: 1px solid var(--line); padding: 8px; vertical-align: top; text-align: left; }
+th small { display: block; color: var(--muted); font-weight: normal; }
+.summary td { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.boards th { width: 200px; min-width: 160px; font-weight: 500; }
+.boards td { width: 590px; } .boards img { display: block; width: 590px; height: auto; border-radius: 6px; }
+.boards td p { margin: 6px 0 0; color: var(--muted); } .boards td p.bad { color: var(--bad); } .boards td p.good { color: var(--good); }
+.empty { color: var(--muted); font-style: italic; }
+.tag, .follow { display: block; font-size: 12px; color: var(--muted); }
+</style></head><body>
+<h1>Whiteboard gallery</h1>
+<p class="lede">The frozen DeepSeek Flash generations from 2 October 2026, repaired and revalidated on 8 October, finished and rendered through Kite's overlay in the default 1400 × 900 panel on a 1920 × 1080 display. All 122 boards are included. Model timings and tokens in the table remain historical; they are not new provider calls. See <a href="phase1-live.json">fresh overlay first-stroke samples and conditions</a>. Click a board to open it at full size.</p>
+<h2>Summary</h2>
+<div class="scroll"><table class="summary"><thead><tr><th>Model</th><th>Drew</th><th>Valid first try</th><th>Repairs</th><th>First token</th><th>First beat (streamed)</th><th>First stroke</th><th>Output tokens</th><th>Lint-clean</th><th>Overlaps</th><th>Through shapes</th><th>Crossings</th><th>Text (median)</th><th>Text under 14 px</th></tr></thead>
+<tbody><tr><th scope="row">DeepSeek Flash<small>deepseek:deepseek-flash</small></th>
+    <td>60/60</td><td>92%</td><td>11</td><td>0.8 s</td><td>1.8 s</td><td>3.9 s</td>
+    <td>896.5</td><td>82%</td><td>0</td><td>0.4262295081967213</td><td>0.3114754098360656</td><td>14 px</td><td>0%</td></tr></tbody></table></div>
+<p class="lede">Times and tokens are medians over lessons; overlaps, through and crossings are means per lesson.</p>
+<h2>Boards</h2>
+<div class="scroll"><table class="boards"><thead><tr><th>Prompt</th><th>DeepSeek Flash</th></tr></thead>
+<tbody><tr><th scope="row"><span class="tag">networking · sequence</span>Explain how the TCP three-way handshake works.</th><td><a href="gallery/deepseek-deepseek-flash/tcp-handshake-0.jpg"><img src="gallery/deepseek-deepseek-flash/tcp-handshake-0.jpg" alt="TCP Three-Way Handshake" loading="lazy" width="590" height="380"></a>
+      <p>5.1 s · 1019 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/tcp-handshake-1.jpg"><img src="gallery/deepseek-deepseek-flash/tcp-handshake-1.jpg" alt="TCP Handshake, Simple" loading="lazy" width="590" height="380"></a>
+      <p>2.9 s · 488 tokens · 4 beats · 17 elements · text 15.6 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What happens if the SYN-ACK gets lost?</th><td class="empty">No lesson (spoke): Good question — it&#39;s a timeout, not a failure.
+
+The client waits for the SYN-ACK. If it doesn&#39;t arrive in time, it just resends the SYN and waits again, doubling the wait each round. If nothing comes back after several tries, it gives up and reports a connection timeout. Meanwhile the server, having</td></tr>
+<tr><th scope="row"><span class="tag">networking · sequence</span>How does OAuth login with Google work?</th><td><a href="gallery/deepseek-deepseek-flash/oauth-0.jpg"><img src="gallery/deepseek-deepseek-flash/oauth-0.jpg" alt="How OAuth login with Google works" loading="lazy" width="590" height="380"></a>
+      <p>5.3 s · 1368 tokens · 6 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on the access token.</th><td><a href="gallery/deepseek-deepseek-flash/oauth-1.jpg"><img src="gallery/deepseek-deepseek-flash/oauth-1.jpg" alt="Access token detail" loading="lazy" width="590" height="380"></a>
+      <p>2.9 s · 621 tokens · 3 beats · 26 elements · text 14 px</p>
+      <p class="bad">4 crossings</p></td></tr>
+<tr><th scope="row"><span class="tag">networking · sequence</span>What happens when I type a website name and DNS looks it up?</th><td><a href="gallery/deepseek-deepseek-flash/dns-0.jpg"><img src="gallery/deepseek-deepseek-flash/dns-0.jpg" alt="How DNS Resolves a Website Name" loading="lazy" width="590" height="380"></a>
+      <p>4.8 s · 1021 tokens · 5 beats · 15 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Where does caching happen?</th><td><a href="gallery/deepseek-deepseek-flash/dns-1.jpg"><img src="gallery/deepseek-deepseek-flash/dns-1.jpg" alt="DNS Caching Layers" loading="lazy" width="590" height="380"></a>
+      <p>3.6 s · 621 tokens · 3 beats · 22 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">networking · sequence</span>How does HTTPS keep my connection secure?</th><td><a href="gallery/deepseek-deepseek-flash/https-tls-0.jpg"><img src="gallery/deepseek-deepseek-flash/https-tls-0.jpg" alt="How HTTPS Keeps Your Connection Secure" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 992 tokens · 5 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on the certificate check.</th><td><a href="gallery/deepseek-deepseek-flash/https-tls-1.jpg"><img src="gallery/deepseek-deepseek-flash/https-tls-1.jpg" alt="How HTTPS Keeps Your Connection Secure" loading="lazy" width="590" height="380"></a>
+      <p>4.2 s · 591 tokens · 5 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">networking · layers</span>Explain the OSI model layers.</th><td><a href="gallery/deepseek-deepseek-flash/osi-0.jpg"><img src="gallery/deepseek-deepseek-flash/osi-0.jpg" alt="The OSI Model: 7 Layers" loading="lazy" width="590" height="380"></a>
+      <p>4.9 s · 1178 tokens · 6 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Which layer does a router work at?</th><td><a href="gallery/deepseek-deepseek-flash/osi-1.jpg"><img src="gallery/deepseek-deepseek-flash/osi-1.jpg" alt="Routers at Layer 3" loading="lazy" width="590" height="380"></a>
+      <p>2.9 s · 464 tokens · 3 beats · 21 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me an example of a packet going down the layers.</th><td><a href="gallery/deepseek-deepseek-flash/osi-2.jpg"><img src="gallery/deepseek-deepseek-flash/osi-2.jpg" alt="A Packet Going Down the Layers" loading="lazy" width="590" height="380"></a>
+      <p>6.5 s · 1620 tokens · 5 beats · 32 elements · text 14 px · 1 repair</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">networking · architecture</span>How does a load balancer spread traffic across servers?</th><td><a href="gallery/deepseek-deepseek-flash/load-balancer-0.jpg"><img src="gallery/deepseek-deepseek-flash/load-balancer-0.jpg" alt="How a Load Balancer Spreads Traffic" loading="lazy" width="590" height="380"></a>
+      <p>4.5 s · 1107 tokens · 6 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What happens when one server goes down?</th><td><a href="gallery/deepseek-deepseek-flash/load-balancer-1.jpg"><img src="gallery/deepseek-deepseek-flash/load-balancer-1.jpg" alt="When a server goes down" loading="lazy" width="590" height="380"></a>
+      <p>2.4 s · 502 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">networking · architecture</span>How does a CDN make websites faster?</th><td><a href="gallery/deepseek-deepseek-flash/cdn-0.jpg"><img src="gallery/deepseek-deepseek-flash/cdn-0.jpg" alt="How a CDN Speeds Up Websites" loading="lazy" width="590" height="380"></a>
+      <p>4.1 s · 961 tokens · 4 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/cdn-1.jpg"><img src="gallery/deepseek-deepseek-flash/cdn-1.jpg" alt="How a CDN Speeds Up Websites" loading="lazy" width="590" height="380"></a>
+      <p>5.8 s · 1585 tokens · 4 beats · 11 elements · text 14 px · 1 repair</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">networking · sequence</span>How is a WebSocket different from normal HTTP requests?</th><td><a href="gallery/deepseek-deepseek-flash/websocket-0.jpg"><img src="gallery/deepseek-deepseek-flash/websocket-0.jpg" alt="WebSocket vs HTTP" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 1111 tokens · 6 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Show me the upgrade step in more detail.</th><td><a href="gallery/deepseek-deepseek-flash/websocket-1.jpg"><img src="gallery/deepseek-deepseek-flash/websocket-1.jpg" alt="WebSocket vs HTTP" loading="lazy" width="590" height="380"></a>
+      <p>4.9 s · 868 tokens · 5 beats · 24 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">programming · flow</span>How does React decide what to re-render?</th><td><a href="gallery/deepseek-deepseek-flash/react-rendering-0.jpg"><img src="gallery/deepseek-deepseek-flash/react-rendering-0.jpg" alt="How React decides what to re-render" loading="lazy" width="590" height="380"></a>
+      <p>4.5 s · 1165 tokens · 7 beats · 22 elements · text 14 px</p>
+      <p class="bad">2 through · 1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on the virtual DOM diff.</th><td><a href="gallery/deepseek-deepseek-flash/react-rendering-1.jpg"><img src="gallery/deepseek-deepseek-flash/react-rendering-1.jpg" alt="How React decides what to re-render" loading="lazy" width="590" height="380"></a>
+      <p>3.3 s · 542 tokens · 6 beats · 26 elements · text 14 px</p>
+      <p class="bad">3 through · 1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">programming · flow</span>Explain the JavaScript event loop.</th><td><a href="gallery/deepseek-deepseek-flash/event-loop-0.jpg"><img src="gallery/deepseek-deepseek-flash/event-loop-0.jpg" alt="The JavaScript Event Loop" loading="lazy" width="590" height="380"></a>
+      <p>4.5 s · 1189 tokens · 6 beats · 17 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Where do promises fit in?</th><td><a href="gallery/deepseek-deepseek-flash/event-loop-1.jpg"><img src="gallery/deepseek-deepseek-flash/event-loop-1.jpg" alt="Where Promises Fit In" loading="lazy" width="590" height="380"></a>
+      <p>2.4 s · 405 tokens · 3 beats · 20 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me an example with setTimeout.</th><td class="empty">No lesson (spoke): I&#39;ve put a snippet in the bubble — the output order usually surprises people.
+
+&lt;details&gt;
+&lt;summary&gt;Event loop ordering example&lt;/summary&gt;
+
+```js
+console.log(&quot;1 — sync start&quot;);
+
+setTimeout(() =&gt; {
+  console.log(&quot;5 — setTimeout (macrotask)&quot;);
+}, 0);
+
+Promise.resolve().then(() =&gt; {
+  console.log(&quot;3 — pro</td></tr>
+<tr><th scope="row"><span class="tag">programming · timeline</span>How do git branches and merging work?</th><td><a href="gallery/deepseek-deepseek-flash/git-branching-0.jpg"><img src="gallery/deepseek-deepseek-flash/git-branching-0.jpg" alt="Git Branches and Merging" loading="lazy" width="590" height="380"></a>
+      <p>4.8 s · 1441 tokens · 5 beats · 27 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What&#39;s the difference with a rebase?</th><td><a href="gallery/deepseek-deepseek-flash/git-branching-1.jpg"><img src="gallery/deepseek-deepseek-flash/git-branching-1.jpg" alt="Merge vs Rebase" loading="lazy" width="590" height="380"></a>
+      <p>10.3 s · 2541 tokens · 3 beats · 38 elements · text 14 px · 2 repair</p>
+      <p class="bad">1 through</p></td></tr>
+<tr><th scope="row"><span class="tag">programming · sequence</span>Walk me through what happens in a REST API request from a mobile app.</th><td><a href="gallery/deepseek-deepseek-flash/rest-request-0.jpg"><img src="gallery/deepseek-deepseek-flash/rest-request-0.jpg" alt="REST API Request from a Mobile App" loading="lazy" width="590" height="380"></a>
+      <p>4.4 s · 1121 tokens · 6 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Where does authentication happen?</th><td><a href="gallery/deepseek-deepseek-flash/rest-request-1.jpg"><img src="gallery/deepseek-deepseek-flash/rest-request-1.jpg" alt="Where Auth Happens" loading="lazy" width="590" height="380"></a>
+      <p>2.8 s · 517 tokens · 4 beats · 23 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">programming · tree</span>Explain recursion using factorial.</th><td><a href="gallery/deepseek-deepseek-flash/recursion-0.jpg"><img src="gallery/deepseek-deepseek-flash/recursion-0.jpg" alt="Recursion via Factorial" loading="lazy" width="590" height="380"></a>
+      <p>4.2 s · 1175 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What&#39;s a stack overflow then?</th><td><a href="gallery/deepseek-deepseek-flash/recursion-1.jpg"><img src="gallery/deepseek-deepseek-flash/recursion-1.jpg" alt="Recursion via Factorial" loading="lazy" width="590" height="380"></a>
+      <p>2.5 s · 446 tokens · 4 beats · 21 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">programming · flow</span>How does a compiler turn code into a program?</th><td><a href="gallery/deepseek-deepseek-flash/compiler-0.jpg"><img src="gallery/deepseek-deepseek-flash/compiler-0.jpg" alt="How a Compiler Turns Code into a Program" loading="lazy" width="590" height="380"></a>
+      <p>5.0 s · 1318 tokens · 6 beats · 20 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on parsing.</th><td><a href="gallery/deepseek-deepseek-flash/compiler-1.jpg"><img src="gallery/deepseek-deepseek-flash/compiler-1.jpg" alt="Parsing in more detail" loading="lazy" width="590" height="380"></a>
+      <p>4.4 s · 1043 tokens · 6 beats · 32 elements · text 14 px</p>
+      <p class="bad">1 through · 2 crossings</p></td></tr>
+<tr><th scope="row"><span class="tag">programming · flow</span>How does garbage collection work?</th><td><a href="gallery/deepseek-deepseek-flash/garbage-collection-0.jpg"><img src="gallery/deepseek-deepseek-flash/garbage-collection-0.jpg" alt="How Garbage Collection Works" loading="lazy" width="590" height="380"></a>
+      <p>4.5 s · 1215 tokens · 5 beats · 21 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/garbage-collection-1.jpg"><img src="gallery/deepseek-deepseek-flash/garbage-collection-1.jpg" alt="How Garbage Collection Works" loading="lazy" width="590" height="380"></a>
+      <p>1.3 s · 174 tokens · 3 beats · 21 elements · text — px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">programming · architecture</span>Explain the MVC pattern.</th><td><a href="gallery/deepseek-deepseek-flash/mvc-0.jpg"><img src="gallery/deepseek-deepseek-flash/mvc-0.jpg" alt="The MVC Pattern" loading="lazy" width="590" height="380"></a>
+      <p>4.0 s · 881 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me an example with a to-do app.</th><td><a href="gallery/deepseek-deepseek-flash/mvc-1.jpg"><img src="gallery/deepseek-deepseek-flash/mvc-1.jpg" alt="MVC in a To-Do App" loading="lazy" width="590" height="380"></a>
+      <p>2.7 s · 484 tokens · 4 beats · 17 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">algorithms · algorithm</span>Show me how binary search works.</th><td><a href="gallery/deepseek-deepseek-flash/binary-search-0.jpg"><img src="gallery/deepseek-deepseek-flash/binary-search-0.jpg" alt="Binary Search" loading="lazy" width="590" height="380"></a>
+      <p>7.2 s · 2046 tokens · 6 beats · 16 elements · text 14 px · 1 repair</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Why is it log n?</th><td><a href="gallery/deepseek-deepseek-flash/binary-search-1.jpg"><img src="gallery/deepseek-deepseek-flash/binary-search-1.jpg" alt="Why it&#39;s O(log n)" loading="lazy" width="590" height="380"></a>
+      <p>2.8 s · 576 tokens · 4 beats · 22 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What if the list isn&#39;t sorted?</th><td class="empty">No lesson (spoke): Short answer: binary search just gives wrong answers — you can silently skip the element you&#39;re looking for.
+
+To fix it, sort first (O(n log n)), then search (O(log n)); or if you need speed on unsorted data, use a hash set for O(1) lookups.</td></tr>
+<tr><th scope="row"><span class="tag">algorithms · algorithm</span>Explain quicksort.</th><td><a href="gallery/deepseek-deepseek-flash/quicksort-0.jpg"><img src="gallery/deepseek-deepseek-flash/quicksort-0.jpg" alt="Quicksort" loading="lazy" width="590" height="380"></a>
+      <p>6.1 s · 1514 tokens · 6 beats · 25 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Show me the partition step on an example.</th><td><a href="gallery/deepseek-deepseek-flash/quicksort-1.jpg"><img src="gallery/deepseek-deepseek-flash/quicksort-1.jpg" alt="Partition walkthrough" loading="lazy" width="590" height="380"></a>
+      <p>3.7 s · 977 tokens · 6 beats · 36 elements · text 14 px</p>
+      <p class="bad">3 through</p></td></tr>
+<tr><th scope="row"><span class="tag">algorithms · algorithm</span>How does breadth-first search work on a graph?</th><td><a href="gallery/deepseek-deepseek-flash/bfs-0.jpg"><img src="gallery/deepseek-deepseek-flash/bfs-0.jpg" alt="Breadth-First Search (BFS)" loading="lazy" width="590" height="380"></a>
+      <p>5.7 s · 1564 tokens · 6 beats · 26 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>How is depth-first search different?</th><td><a href="gallery/deepseek-deepseek-flash/bfs-1.jpg"><img src="gallery/deepseek-deepseek-flash/bfs-1.jpg" alt="DFS vs BFS" loading="lazy" width="590" height="380"></a>
+      <p>3.3 s · 702 tokens · 4 beats · 33 elements · text 14 px</p>
+      <p class="bad">1 through</p></td></tr>
+<tr><th scope="row"><span class="tag">algorithms · algorithm</span>How does a hash table handle collisions?</th><td><a href="gallery/deepseek-deepseek-flash/hash-collisions-0.jpg"><img src="gallery/deepseek-deepseek-flash/hash-collisions-0.jpg" alt="Hash Table Collisions" loading="lazy" width="590" height="380"></a>
+      <p>4.4 s · 1239 tokens · 5 beats · 24 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on open addressing.</th><td><a href="gallery/deepseek-deepseek-flash/hash-collisions-1.jpg"><img src="gallery/deepseek-deepseek-flash/hash-collisions-1.jpg" alt="Open Addressing, In Detail" loading="lazy" width="590" height="380"></a>
+      <p>3.7 s · 745 tokens · 6 beats · 30 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">algorithms · compare</span>Explain Big O notation with examples.</th><td><a href="gallery/deepseek-deepseek-flash/big-o-0.jpg"><img src="gallery/deepseek-deepseek-flash/big-o-0.jpg" alt="Big O Notation" loading="lazy" width="590" height="380"></a>
+      <p>6.9 s · 1764 tokens · 5 beats · 26 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td class="empty">No lesson (spoke): Sure — think of Big O as &quot;how much slower does this get as the list grows?&quot; Doubling the list and the work stays the same is O(1), doubles is O(n), quadruples is O(n²). That&#39;s the whole idea.</td></tr>
+<tr><th scope="row"><span class="tag">algorithms · algorithm</span>How does inserting into a linked list work?</th><td><a href="gallery/deepseek-deepseek-flash/linked-list-0.jpg"><img src="gallery/deepseek-deepseek-flash/linked-list-0.jpg" alt="Inserting into a Linked List" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 1115 tokens · 6 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>How is that different from an array?</th><td><a href="gallery/deepseek-deepseek-flash/linked-list-1.jpg"><img src="gallery/deepseek-deepseek-flash/linked-list-1.jpg" alt="Linked List vs Array" loading="lazy" width="590" height="380"></a>
+      <p>3.8 s · 847 tokens · 3 beats · 27 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">algorithms · algorithm</span>How does Dijkstra&#39;s shortest path algorithm work?</th><td><a href="gallery/deepseek-deepseek-flash/dijkstra-0.jpg"><img src="gallery/deepseek-deepseek-flash/dijkstra-0.jpg" alt="Dijkstra&#39;s Shortest Path" loading="lazy" width="590" height="380"></a>
+      <p>4.9 s · 1273 tokens · 6 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me an example on a small graph.</th><td><a href="gallery/deepseek-deepseek-flash/dijkstra-1.jpg"><img src="gallery/deepseek-deepseek-flash/dijkstra-1.jpg" alt="Dijkstra on a Small Graph" loading="lazy" width="590" height="380"></a>
+      <p>5.0 s · 1292 tokens · 6 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · compare</span>Explain the CAP theorem.</th><td><a href="gallery/deepseek-deepseek-flash/cap-0.jpg"><img src="gallery/deepseek-deepseek-flash/cap-0.jpg" alt="The CAP Theorem" loading="lazy" width="590" height="380"></a>
+      <p>4.1 s · 1035 tokens · 6 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me an example of a CP and an AP database.</th><td><a href="gallery/deepseek-deepseek-flash/cap-1.jpg"><img src="gallery/deepseek-deepseek-flash/cap-1.jpg" alt="CP vs AP examples" loading="lazy" width="590" height="380"></a>
+      <p>2.0 s · 303 tokens · 2 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · architecture</span>Microservices versus a monolith: what&#39;s the difference?</th><td><a href="gallery/deepseek-deepseek-flash/microservices-0.jpg"><img src="gallery/deepseek-deepseek-flash/microservices-0.jpg" alt="Monolith vs Microservices" loading="lazy" width="590" height="380"></a>
+      <p>4.0 s · 1029 tokens · 5 beats · 16 elements · text 14 px</p>
+      <p class="bad">1 through</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>How do the services talk to each other?</th><td><a href="gallery/deepseek-deepseek-flash/microservices-1.jpg"><img src="gallery/deepseek-deepseek-flash/microservices-1.jpg" alt="How services talk" loading="lazy" width="590" height="380"></a>
+      <p>2.9 s · 558 tokens · 4 beats · 21 elements · text 14 px</p>
+      <p class="bad">1 through</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · architecture</span>How does a message queue like Kafka work?</th><td><a href="gallery/deepseek-deepseek-flash/message-queue-0.jpg"><img src="gallery/deepseek-deepseek-flash/message-queue-0.jpg" alt="How Kafka Works" loading="lazy" width="590" height="380"></a>
+      <p>4.7 s · 1324 tokens · 5 beats · 22 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What&#39;s a consumer group?</th><td><a href="gallery/deepseek-deepseek-flash/message-queue-1.jpg"><img src="gallery/deepseek-deepseek-flash/message-queue-1.jpg" alt="Consumer Groups, Close Up" loading="lazy" width="590" height="380"></a>
+      <p>3.0 s · 602 tokens · 4 beats · 28 elements · text 14 px</p>
+      <p class="bad">1 through</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · tree</span>How does a database index make queries faster?</th><td><a href="gallery/deepseek-deepseek-flash/db-index-0.jpg"><img src="gallery/deepseek-deepseek-flash/db-index-0.jpg" alt="How a database index speeds up queries" loading="lazy" width="590" height="380"></a>
+      <p>5.1 s · 1333 tokens · 5 beats · 22 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on the B-tree.</th><td><a href="gallery/deepseek-deepseek-flash/db-index-1.jpg"><img src="gallery/deepseek-deepseek-flash/db-index-1.jpg" alt="Inside the B-tree" loading="lazy" width="590" height="380"></a>
+      <p>4.6 s · 1200 tokens · 4 beats · 38 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · flow</span>How does caching with Redis in front of a database work?</th><td><a href="gallery/deepseek-deepseek-flash/caching-0.jpg"><img src="gallery/deepseek-deepseek-flash/caching-0.jpg" alt="Redis Cache in Front of a Database" loading="lazy" width="590" height="380"></a>
+      <p>3.8 s · 946 tokens · 6 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What&#39;s cache invalidation?</th><td><a href="gallery/deepseek-deepseek-flash/caching-1.jpg"><img src="gallery/deepseek-deepseek-flash/caching-1.jpg" alt="Cache Invalidation" loading="lazy" width="590" height="380"></a>
+      <p>3.4 s · 647 tokens · 5 beats · 18 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · compare</span>How are Docker containers different from virtual machines?</th><td><a href="gallery/deepseek-deepseek-flash/docker-0.jpg"><img src="gallery/deepseek-deepseek-flash/docker-0.jpg" alt="Containers vs Virtual Machines" loading="lazy" width="590" height="380"></a>
+      <p>4.8 s · 1241 tokens · 6 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/docker-1.jpg"><img src="gallery/deepseek-deepseek-flash/docker-1.jpg" alt="Containers vs VMs, simply" loading="lazy" width="590" height="380"></a>
+      <p>2.2 s · 451 tokens · 3 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · architecture</span>How would you design a URL shortener?</th><td><a href="gallery/deepseek-deepseek-flash/url-shortener-0.jpg"><img src="gallery/deepseek-deepseek-flash/url-shortener-0.jpg" alt="Designing a URL Shortener" loading="lazy" width="590" height="380"></a>
+      <p>5.0 s · 1113 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>How do you handle lots of traffic?</th><td><a href="gallery/deepseek-deepseek-flash/url-shortener-1.jpg"><img src="gallery/deepseek-deepseek-flash/url-shortener-1.jpg" alt="Scaling the URL Shortener" loading="lazy" width="590" height="380"></a>
+      <p>3.9 s · 842 tokens · 4 beats · 29 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · sequence</span>What does ACID mean for database transactions?</th><td><a href="gallery/deepseek-deepseek-flash/transactions-0.jpg"><img src="gallery/deepseek-deepseek-flash/transactions-0.jpg" alt="ACID Transactions" loading="lazy" width="590" height="380"></a>
+      <p>3.4 s · 752 tokens · 6 beats · 10 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me a bank transfer example.</th><td><a href="gallery/deepseek-deepseek-flash/transactions-1.jpg"><img src="gallery/deepseek-deepseek-flash/transactions-1.jpg" alt="ACID: Bank Transfer Example" loading="lazy" width="590" height="380"></a>
+      <p>3.6 s · 713 tokens · 5 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">systems · cycle</span>Explain process states in an operating system.</th><td><a href="gallery/deepseek-deepseek-flash/os-process-0.jpg"><img src="gallery/deepseek-deepseek-flash/os-process-0.jpg" alt="Process States in an OS" loading="lazy" width="590" height="380"></a>
+      <p>4.0 s · 869 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What makes a process go to waiting?</th><td><a href="gallery/deepseek-deepseek-flash/os-process-1.jpg"><img src="gallery/deepseek-deepseek-flash/os-process-1.jpg" alt="What Sends a Process to Waiting" loading="lazy" width="590" height="380"></a>
+      <p>2.5 s · 479 tokens · 2 beats · 18 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">science · flow</span>Explain photosynthesis.</th><td><a href="gallery/deepseek-deepseek-flash/photosynthesis-0.jpg"><img src="gallery/deepseek-deepseek-flash/photosynthesis-0.jpg" alt="Photosynthesis" loading="lazy" width="590" height="380"></a>
+      <p>7.3 s · 1909 tokens · 6 beats · 16 elements · text 14 px · 1 repair</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/photosynthesis-1.jpg"><img src="gallery/deepseek-deepseek-flash/photosynthesis-1.jpg" alt="Photosynthesis" loading="lazy" width="590" height="380"></a>
+      <p>1.9 s · 335 tokens · 3 beats · 14 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What happens in the dark reactions?</th><td><a href="gallery/deepseek-deepseek-flash/photosynthesis-2.jpg"><img src="gallery/deepseek-deepseek-flash/photosynthesis-2.jpg" alt="Photosynthesis" loading="lazy" width="590" height="380"></a>
+      <p>2.1 s · 384 tokens · 2 beats · 19 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">science · cycle</span>Explain the water cycle.</th><td><a href="gallery/deepseek-deepseek-flash/water-cycle-0.jpg"><img src="gallery/deepseek-deepseek-flash/water-cycle-0.jpg" alt="The Water Cycle" loading="lazy" width="590" height="380"></a>
+      <p>3.9 s · 1043 tokens · 6 beats · 14 elements · text 14 px</p>
+      <p class="bad">2 crossings</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Where do clouds come from exactly?</th><td><a href="gallery/deepseek-deepseek-flash/water-cycle-1.jpg"><img src="gallery/deepseek-deepseek-flash/water-cycle-1.jpg" alt="Where clouds come from" loading="lazy" width="590" height="380"></a>
+      <p>3.3 s · 717 tokens · 4 beats · 22 elements · text 14 px</p>
+      <p class="bad">2 crossings</p></td></tr>
+<tr><th scope="row"><span class="tag">science · timeline</span>How does mitosis work?</th><td><a href="gallery/deepseek-deepseek-flash/cell-division-0.jpg"><img src="gallery/deepseek-deepseek-flash/cell-division-0.jpg" alt="How Mitosis Works" loading="lazy" width="590" height="380"></a>
+      <p>3.4 s · 824 tokens · 4 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>How is meiosis different?</th><td><a href="gallery/deepseek-deepseek-flash/cell-division-1.jpg"><img src="gallery/deepseek-deepseek-flash/cell-division-1.jpg" alt="How Mitosis Works" loading="lazy" width="590" height="380"></a>
+      <p>3.2 s · 626 tokens · 3 beats · 20 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">science · flow</span>How does blood flow through the heart?</th><td><a href="gallery/deepseek-deepseek-flash/heart-0.jpg"><img src="gallery/deepseek-deepseek-flash/heart-0.jpg" alt="Blood Flow Through the Heart" loading="lazy" width="590" height="380"></a>
+      <p>3.1 s · 908 tokens · 5 beats · 14 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/heart-1.jpg"><img src="gallery/deepseek-deepseek-flash/heart-1.jpg" alt="Blood Flow, Simplified" loading="lazy" width="590" height="380"></a>
+      <p>3.1 s · 861 tokens · 2 beats · 27 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">science · architecture</span>What&#39;s the structure of an atom?</th><td><a href="gallery/deepseek-deepseek-flash/atom-0.jpg"><img src="gallery/deepseek-deepseek-flash/atom-0.jpg" alt="Structure of an Atom" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 1134 tokens · 5 beats · 17 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What&#39;s an isotope?</th><td><a href="gallery/deepseek-deepseek-flash/atom-1.jpg"><img src="gallery/deepseek-deepseek-flash/atom-1.jpg" alt="Isotopes" loading="lazy" width="590" height="380"></a>
+      <p>2.4 s · 563 tokens · 4 beats · 23 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">science · flow</span>How does the greenhouse effect work?</th><td><a href="gallery/deepseek-deepseek-flash/greenhouse-0.jpg"><img src="gallery/deepseek-deepseek-flash/greenhouse-0.jpg" alt="The Greenhouse Effect" loading="lazy" width="590" height="380"></a>
+      <p>3.5 s · 785 tokens · 5 beats · 11 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on which gases matter.</th><td><a href="gallery/deepseek-deepseek-flash/greenhouse-1.jpg"><img src="gallery/deepseek-deepseek-flash/greenhouse-1.jpg" alt="Which Greenhouse Gases Matter" loading="lazy" width="590" height="380"></a>
+      <p>3.7 s · 739 tokens · 4 beats · 20 elements · text 14 px</p>
+      <p class="bad">4 crossings</p></td></tr>
+<tr><th scope="row"><span class="tag">science · sequence</span>How do vaccines train the immune system?</th><td><a href="gallery/deepseek-deepseek-flash/vaccines-0.jpg"><img src="gallery/deepseek-deepseek-flash/vaccines-0.jpg" alt="How Vaccines Train the Immune System" loading="lazy" width="590" height="380"></a>
+      <p>4.8 s · 1326 tokens · 5 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Why do some need boosters?</th><td><a href="gallery/deepseek-deepseek-flash/vaccines-1.jpg"><img src="gallery/deepseek-deepseek-flash/vaccines-1.jpg" alt="Booster Shots" loading="lazy" width="590" height="380"></a>
+      <p>3.9 s · 824 tokens · 3 beats · 30 elements · text 14 px</p>
+      <p class="bad">2 through</p></td></tr>
+<tr><th scope="row"><span class="tag">science · compare</span>What&#39;s the difference between series and parallel circuits?</th><td><a href="gallery/deepseek-deepseek-flash/circuits-0.jpg"><img src="gallery/deepseek-deepseek-flash/circuits-0.jpg" alt="Series vs Parallel Circuits" loading="lazy" width="590" height="380"></a>
+      <p>5.1 s · 1584 tokens · 5 beats · 24 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Which one do houses use?</th><td><a href="gallery/deepseek-deepseek-flash/circuits-1.jpg"><img src="gallery/deepseek-deepseek-flash/circuits-1.jpg" alt="Why homes use parallel" loading="lazy" width="590" height="380"></a>
+      <p>2.1 s · 329 tokens · 3 beats · 26 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">science · flow</span>Explain a food chain and energy transfer.</th><td><a href="gallery/deepseek-deepseek-flash/food-chain-0.jpg"><img src="gallery/deepseek-deepseek-flash/food-chain-0.jpg" alt="Food Chain and Energy Transfer" loading="lazy" width="590" height="380"></a>
+      <p>4.4 s · 1199 tokens · 5 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Why is only 10 percent passed on?</th><td><a href="gallery/deepseek-deepseek-flash/food-chain-1.jpg"><img src="gallery/deepseek-deepseek-flash/food-chain-1.jpg" alt="Why only ~10% passes on" loading="lazy" width="590" height="380"></a>
+      <p>2.8 s · 618 tokens · 4 beats · 26 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">science · cycle</span>Why do we have seasons?</th><td><a href="gallery/deepseek-deepseek-flash/seasons-0.jpg"><img src="gallery/deepseek-deepseek-flash/seasons-0.jpg" alt="Why We Have Seasons" loading="lazy" width="590" height="380"></a>
+      <p>7.3 s · 2089 tokens · 5 beats · 14 elements · text 14 px · 1 repair</p>
+      <p class="bad">2 through</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/seasons-1.jpg"><img src="gallery/deepseek-deepseek-flash/seasons-1.jpg" alt="Why We Have Seasons" loading="lazy" width="590" height="380"></a>
+      <p>2.3 s · 494 tokens · 3 beats · 20 elements · text 16.2 px</p>
+      <p class="bad">3 through</p></td></tr>
+<tr><th scope="row"><span class="tag">economics · plot</span>Explain supply and demand.</th><td><a href="gallery/deepseek-deepseek-flash/supply-demand-0.jpg"><img src="gallery/deepseek-deepseek-flash/supply-demand-0.jpg" alt="Supply and Demand" loading="lazy" width="590" height="380"></a>
+      <p>3.6 s · 891 tokens · 5 beats · 14 elements · text 14 px</p>
+      <p class="bad">2 through</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What happens when demand goes up?</th><td><a href="gallery/deepseek-deepseek-flash/supply-demand-1.jpg"><img src="gallery/deepseek-deepseek-flash/supply-demand-1.jpg" alt="Demand Shifts Right" loading="lazy" width="590" height="380"></a>
+      <p>2.6 s · 501 tokens · 3 beats · 20 elements · text 14 px</p>
+      <p class="bad">3 through</p></td></tr>
+<tr><th scope="row"><span class="tag">economics · plot</span>How does compound interest work?</th><td><a href="gallery/deepseek-deepseek-flash/compound-interest-0.jpg"><img src="gallery/deepseek-deepseek-flash/compound-interest-0.jpg" alt="Compound Interest" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 1071 tokens · 6 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me an example with 10,000 rupees at 8 percent.</th><td><a href="gallery/deepseek-deepseek-flash/compound-interest-1.jpg"><img src="gallery/deepseek-deepseek-flash/compound-interest-1.jpg" alt="₹10,000 at 8%" loading="lazy" width="590" height="380"></a>
+      <p>3.2 s · 632 tokens · 4 beats · 22 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">economics · flow</span>What causes inflation?</th><td><a href="gallery/deepseek-deepseek-flash/inflation-0.jpg"><img src="gallery/deepseek-deepseek-flash/inflation-0.jpg" alt="What Causes Inflation" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 995 tokens · 5 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>How do interest rates fight it?</th><td><a href="gallery/deepseek-deepseek-flash/inflation-1.jpg"><img src="gallery/deepseek-deepseek-flash/inflation-1.jpg" alt="How Interest Rates Fight Inflation" loading="lazy" width="590" height="380"></a>
+      <p>3.3 s · 644 tokens · 6 beats · 22 elements · text 14 px</p>
+      <p class="bad">6 crossings</p></td></tr>
+<tr><th scope="row"><span class="tag">economics · sequence</span>How does a UPI payment go from my phone to the shop?</th><td><a href="gallery/deepseek-deepseek-flash/upi-0.jpg"><img src="gallery/deepseek-deepseek-flash/upi-0.jpg" alt="How a UPI payment travels" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 968 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Where is the PIN checked?</th><td><a href="gallery/deepseek-deepseek-flash/upi-1.jpg"><img src="gallery/deepseek-deepseek-flash/upi-1.jpg" alt="Where the UPI PIN is checked" loading="lazy" width="590" height="380"></a>
+      <p>2.7 s · 400 tokens · 3 beats · 15 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">economics · architecture</span>How does buying a share on the stock market work?</th><td><a href="gallery/deepseek-deepseek-flash/stock-market-0.jpg"><img src="gallery/deepseek-deepseek-flash/stock-market-0.jpg" alt="How Buying a Share Works" loading="lazy" width="590" height="380"></a>
+      <p>4.4 s · 1099 tokens · 6 beats · 16 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/stock-market-1.jpg"><img src="gallery/deepseek-deepseek-flash/stock-market-1.jpg" alt="Buying a Share — Plain Version" loading="lazy" width="590" height="380"></a>
+      <p>2.0 s · 323 tokens · 4 beats · 17 elements · text 14 px</p>
+      <p class="bad">1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · steps</span>Explain the Pythagorean theorem.</th><td><a href="gallery/deepseek-deepseek-flash/pythagoras-0.jpg"><img src="gallery/deepseek-deepseek-flash/pythagoras-0.jpg" alt="The Pythagorean Theorem" loading="lazy" width="590" height="380"></a>
+      <p>3.0 s · 727 tokens · 5 beats · 9 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Show me why it&#39;s true.</th><td><a href="gallery/deepseek-deepseek-flash/pythagoras-1.jpg"><img src="gallery/deepseek-deepseek-flash/pythagoras-1.jpg" alt="Why a² + b² = c²" loading="lazy" width="590" height="380"></a>
+      <p>3.0 s · 777 tokens · 5 beats · 18 elements · text 15.6 px</p>
+      <p class="bad">8 through</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me an example with numbers.</th><td><a href="gallery/deepseek-deepseek-flash/pythagoras-2.jpg"><img src="gallery/deepseek-deepseek-flash/pythagoras-2.jpg" alt="Numbers: 3-4-5 and friends" loading="lazy" width="590" height="380"></a>
+      <p>3.5 s · 799 tokens · 4 beats · 27 elements · text 14 px</p>
+      <p class="bad">8 through</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · plot</span>What is a derivative in calculus?</th><td><a href="gallery/deepseek-deepseek-flash/derivatives-0.jpg"><img src="gallery/deepseek-deepseek-flash/derivatives-0.jpg" alt="What a Derivative Is" loading="lazy" width="590" height="380"></a>
+      <p>8.7 s · 2387 tokens · 5 beats · 16 elements · text 14 px · 1 repair</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Give me the derivative of x squared step by step.</th><td><a href="gallery/deepseek-deepseek-flash/derivatives-1.jpg"><img src="gallery/deepseek-deepseek-flash/derivatives-1.jpg" alt="Derivative of x squared, step by step" loading="lazy" width="590" height="380"></a>
+      <p>2.9 s · 567 tokens · 4 beats · 21 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · steps</span>Explain Ohm&#39;s law.</th><td><a href="gallery/deepseek-deepseek-flash/ohms-law-0.jpg"><img src="gallery/deepseek-deepseek-flash/ohms-law-0.jpg" alt="Ohm&#39;s Law" loading="lazy" width="590" height="380"></a>
+      <p>2.8 s · 675 tokens · 5 beats · 9 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Solve an example: 12 volts across 4 ohms.</th><td><a href="gallery/deepseek-deepseek-flash/ohms-law-1.jpg"><img src="gallery/deepseek-deepseek-flash/ohms-law-1.jpg" alt="Ohm&#39;s Law" loading="lazy" width="590" height="380"></a>
+      <p>2.0 s · 396 tokens · 4 beats · 12 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · steps</span>How do I solve a quadratic equation?</th><td><a href="gallery/deepseek-deepseek-flash/quadratic-0.jpg"><img src="gallery/deepseek-deepseek-flash/quadratic-0.jpg" alt="Solving a Quadratic Equation" loading="lazy" width="590" height="380"></a>
+      <p>3.9 s · 962 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Solve x squared minus 5x plus 6 equals zero.</th><td><a href="gallery/deepseek-deepseek-flash/quadratic-1.jpg"><img src="gallery/deepseek-deepseek-flash/quadratic-1.jpg" alt="Solving x² − 5x + 6 = 0" loading="lazy" width="590" height="380"></a>
+      <p>2.9 s · 679 tokens · 4 beats · 20 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · tree</span>Explain probability with two coin flips.</th><td><a href="gallery/deepseek-deepseek-flash/probability-0.jpg"><img src="gallery/deepseek-deepseek-flash/probability-0.jpg" alt="Probability with Two Coin Flips" loading="lazy" width="590" height="380"></a>
+      <p>3.8 s · 966 tokens · 5 beats · 15 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What about three flips?</th><td><a href="gallery/deepseek-deepseek-flash/probability-1.jpg"><img src="gallery/deepseek-deepseek-flash/probability-1.jpg" alt="Three Flips: 8 Outcomes" loading="lazy" width="590" height="380"></a>
+      <p>3.6 s · 916 tokens · 4 beats · 27 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · steps</span>How do you add fractions with different denominators?</th><td><a href="gallery/deepseek-deepseek-flash/fractions-0.jpg"><img src="gallery/deepseek-deepseek-flash/fractions-0.jpg" alt="Adding fractions with different denominators" loading="lazy" width="590" height="380"></a>
+      <p>2.7 s · 712 tokens · 4 beats · 9 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Simpler, please.</th><td><a href="gallery/deepseek-deepseek-flash/fractions-1.jpg"><img src="gallery/deepseek-deepseek-flash/fractions-1.jpg" alt="Add fractions: 3 easy steps" loading="lazy" width="590" height="380"></a>
+      <p>2.3 s · 474 tokens · 1 beats · 5 elements · text 16.2 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · steps</span>Where does pi come from?</th><td><a href="gallery/deepseek-deepseek-flash/pi-0.jpg"><img src="gallery/deepseek-deepseek-flash/pi-0.jpg" alt="Where pi comes from" loading="lazy" width="590" height="380"></a>
+      <p>4.3 s · 908 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="bad">1 through</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>How do I use it for the area of a circle?</th><td><a href="gallery/deepseek-deepseek-flash/pi-1.jpg"><img src="gallery/deepseek-deepseek-flash/pi-1.jpg" alt="Pi and the area of a circle" loading="lazy" width="590" height="380"></a>
+      <p>3.0 s · 681 tokens · 4 beats · 22 elements · text 14 px</p>
+      <p class="bad">1 through</p></td></tr>
+<tr><th scope="row"><span class="tag">maths · steps</span>How does matrix multiplication work?</th><td><a href="gallery/deepseek-deepseek-flash/matrix-multiply-0.jpg"><img src="gallery/deepseek-deepseek-flash/matrix-multiply-0.jpg" alt="Matrix Multiplication" loading="lazy" width="590" height="380"></a>
+      <p>4.5 s · 1023 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="bad">2 through</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Show me a 2 by 2 example.</th><td><a href="gallery/deepseek-deepseek-flash/matrix-multiply-1.jpg"><img src="gallery/deepseek-deepseek-flash/matrix-multiply-1.jpg" alt="2x2 Example" loading="lazy" width="590" height="380"></a>
+      <p>2.8 s · 680 tokens · 4 beats · 19 elements · text 14 px</p>
+      <p class="bad">2 through</p></td></tr>
+<tr><th scope="row"><span class="tag">ai · architecture</span>How does a neural network learn?</th><td><a href="gallery/deepseek-deepseek-flash/neural-network-0.jpg"><img src="gallery/deepseek-deepseek-flash/neural-network-0.jpg" alt="How a Neural Network Learns" loading="lazy" width="590" height="380"></a>
+      <p>5.1 s · 1221 tokens · 5 beats · 19 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on backpropagation.</th><td><a href="gallery/deepseek-deepseek-flash/neural-network-1.jpg"><img src="gallery/deepseek-deepseek-flash/neural-network-1.jpg" alt="Backprop in Detail" loading="lazy" width="590" height="380"></a>
+      <p>3.4 s · 717 tokens · 5 beats · 26 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">ai · flow</span>How does a large language model generate text?</th><td><a href="gallery/deepseek-deepseek-flash/transformer-0.jpg"><img src="gallery/deepseek-deepseek-flash/transformer-0.jpg" alt="How a large language model generates text" loading="lazy" width="590" height="380"></a>
+      <p>4.2 s · 1011 tokens · 5 beats · 17 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What is attention?</th><td><a href="gallery/deepseek-deepseek-flash/transformer-1.jpg"><img src="gallery/deepseek-deepseek-flash/transformer-1.jpg" alt="What attention does" loading="lazy" width="590" height="380"></a>
+      <p>3.9 s · 818 tokens · 5 beats · 26 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="tag">ai · flow</span>What is retrieval augmented generation?</th><td><a href="gallery/deepseek-deepseek-flash/rag-0.jpg"><img src="gallery/deepseek-deepseek-flash/rag-0.jpg" alt="Retrieval-Augmented Generation (RAG)" loading="lazy" width="590" height="380"></a>
+      <p>4.5 s · 1136 tokens · 5 beats · 20 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>Where do embeddings come in?</th><td><a href="gallery/deepseek-deepseek-flash/rag-1.jpg"><img src="gallery/deepseek-deepseek-flash/rag-1.jpg" alt="Where embeddings come in" loading="lazy" width="590" height="380"></a>
+      <p>3.5 s · 758 tokens · 5 beats · 28 elements · text 14 px</p>
+      <p class="bad">1 through · 1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">ai · cycle</span>Explain how training versus testing data works in machine learning.</th><td><a href="gallery/deepseek-deepseek-flash/ml-training-0.jpg"><img src="gallery/deepseek-deepseek-flash/ml-training-0.jpg" alt="Training vs Testing Data" loading="lazy" width="590" height="380"></a>
+      <p>4.1 s · 902 tokens · 5 beats · 13 elements · text 14 px</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>What&#39;s overfitting?</th><td><a href="gallery/deepseek-deepseek-flash/ml-training-1.jpg"><img src="gallery/deepseek-deepseek-flash/ml-training-1.jpg" alt="Overfitting, close up" loading="lazy" width="590" height="380"></a>
+      <p>7.8 s · 2149 tokens · 4 beats · 27 elements · text 14 px · 1 repair</p>
+      <p class="bad">3 through · 1 crossing</p></td></tr>
+<tr><th scope="row"><span class="tag">history · timeline</span>Give me a timeline of the space race.</th><td><a href="gallery/deepseek-deepseek-flash/history-timeline-0.jpg"><img src="gallery/deepseek-deepseek-flash/history-timeline-0.jpg" alt="The Space Race" loading="lazy" width="590" height="380"></a>
+      <p>12.1 s · 3356 tokens · 7 beats · 21 elements · text 14 px · 1 repair</p>
+      <p class="good">Lint-clean</p></td></tr>
+<tr><th scope="row"><span class="follow">Follow-up</span>More detail on Apollo 11.</th><td><a href="gallery/deepseek-deepseek-flash/history-timeline-1.jpg"><img src="gallery/deepseek-deepseek-flash/history-timeline-1.jpg" alt="Apollo 11 in detail" loading="lazy" width="590" height="380"></a>
+      <p>7.7 s · 1798 tokens · 4 beats · 33 elements · text 14 px · 1 repair</p>
+      <p class="good">Lint-clean</p></td></tr></tbody></table></div>
+</body></html>

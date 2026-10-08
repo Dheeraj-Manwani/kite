@@ -6,6 +6,7 @@ import { useSettings } from '../hooks/useSettings';
 import { ExportIcon, SearchIcon, TrashIcon } from '../icons';
 import { Keycaps } from './Keycaps';
 import { dayLabel, duration, markLabel, snippetParts, toolLine } from './historyText';
+import type { BoardSummary } from '../../shared/board';
 
 const time = (t: number) => new Date(t).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
 
@@ -23,8 +24,12 @@ export default function HistoryView() {
   const settings = useSettings();
   const [query, setQuery] = useState(''), [rows, setRows] = useState<ConversationSummary[] | null>(null), [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<HistoryDetail | null>(null), [toast, setToast] = useState('');
+  const [boards, setBoards] = useState<BoardSummary[]>([]);
   // Keep the open conversation while it's still listed; otherwise open the first one, so the two panes always agree.
-  const load = (q: string) => window.kite.listHistory(q).then(list => { setRows(list); setSelected(current => list.some(r => r.id === current) ? current : list[0]?.id ?? null); return list; });
+  const load = async (q: string) => {
+    const [list, saved] = await Promise.all([window.kite.listHistory(q), window.kite.listBoards(q)]);
+    setBoards(saved); setRows(list); setSelected(current => list.some(r => r.id === current) ? current : list[0]?.id ?? null); return list;
+  };
   useEffect(() => {
     let alive = true;
     const timer = setTimeout(() => { if (alive) load(query).catch(() => setToast('Couldn’t load history.')); }, 180);
@@ -53,6 +58,11 @@ export default function HistoryView() {
   return <main className="history-view">
     <h1>History</h1>
     <p className="group-hint">Stored on this computer. Search, read again, or let conversations go.</p>
+    {!!boards.length && <section className="history-boards" aria-label="Saved whiteboards"><h2>Whiteboards</h2>
+      <div>{boards.map(b => <button key={b.id} onClick={() => void window.kite.reopenBoard(b.id).then(r => setToast(r.ok ? 'Replaying the whiteboard.' : r.error ?? 'Couldn’t open the whiteboard.'))}>
+        {b.thumbnail && <img src={b.thumbnail} alt="" />}<strong>{b.title}</strong><small>{dayLabel(b.createdAt)} · Replay</small>
+      </button>)}</div>
+    </section>}
     {empty && !query ? <div className="history-empty"><SailMark size={40} /><p>Hold <Keycaps keys={hotkey} /> to ask your first question.</p></div> :
     <div className="history-layout">
       <nav className="history-list" aria-label="Conversations">

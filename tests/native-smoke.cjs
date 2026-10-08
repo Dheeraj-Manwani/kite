@@ -57,7 +57,17 @@ app.whenReady().then(() => {
     // History knows which question kept a screenshot, and finds its marked overview (UX-74).
     assert.equal(db.detail('test').messages.find(m=>m.id===row).attachments,1);assert.equal(db.screenshot(row),'fixture.jpg');assert.equal(db.screenshot(row+999),null);
     assert.equal(db.voiceStats().voiceMedianMs, null); // interrupted voice sample is excluded
+    // Saved boards survive restart, search labels, update in place, and cascade with their conversation.
+    const saved={id:'board-fixture',messageId:row,title:'Handshake',lesson:{title:'Handshake',beats:[{say:'A SYN packet.',draw:[{id:'syn',type:'text',x:20,y:20,text:'SYN packet'}]}]},scene:[]};
+    assert.equal(db.saveBoard(saved),true);db.boardThumbnail(saved.id,Buffer.from([137,80,78,71]));
+    db.close();db=openDatabase(dbPath);
+    assert.equal(db.readBoard(saved.id).lesson.beats[0].say,'A SYN packet.');assert.equal(db.listBoards('packet').length,1);
+    assert.match(db.listBoards('Handshake')[0].thumbnail,/^data:image\/png;base64,/);
+    assert.equal(db.listBoards('" OR injection').length,0);
+    db.saveBoard({...saved,title:'TCP connection'});assert.equal(db.listBoards('Handshake').length,0);assert.equal(db.listBoards('TCP').length,1);
     const paths=db.deleteHistory('test');assert.deepEqual(paths,['fixture.jpg']);
+    assert.equal(db.readBoard(saved.id),null);assert.equal(db.listBoards('packet').length,0);assert.equal(db.saveBoard(saved),false);
+    db.boardThumbnail(saved.id,Buffer.from([1]));assert.equal(db.listBoards().length,0);
     assert.equal(db.listConversations('hello').length,0);assert.equal(db.detail('test').messages.length,0);assert.equal(db.recentTools().length,0);
     db.close();
     const Database=require('better-sqlite3');const legacyPath=path.join(temporary,'legacy.db');const legacy=new Database(legacyPath);

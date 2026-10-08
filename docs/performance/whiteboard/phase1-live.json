@@ -1,0 +1,59 @@
+{
+  "checkedAt": "2026-10-08T04:14:39.845Z",
+  "models": [
+    {
+      "checkedAt": "2026-10-08T04:10:56.901Z",
+      "model": "deepseek:deepseek-flash",
+      "conditions": "1920x1080 real offscreen overlay, voice off, ordinary motion, font/camera/player included",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "firstStrokeMs": 3007,
+          "totalMs": 4247,
+          "drew": true
+        },
+        {
+          "prompt": "oauth",
+          "firstStrokeMs": 2064,
+          "totalMs": 4265,
+          "drew": true
+        },
+        {
+          "prompt": "dns",
+          "firstStrokeMs": 2796,
+          "totalMs": 4631,
+          "drew": true
+        }
+      ],
+      "medianFirstStrokeMs": 2796,
+      "targetMs": 5000
+    },
+    {
+      "checkedAt": "2026-10-08T04:14:39.845Z",
+      "model": "groq:openai/gpt-oss-120b",
+      "conditions": "1920x1080 real offscreen overlay, voice off, ordinary motion, font/camera/player included",
+      "runs": [
+        {
+          "prompt": "tcp-handshake",
+          "firstStrokeMs": 3755,
+          "totalMs": 3785,
+          "drew": true
+        },
+        {
+          "prompt": "oauth",
+          "firstStrokeMs": 4218,
+          "totalMs": 4254,
+          "drew": true
+        },
+        {
+          "prompt": "dns",
+          "firstStrokeMs": 3772,
+          "totalMs": 3787,
+          "drew": true
+        }
+      ],
+      "medianFirstStrokeMs": 3772,
+      "targetMs": 5000
+    }
+  ]
+}

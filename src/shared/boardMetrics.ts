@@ -58,7 +58,7 @@ const shrink = (r: ScreenBounds, by: number): ScreenBounds => ({ x: r.x + by, y:
 const blockBox = (t: TextBlock): ScreenBounds => ({ x: t.x, y: t.y, width: t.width, height: t.height });
 const segments = (points: Point[]) => points.slice(1).map((b, i) => [points[i], b] as const);
 /** Liang–Barsky: does the segment enter the rectangle's interior? */
-function segmentHitsBox(a: Point, b: Point, r: ScreenBounds) {
+export function segmentHitsBox(a: Point, b: Point, r: ScreenBounds) {
   if (r.width <= 0 || r.height <= 0) return false;
   let t0 = 0, t1 = 1; const dx = b.x - a.x, dy = b.y - a.y;
   for (const [p, q] of [[-dx, a.x - r.x], [dx, r.x + r.width - a.x], [-dy, a.y - r.y], [dy, r.y + r.height - a.y]]) {
@@ -135,7 +135,7 @@ export function sceneMetrics(elements: LaidElement[], display = referenceDisplay
     if (a.some(([p, q]) => b.some(([r, s]) => segmentsCross(p, q, r, s)))) { crossings++; issues.push({ kind: 'crossing', ids: [arrows[i].id, arrows[j].id] }); }
   }
   let textOnLines = 0;
-  for (const t of texts.filter(t => t.free)) {
+  for (const t of texts.filter(t => t.free && !textOf(elements.find(e => e.id === t.owner))?.halo)) {
     const on = edges.find(edge => edge.id !== t.owner && segments(edge.points).some(([a, b]) => segmentHitsBox(a, b, shrink(t.box, 2))));
     if (on) { textOnLines++; issues.push({ kind: 'textOnLine', ids: [t.owner, on.id] }); }
   }

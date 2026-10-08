@@ -48,3 +48,8 @@
   .history-item.selected { outline: 2px solid Highlight; outline-offset: -2px; }
   .history-item.selected::before { background: Highlight; }
 }
+.history-boards { margin-bottom: 20px; }
+.history-boards > div { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+.history-boards button { display: flex; flex-direction: column; gap: 6px; flex: 0 0 180px; text-align: left; padding: 10px; }
+.history-boards img { width: 158px; height: 90px; object-fit: contain; background: white; border-radius: var(--radius-s); }
+.history-boards small { color: var(--text-muted); }

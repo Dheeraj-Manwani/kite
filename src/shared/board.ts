@@ -1,5 +1,6 @@
 import type { ScreenBounds } from './types';
 import { excalifontFallbackWidth, excalifontWidths } from './boardFont';
+export { fixScene, lintScene, repairBeats, repairLesson } from './boardLayout';
 /**
  * Whiteboard model shared by main (layout, context for the model) and the overlay (drawing).
  * Coordinates are board units on a 1600 × 900 canvas; the overlay zooms the board to fit.
@@ -36,12 +37,14 @@ export interface ElementInput {
   label?: string; text?: string; size?: TextSize; align?: 'left' | 'center';
   color?: BoardColor; fill?: BoardFill;
   from?: string; to?: string; points?: Point[]; dashed?: boolean; heads?: 'end' | 'both' | 'none';
+  /** Local layout repairs, never requested from the model. */
+  labelOffset?: Point; halo?: boolean;
 }
 export interface BeatInput { say: string; draw?: ElementInput[]; highlight?: string[]; erase?: string[] }
 export interface LessonInput { title: string; mode?: 'new' | 'add'; beats: BeatInput[] }
 export const boardLimits = { beats: 16, perBeat: 24, elements: 200 };
 
-export interface TextBlock { lines: string[]; size: number; x: number; y: number; width: number; height: number; align: 'left' | 'center' }
+export interface TextBlock { lines: string[]; size: number; x: number; y: number; width: number; height: number; align: 'left' | 'center'; halo?: boolean }
 interface Laid { id: string; color: BoardColor; seed: number }
 export interface LaidShape extends Laid { kind: 'shape'; shape: ShapeKind; box: ScreenBounds; label: TextBlock | null; fill: BoardFill }
 export interface LaidText extends Laid { kind: 'text'; box: ScreenBounds; text: TextBlock }
@@ -116,7 +119,7 @@ function layoutText(e: ElementInput): LaidText {
   const lines = wrapText(e.text ?? e.label ?? '', e.width ?? (e.size === 'title' ? 1400 : 520), size);
   const m = measure(lines, size), x = coord(e.x), y = coord(e.y);
   const left = align === 'center' ? x - m.width / 2 : x;
-  const text = { lines, size, x: left, y, width: m.width, height: m.height, align };
+  const text = { lines, size, x: left, y, width: m.width, height: m.height, align, ...(e.halo ? { halo: true } : {}) };
   return { id: e.id, kind: 'text', box: { x: left, y, width: m.width, height: m.height }, text, color: e.color ?? 'black', seed: seedOf(e.id) };
 }
 const center = (r: ScreenBounds): Point => ({ x: r.x + r.width / 2, y: r.y + r.height / 2 });
@@ -175,15 +178,16 @@ function layoutArrow(e: ElementInput, shapes: Map<string, LaidShape | LaidText>,
     if (ny > 1e-6 || (Math.abs(ny) <= 1e-6 && nx < 0)) { nx = -nx; ny = -ny; }
     if (Math.abs(ny) < 0.2) { nx = Math.abs(nx); ny = 0; }
     const clear = Math.abs(nx) * m.width / 2 + Math.abs(ny) * m.height / 2 + 6;
-    label = { lines, size, x: point.x + nx * clear - m.width / 2, y: point.y + ny * clear - m.height / 2, width: m.width, height: m.height, align: 'center' };
+    label = { lines, size, x: point.x + nx * clear - m.width / 2 + (e.labelOffset?.x ?? 0), y: point.y + ny * clear - m.height / 2 + (e.labelOffset?.y ?? 0), width: m.width, height: m.height, align: 'center', ...(e.halo ? { halo: true } : {}) };
   }
   return { id: e.id, kind: 'arrow', points, label, dashed: !!e.dashed, heads: e.heads ?? 'end', color: e.color ?? 'black', seed: seedOf(e.id),
     ...(from ? { from: e.from } : {}), ...(to ? { to: e.to } : {}) };
 }
 /** Lay out a whole scene in input order. Arrows bind to shapes wherever they are; broken references are dropped. */
-export function layoutScene(inputs: ElementInput[]): LaidElement[] {
+export function layoutScene(inputs: ElementInput[], cachedNodes?: LaidElement[], edgeId?: string): LaidElement[] {
   const placed = new Map<string, LaidShape | LaidText>();
-  for (const e of inputs) {
+  if (cachedNodes) for (const e of cachedNodes) { if (e.kind === 'shape' || e.kind === 'text') placed.set(e.id, e); }
+  else for (const e of inputs) {
     if ((shapeKinds as readonly string[]).includes(e.type)) placed.set(e.id, layoutShape(e));
     else if (e.type === 'text' && (e.text ?? e.label)) placed.set(e.id, layoutText(e));
   }
@@ -204,6 +208,7 @@ export function layoutScene(inputs: ElementInput[]): LaidElement[] {
   };
   const out: LaidElement[] = [];
   for (const e of inputs) {
+    if (edgeId && e.id !== edgeId) continue;
     const laid = placed.get(e.id);
     if (laid && (e.type === 'text' || (shapeKinds as readonly string[]).includes(e.type))) out.push(laid);
     else if (e.type === 'arrow') { const arrow = layoutArrow(e, placed, slotOf(e)); if (arrow) out.push(arrow); }
@@ -417,7 +422,11 @@ export interface BoardView {
   captions?: boolean;
   /** Presentation mode ("make it bigger"): the panel fills most of the screen. */
   presenting?: boolean;
+  /** Local archive identity; used to attach the board's PNG thumbnail. */
+  savedId?: string;
 }
+export interface SavedBoard { id: string; messageId: number; title: string; lesson: LessonInput; scene: LaidElement[] }
+export interface BoardSummary { id: string; messageId: number; title: string; createdAt: number; thumbnail: string | null }
 export interface LessonStats {
   /** From the model request to the first stroke on the board. */
   firstStrokeMs?: number;

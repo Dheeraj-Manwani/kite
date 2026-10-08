@@ -14,11 +14,11 @@ function fontStyle() {
  * Render the board as a PNG: a clean copy of the live SVG (no animation state or highlight rings), cropped
  * to its content on white paper. Presentation attributes carry every style, so the copy needs no CSS.
  */
-export async function exportPng(svg: SVGSVGElement | null, elements: LaidElement[]): Promise<Uint8Array> {
+export async function exportPng(svg: SVGSVGElement | null, elements: LaidElement[], maxSide = 4096): Promise<Uint8Array> {
   if (!svg) throw new Error('No board');
   const content = sceneBounds(elements) ?? { x: 0, y: 0, width: canvas.width, height: canvas.height }, pad = 40;
   const box = { x: content.x - pad, y: content.y - pad, width: content.width + pad * 2, height: content.height + pad * 2 };
-  const scale = Math.min(2, 4096 / Math.max(box.width, box.height));
+  const scale = Math.min(2, maxSide / Math.max(box.width, box.height));
   const width = Math.max(1, Math.round(box.width * scale)), height = Math.max(1, Math.round(box.height * scale));
   const copy = svg.cloneNode(true) as SVGSVGElement;
   copy.querySelectorAll('[style]').forEach(node => node.removeAttribute('style'));

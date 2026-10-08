@@ -135,7 +135,8 @@ th small { display: block; color: var(--muted); font-weight: normal; }
 .tag, .follow { display: block; font-size: 12px; color: var(--muted); }
 </style></head><body>
 <h1>Whiteboard gallery</h1>
-<p class="lede">Each lesson from <code>latest.json</code> (updated ${escape(data.updated)}), finished and rendered by Kite's overlay in the default ${data.panel.width} × ${data.panel.height} panel on a ${data.display.width} × ${data.display.height} display, as the user would see it. First stroke is the time from the request until today's Kite could start drawing. Click a board to open it at full size.</p>
+<p class="lede">Each lesson from <code>latest.json</code>, finished and rendered by Kite's overlay in the default ${data.panel.width} × ${data.panel.height} panel on a ${data.display.width} × ${data.display.height} display. ${escape(data.about)} Click a board to open it at full size.</p>
+<p class="lede">Provider generations: ${escape(data.updated)}. ${data.revalidatedAt ? `Repairs/readability revalidated: ${escape(data.revalidatedAt)}. Model timings and tokens below remain historical.` : 'The model-only harness cannot measure an actual drawing frame.'} See <a href="phase1-live.json">fresh overlay first-stroke samples and conditions</a>.</p>
 <h2>Summary</h2>
 <div class="scroll"><table class="summary"><thead><tr><th>Model</th><th>Drew</th><th>Valid first try</th><th>Repairs</th><th>First token</th><th>First beat (streamed)</th><th>First stroke</th><th>Output tokens</th><th>Lint-clean</th><th>Overlaps</th><th>Through shapes</th><th>Crossings</th><th>Text (median)</th><th>Text under 14 px</th></tr></thead>
 <tbody>${summary}</tbody></table></div>

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { sanitizeLesson, wrapText, layoutScene, applyBeat, boundaryPoint, sceneBounds, fitView, describeScene, elementsAt, classifyBoardCommand, speechMs, readingMs, canvas } = require('../src/shared/board.ts');
+const { sanitizeLesson, wrapText, textWidth, fixScene, lintScene, repairLesson, layoutScene, applyBeat, boundaryPoint, sceneBounds, fitView, describeScene, elementsAt, classifyBoardCommand, speechMs, readingMs, canvas } = require('../src/shared/board.ts');
 const { elementStrokes, hachure, random } = require('../src/renderer/board/rough.ts');
 const { BoardSession } = require('../src/main/board/session.ts');
 const { BoardService, demoLesson } = require('../src/main/board/service.ts');
@@ -12,11 +12,71 @@ const { Conversation } = require('../src/main/ai/conversation.ts');
 const flush = async (n = 6) => { for (let i = 0; i < n; i++) await new Promise(r => setTimeout(r, 2)); };
 const numbers = d => d.match(/-?\d+(\.\d+)?/g).map(Number);
 
-test('text wraps by estimated width, keeps newlines, and splits long words', () => {
-  assert.deepEqual(wrapText('Client sends SYN to the server', 120, 20), ['Client', 'sends SYN', 'to the', 'server']);
+test('text wraps by Excalifont width, keeps newlines, and splits long words', () => {
+  assert.deepEqual(wrapText('Client sends SYN to the server', 120, 20), ['Client sends', 'SYN to the', 'server']);
   assert.deepEqual(wrapText('one\ntwo three', 1000, 20), ['one', 'two three']);
-  assert.deepEqual(wrapText('Supercalifragilistic', 60, 20), ['Super', 'calif', 'ragil', 'istic']);
+  const split = wrapText('Supercalifragilistic', 60, 20);
+  assert.equal(split.join(''), 'Supercalifragilistic');
+  assert.ok(split.every(line => textWidth(line) * 20 <= 60));
   assert.deepEqual(wrapText('', 100, 20), ['']);
+});
+
+test('scene repairs remove collisions and label overflow, retain bindings, and halo text over lines', () => {
+  const inputs = [
+    { id: 'a', type: 'rectangle', x: 100, y: 100, width: 70, height: 25, label: 'A long unbroken label' },
+    { id: 'b', type: 'ellipse', x: 140, y: 110, width: 80, height: 40, label: 'Destination' },
+    { id: 'c', type: 'rectangle', x: 450, y: 100, label: 'C' },
+    { id: 'edge', type: 'arrow', from: 'a', to: 'c', label: 'message' },
+    { id: 'line', type: 'line', points: [{ x: 0, y: 700 }, { x: 800, y: 700 }] },
+    { id: 'note', type: 'text', x: 100, y: 690, text: 'A note' },
+  ];
+  const fixed = fixScene(inputs), m = lintScene(fixed);
+  assert.equal(m.overlaps, 0); assert.equal(m.overflow, 0); assert.equal(m.through, 0); assert.equal(m.textOnLines, 0);
+  assert.equal(fixed.find(e => e.id === 'note').halo, true);
+  assert.equal(fixed.find(e => e.id === 'edge').from, 'a');
+  assert.deepEqual(fixScene(fixed), fixed, 'repairs are stable on replay');
+  assert.equal(inputs[0].width, 70, 'authored inputs are not mutated');
+});
+
+test('an arrow detours around an unrelated shape while retaining its endpoints', () => {
+  const inputs = [
+    { id: 'left', type: 'rectangle', x: 0, y: 100, width: 120, height: 80, label: 'Left' },
+    { id: 'obstacle', type: 'rectangle', x: 200, y: 100, width: 120, height: 80, label: 'Obstacle' },
+    { id: 'right', type: 'rectangle', x: 400, y: 100, width: 120, height: 80, label: 'Right' },
+    { id: 'edge', type: 'arrow', from: 'left', to: 'right', label: 'request' },
+  ];
+  assert.equal(lintScene(inputs).through, 1);
+  const fixed = fixScene(inputs), edge = fixed.find(e => e.id === 'edge');
+  assert.equal(lintScene(fixed).through, 0); assert.equal(lintScene(fixed).overlaps, 0);
+  assert.equal(edge.from, 'left'); assert.equal(edge.to, 'right'); assert.ok(edge.points.length > 0);
+  assert.equal(fixed.find(e => e.id === 'obstacle').x, 200);
+});
+
+test('streamed scene repairs pin the prefix and keep follow-up labels readable', () => {
+  const first = repairLesson({ title: 'First', beats: [{ say: 'A', draw: [{ id: 'a', type: 'rectangle', x: 100, y: 100, label: 'First' }] }] });
+  const base = first.beats.reduce(applyBeat, []);
+  const more = repairLesson({ title: 'More', beats: [{ say: 'B', draw: [{ id: 'b', type: 'diamond', x: 110, y: 110, width: 50, height: 30, label: 'Destination?' }] }] }, base);
+  const final = more.beats.reduce(applyBeat, base);
+  assert.deepEqual(final.find(e => e.id === 'a'), base[0]);
+  assert.equal(lintScene(final).overlaps, 0); assert.equal(lintScene(final).overflow, 0);
+});
+
+test('saved lessons include streamed beats and follow-ups, close once, and reopen with the same history identity', () => {
+  const saved = [], views = [];
+  const service = new BoardService({ enabled: () => true, speed: () => 1, silence: () => {}, speak: () => false, emit: v => views.push(v), save: b => saved.push(b) });
+  const first = { title: 'TCP', mode: 'new', beats: [{ say: 'Client', draw: [{ id: 'a', type: 'rectangle', x: 100, y: 100, label: 'Client' }] }] };
+  service.preview('stream-save', first, { messageId: 42 });
+  service.start({ ...first, beats: [...first.beats, { say: 'Server', draw: [{ id: 'b', type: 'rectangle', x: 100, y: 100, label: 'Server' }] }] }, { callId: 'stream-save', messageId: 42 });
+  service.control('next'); service.control('next');
+  assert.equal(saved.length, 1); assert.equal(saved[0].messageId, 42); assert.equal(saved[0].lesson.beats.length, 2);
+  const id = saved[0].id;
+  service.start({ title: 'Follow-up', mode: 'add', beats: [{ say: 'ACK', draw: [{ id: 'ack', type: 'text', x: 100, y: 300, text: 'ACK' }] }] }, { messageId: 43 });
+  service.close(); assert.equal(saved.at(-1).lesson.beats.length, 3); assert.equal(saved.at(-1).id, id);
+  const snapshot = saved.at(-1); assert.equal(service.reopen(snapshot).ok, true);
+  assert.equal(views.at(-1).savedId, id); assert.equal(views.at(-1).status, 'playing');
+  service.close();
+  const n = saved.length; service.preview('reject-save', first, { messageId: 44 }); service.endStream('reject-save', 'rejected');
+  assert.equal(saved.length, n, 'rejected previews are not archived'); service.close();
 });
 
 test('shapes size to their labels, arrows bind edge to edge, broken references are dropped', () => {
@@ -310,6 +370,9 @@ test('the lesson log: time to first stroke from the model request, lint counts, 
   assert.equal(first.beats, demoLesson.beats.length); assert.ok(first.elements > 0);
   assert.deepEqual(Object.keys(first.lint), ['overlaps', 'overflow', 'through', 'crossings', 'textOnLines', 'minTextPx']);
   now = 3400; spoken.at(-1).started();
+  assert.equal(views.at(-1).stats.firstStrokeMs, undefined, 'speech start is not a drawing frame');
+  service.started(-1, views.at(-1).drawing.key); assert.equal(views.at(-1).stats.firstStrokeMs, undefined, 'stale boards cannot stop the clock');
+  service.started(views.at(-1).id, views.at(-1).drawing.key);
   assert.equal(views.at(-1).stats.firstStrokeMs, 3000);
   now = 9000; spoken.at(-1).done('spoken');
   assert.equal(views.at(-1).stats.firstStrokeMs, 3000, 'measured once per lesson');
@@ -321,6 +384,7 @@ test('the lesson log: time to first stroke from the model request, lint counts, 
   // A follow-up is measured on its own, against the board it adds to.
   service.start({ title: 'More', mode: 'add', beats: [{ say: 'Extra.', draw: [{ id: 'note', type: 'text', x: 60, y: 840, text: 'Extra' }] }] }, { requestedAt: 9000 });
   now = 9500; spoken.at(-1).started();
+  service.started(views.at(-1).id, views.at(-1).drawing.key);
   const follow = views.at(-1).stats;
   assert.equal(follow.firstStrokeMs, 500); assert.equal(follow.beats, 1); assert.ok(follow.elements > first.elements, 'lint covers the whole board');
   assert.equal(follow.outputTokens, undefined); assert.equal(follow.repairs, 0);

@@ -17,7 +17,7 @@ function Lines({ block, color, clip, order }: { block: TextBlock; color: string;
     return <g key={i}>
       <clipPath id={id}><rect x={0} y={0} width={0} height={0} /></clipPath>
       <text data-kind="text" data-order={order + i} data-clip={id} x={x} y={block.y + i * block.size * lineHeight + block.size}
-        fontSize={block.size} fontFamily={boardFontFamily} fill={color} textAnchor={block.align === 'center' ? 'middle' : 'start'}>{line}</text>
+        fontSize={block.size} fontFamily={boardFontFamily} fill={color} stroke={block.halo ? '#ffffff' : undefined} strokeWidth={block.halo ? 6 : undefined} paintOrder={block.halo ? 'stroke' : undefined} strokeLinejoin="round" textAnchor={block.align === 'center' ? 'middle' : 'start'}>{line}</text>
     </g>;
   })}</>;
 }
@@ -70,7 +70,16 @@ export function BoardLayer() {
     // Load the board's font before the first lesson, so its first words are not drawn in a fallback face.
     void document.fonts?.load('20px Excalifont', 'Aa').catch((): void => undefined);
     const off = window.kite.onBoardEvent(next => {
-      const before = current.current; current.current = next;
+      const before = current.current;
+      // Snapshot while the old SVG still exists. The archive row is saved by main before its event is sent.
+      const capture = next?.status === 'done' && (before?.status !== 'done' || before?.id !== next.id) ? next
+        : before && (!next || next.id !== before.id) ? before : null;
+      if (capture?.savedId && svg.current) {
+        // A done event may add the last elements: capture after React commits it; closing clones immediately.
+        const save = () => { void exportPng(svg.current, capture.elements, 420).then(png => window.kite.boardThumbnail(capture.savedId, png)).catch((): void => undefined); };
+        if (capture === next) requestAnimationFrame(save); else save();
+      }
+      current.current = next;
       if (next?.stats) boardRuntime.stats = next.stats;
       if (next && before?.id !== next.id) { react('perk'); setFrame(f => f && onScreen(f) ? f : initialFrame()); setCamera(null); }
       if (next?.status === 'done' && before?.status !== 'done') react('success');
@@ -121,7 +130,7 @@ export function BoardLayer() {
     const groups = drawing.ids.map(id => node.querySelector(`[data-el="${CSS.escape(id)}"]`)).filter(Boolean);
     const id = view.id, key = drawing.key;
     player.current.last = null;
-    player.current.play(key, node, groups, drawing.durationMs, () => window.kite.boardDrawn(id, key), reduced(), wait);
+    player.current.play(key, node, groups, drawing.durationMs, () => window.kite.boardDrawn(id, key), reduced(), wait, () => window.kite.boardStarted(id, key));
   }, [view?.drawing?.key, view?.id]);
   // Between beats: keep the camera on the last beat; a finished lesson shows the whole board; a resized panel re-plans at once.
   useLayoutEffect(() => {

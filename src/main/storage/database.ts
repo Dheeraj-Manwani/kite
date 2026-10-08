@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3';
 import type { Timing, ModelSelection, ToolAudit, ToolDecision, Reminder } from '../../shared/types';
 import { modelIds } from '../ai/models';
+import type { BoardSummary, SavedBoard } from '../../shared/board';
 export const migrations = [
   `CREATE TABLE conversations (id TEXT PRIMARY KEY, started_at INTEGER NOT NULL);
    CREATE TABLE messages (
@@ -33,6 +34,15 @@ export const migrations = [
   `CREATE TABLE memory (id INTEGER PRIMARY KEY AUTOINCREMENT, kind TEXT NOT NULL CHECK(kind IN ('profile','address','preference','order')),
      key TEXT NOT NULL UNIQUE, label TEXT NOT NULL, value TEXT NOT NULL, source TEXT NOT NULL,
      created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL, used_at INTEGER);`,
+  `CREATE TABLE boards (id TEXT PRIMARY KEY, message_id INTEGER NOT NULL REFERENCES messages(id) ON DELETE CASCADE,
+     title TEXT NOT NULL, script_json TEXT NOT NULL, final_scene_json TEXT NOT NULL, thumbnail_png BLOB, labels TEXT NOT NULL, created_at INTEGER NOT NULL);
+   CREATE INDEX boards_message ON boards(message_id);
+   CREATE VIRTUAL TABLE boards_fts USING fts5(title, labels, content='boards', content_rowid='rowid');
+   CREATE TRIGGER boards_ai AFTER INSERT ON boards BEGIN INSERT INTO boards_fts(rowid,title,labels) VALUES(new.rowid,new.title,new.labels); END;
+   CREATE TRIGGER boards_ad AFTER DELETE ON boards BEGIN INSERT INTO boards_fts(boards_fts,rowid,title,labels) VALUES('delete',old.rowid,old.title,old.labels); END;
+   CREATE TRIGGER boards_au AFTER UPDATE OF title,labels ON boards BEGIN
+     INSERT INTO boards_fts(boards_fts,rowid,title,labels) VALUES('delete',old.rowid,old.title,old.labels);
+     INSERT INTO boards_fts(rowid,title,labels) VALUES(new.rowid,new.title,new.labels); END;`,
 ];
 /** A memory row as stored: `value` is ciphertext (base64). */
 export interface MemoryRow { id: number; kind: string; key: string; label: string; value: string; source: string; created_at: number; updated_at: number; used_at: number | null }
@@ -48,10 +58,32 @@ export function openDatabase(filename: string) {
     }
   })();
   db.exec("INSERT INTO messages_fts(messages_fts,rank) VALUES('secure-delete',1)");
+  db.exec("INSERT INTO boards_fts(boards_fts,rank) VALUES('secure-delete',1)");
   const conversation = db.prepare('INSERT OR IGNORE INTO conversations(id, started_at) VALUES (?, ?)');
   const insert = db.prepare(`INSERT INTO messages(conversation_id, role, content, provider, model, created_at, transcribe_ms, first_token_ms, total_ms, interrupted, tts_first_audio_ms, voice_to_voice_ms)
     VALUES (@conversationId, @role, @content, @provider, @model, @createdAt, @transcribeMs, @firstTokenMs, @totalMs, @interrupted, @ttsFirstAudioMs, @voiceToVoiceMs)`);
   return {
+    saveBoard(board: SavedBoard) {
+      // A delayed close/thumbnail after history deletion must never recreate a board.
+      if (!db.prepare('SELECT id FROM messages WHERE id=?').get(board.messageId)) return false;
+      const labels = board.lesson.beats.flatMap(b => b.draw ?? []).map(e => e.label ?? e.text ?? '').join(' ');
+      db.prepare(`INSERT INTO boards(id,message_id,title,script_json,final_scene_json,labels,created_at) VALUES(?,?,?,?,?,?,?)
+        ON CONFLICT(id) DO UPDATE SET title=excluded.title,script_json=excluded.script_json,final_scene_json=excluded.final_scene_json,labels=excluded.labels`)
+        .run(board.id, board.messageId, board.title, JSON.stringify(board.lesson), JSON.stringify(board.scene), labels, Date.now());
+      return true;
+    },
+    boardThumbnail(id: string, png: Uint8Array) { db.prepare('UPDATE boards SET thumbnail_png=? WHERE id=?').run(Buffer.from(png), id); },
+    listBoards(query = ''): BoardSummary[] {
+      const match = query.trim().split(/\s+/).filter(Boolean).map(s => '"' + s.replace(/"/g, '""') + '"').join(' AND ');
+      const rows = db.prepare(`SELECT id,message_id,title,created_at,thumbnail_png FROM boards
+        ${match ? 'WHERE rowid IN (SELECT rowid FROM boards_fts WHERE boards_fts MATCH ?)' : ''} ORDER BY created_at DESC LIMIT 300`).all(...(match ? [match] : [])) as { id: string; message_id: number; title: string; created_at: number; thumbnail_png: Buffer | null }[];
+      return rows.map(r => ({ id: r.id, messageId: r.message_id, title: r.title, createdAt: r.created_at, thumbnail: r.thumbnail_png ? `data:image/png;base64,${r.thumbnail_png.toString('base64')}` : null }));
+    },
+    readBoard(id: string): SavedBoard | null {
+      const row = db.prepare('SELECT * FROM boards WHERE id=?').get(id) as { id: string; message_id: number; title: string; script_json: string; final_scene_json: string } | undefined;
+      if (!row) return null;
+      return { id: row.id, messageId: row.message_id, title: row.title, lesson: JSON.parse(row.script_json), scene: JSON.parse(row.final_scene_json) };
+    },
     createConversation(id: string, now: number) { conversation.run(id, now); },
     addMessage(conversationId: string, role: 'user' | 'assistant', content: string, timing: Timing, model?: ModelSelection, interrupted = false) {
       const row = insert.run({ conversationId, role, content, provider: model?.provider ?? (role === 'user' ? 'groq' : 'moonshot'),
@@ -108,6 +140,7 @@ export function openDatabase(filename: string) {
         db.prepare(`DELETE FROM conversations${id === null ? '' : ' WHERE id=?'}`).run(...args);
       })();
       db.exec("INSERT INTO messages_fts(messages_fts) VALUES('optimize')");
+      db.exec("INSERT INTO boards_fts(boards_fts) VALUES('optimize')");
       db.pragma('wal_checkpoint(TRUNCATE)'); return files.map(f => f.path);
     },
     memory: {

@@ -1,4 +1,5 @@
-import { classifyBoardCommand, describeScene, layoutScene, markLabel, type BoardAction, type BoardView, type ElementInput, type LessonInput, type LessonStats, type LooseLesson, sanitizeLesson } from '../../shared/board';
+import { classifyBoardCommand, describeScene, layoutScene, markLabel, repairLesson, type BoardAction, type BoardView, type ElementInput, type LessonInput, type LessonStats, type LooseLesson, type SavedBoard, sanitizeLesson } from '../../shared/board';
+import { randomUUID } from 'node:crypto';
 import { lessonMetrics } from '../../shared/boardMetrics';
 import type { StreamEnd, ToolResult } from '../tools/types';
 import { BoardSession, type BoardSessionDeps } from './session';
@@ -11,6 +12,7 @@ export interface BoardServiceDeps extends Omit<BoardSessionDeps, 'emit'> {
   /** Whether captions show (see BoardView.captions); shown when absent. */
   captions?(): boolean;
   now?(): number;
+  save?(board: SavedBoard): void;
 }
 interface Stream { session: BoardSession; count: number; base: ElementInput[]; adding: boolean }
 /** Owns the one whiteboard lesson on screen and answers its voice commands locally. */
@@ -22,6 +24,8 @@ export class BoardService {
   private requestedAt?: number;
   /** Presentation mode, until "smaller" or the board is put away. */
   private presenting = false;
+  private archive?: { id: string; messageId: number };
+  private savedRevision?: string;
   constructor(private deps: BoardServiceDeps) {}
   private now() { return this.deps.now?.() ?? performance.now(); }
   get active() { return !!this.session && !this.session.ended; }
@@ -34,7 +38,7 @@ export class BoardService {
    * Start a lesson, or finish one that was streamed. `requestedAt`: when the model request that wrote it began
    * (performance.now()), for the time to first stroke. `callId`: the tool call, to find its stream.
    */
-  start(written: LooseLesson, meta: { requestedAt?: number; callId?: string } = {}): ToolResult {
+  start(written: LooseLesson, meta: { requestedAt?: number; callId?: string; messageId?: number | null } = {}): ToolResult {
     if (!this.deps.enabled()) return { ok: false, message: 'The whiteboard is turned off in Settings.' };
     const stream = meta.callId ? this.streams.get(meta.callId) : undefined;
     if (stream && meta.callId) { this.streams.delete(meta.callId); return this.complete(stream, written); }
@@ -45,14 +49,14 @@ export class BoardService {
     if (!lesson.beats.length) return { ok: false, message: `Nothing in that lesson could be drawn (${fixes.join('; ')}). Each beat needs a "say" and elements with a type and a position.` };
     this.measure(lesson, base, meta.requestedAt, fixes.length);
     if (adding) { current.insert(lesson.beats); this.deps.log?.('board:add', { count: lesson.beats.length }); }
-    else this.open(lesson).start();
+    else this.open(lesson, meta.messageId).start();
     return this.result(lesson.title, adding, fixes);
   }
   /**
    * Beats of a lesson the model is still writing (complete ones only, as written so far). The first opens the board or
    * joins the open one, so drawing starts long before the whole lesson exists; later ones follow it.
    */
-  preview(callId: string, written: LooseLesson, meta: { requestedAt?: number } = {}) {
+  preview(callId: string, written: LooseLesson, meta: { requestedAt?: number; messageId?: number | null } = {}) {
     if (!this.deps.enabled()) return;
     const stream = this.streams.get(callId);
     if (stream) {
@@ -72,7 +76,7 @@ export class BoardService {
     this.measure(lesson, base, meta.requestedAt, fixes.length);
     let session: BoardSession;
     if (adding) { session = current; session.stream(); session.insert(lesson.beats); this.deps.log?.('board:add', { count: lesson.beats.length, streamed: true }); }
-    else { session = this.open(lesson); session.stream(); session.start(); }
+    else { session = this.open(lesson, meta.messageId); session.stream(); session.start(); }
     this.streams.set(callId, { session, count: lesson.beats.length, base, adding });
   }
   /** The streamed lesson's final input: add what has not arrived yet, settle its title, and let it end. */
@@ -94,22 +98,27 @@ export class BoardService {
     this.streams.delete(callId);
     if (stream.session.ended || this.session !== stream.session) return undefined;
     this.deps.log?.('board:streamEnd', { end, count: stream.count });
-    if (end === 'rejected' && !stream.adding) { stream.session.stop(); return undefined; }
+    if (end === 'rejected' && !stream.adding) { this.archive = undefined; stream.session.stop(); return undefined; }
     stream.session.seal();
     return end === 'truncated' ? { ok: true, message: 'The lesson was cut off; Kite is playing the beats that arrived.', transcript: `(Sketched on the whiteboard: ${stream.session.name})` } : undefined;
   }
   private result(title: string, adding: boolean, fixes: string[]): ToolResult {
-    const fixed = fixes.length ? ` Fixed: ${fixes.join('; ')}.` : '';
+    const changes = [...fixes];
+    if ((this.stats?.fixes ?? 0) > fixes.length) changes.push('adjusted scene layout for readability');
+    const fixed = changes.length ? ` Fixed: ${changes.join('; ')}.` : '';
     return adding ? { ok: true, message: `Added to the whiteboard. Kite is drawing and narrating the new beats itself.${fixed}`, transcript: `(Added to the whiteboard: ${title})` }
       : { ok: true, message: `The whiteboard is open. Kite is drawing each beat and narrating it itself.${fixed}`, transcript: `(Sketched on the whiteboard: ${title})` };
   }
   /** A new lesson replaces whatever is on the board. */
-  private open(lesson: LessonInput) {
+  private open(lesson: LessonInput, messageId?: number | null, savedId?: string) {
     this.session?.stop();
+    this.archive = messageId ? { id: savedId ?? randomUUID(), messageId } : undefined;
+    this.savedRevision = undefined;
     const session: BoardSession = new BoardSession(++this.sequence, lesson.title, lesson.beats, {
       ...this.deps,
       emit: view => {
         if (this.session !== session) return;
+        if (view === null || view.status === 'done') this.persist(session);
         if (view === null) this.session = undefined;
         this.deps.emit(view && this.annotate(view));
       },
@@ -121,22 +130,34 @@ export class BoardService {
     this.deps.log?.('board:start', { count: lesson.beats.length });
     return session;
   }
+  private persist(session: BoardSession) {
+    if (!this.archive || !this.deps.save) return;
+    const snapshot = { ...this.archive, title: session.name, lesson: session.script(), scene: session.scene() };
+    const revision = JSON.stringify(snapshot);
+    if (revision === this.savedRevision) return;
+    try { this.deps.save(snapshot); this.savedRevision = revision; }
+    catch { this.deps.log?.('board:saveFailed'); }
+  }
+  /** Replay a local lesson with its original history association and archive identity. */
+  reopen(saved: SavedBoard): ToolResult {
+    if (!this.deps.enabled()) return { ok: false, message: 'The whiteboard is turned off in Settings.' };
+    this.measure(saved.lesson, [], undefined, 0);
+    this.open(saved.lesson, saved.messageId, saved.id).start();
+    return { ok: true, message: 'Replaying the saved whiteboard.' };
+  }
   /** `keepClock`: the same lesson, now complete (streamed): its time to first stroke is already measured or running. */
   private measure(lesson: LessonInput, base: ElementInput[], requestedAt: number | undefined, fixes: number, keepClock = false) {
-    const m = lessonMetrics(lesson.beats, base);
+    const repaired = repairLesson(lesson, base), m = lessonMetrics(repaired.beats, base);
+    const changed = repaired.beats.reduce((n, beat, i) => n + (JSON.stringify(beat.draw) !== JSON.stringify(lesson.beats[i].draw) ? 1 : 0), 0);
     const first = keepClock ? this.stats?.firstStrokeMs : undefined;
-    this.stats = { repairs: 0, fixes, beats: m.beats, elements: m.elements, ...(first !== undefined ? { firstStrokeMs: first } : {}),
+    this.stats = { repairs: 0, fixes: fixes + changed, beats: m.beats, elements: m.elements, ...(first !== undefined ? { firstStrokeMs: first } : {}),
       lint: { overlaps: m.overlaps, overflow: m.overflow, through: m.through, crossings: m.crossings, textOnLines: m.textOnLines, minTextPx: m.minTextPx } };
     if (!keepClock) this.requestedAt = requestedAt;
   }
-  /** Every view carries the lesson's stats; the first one that draws stops the first-stroke clock. */
+  /** Every view carries the lesson's stats; the renderer acknowledgement stops the first-stroke clock. */
   private annotate(view: BoardView): BoardView {
-    view = { ...view, captions: this.deps.captions?.() ?? true, presenting: this.presenting };
+    view = { ...view, captions: this.deps.captions?.() ?? true, presenting: this.presenting, savedId: this.archive?.id };
     if (!this.stats) return view;
-    if (view.drawing && this.requestedAt !== undefined) {
-      this.stats = { ...this.stats, firstStrokeMs: Math.round(this.now() - this.requestedAt) }; this.requestedAt = undefined;
-      this.deps.log?.('board:lesson', { ...this.stats });
-    }
     return { ...view, stats: this.stats };
   }
   /** Token use of the model calls that wrote the latest lesson, known once its call has finished. */
@@ -165,6 +186,12 @@ export class BoardService {
     }
   }
   drawn(id: number, key: number) { if (this.session?.id === id) this.session.drew(key); }
+  /** Renderer acknowledgement after font/layout/camera readiness, when its first drawing frame begins. */
+  started(id: number, key: number) {
+    if (!this.stats || this.requestedAt === undefined || this.session?.id !== id || this.session.view().drawing?.key !== key) return;
+    this.stats = { ...this.stats, firstStrokeMs: Math.round(this.now() - this.requestedAt) }; this.requestedAt = undefined;
+    this.deps.log?.('board:lesson', { ...this.stats }); this.refresh();
+  }
   /** System context: when to draw, and what is on the board now. Board text was written by the model, never the screen. */
   context(): string | undefined {
     if (!this.deps.enabled()) return undefined;

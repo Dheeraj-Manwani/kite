@@ -37,9 +37,10 @@ test('a label too big for a fixed-size shape overflows', () => {
   assert.equal(metrics([box('a', 100, 100, { width: 120, height: 40, label: 'A label that wraps onto several lines' })]).overflow, 1);
   assert.equal(metrics([{ id: 'a', type: 'diamond', x: 100, y: 100, label: 'Sized to fit' }]).overflow, 0);
   // A word split to fit a narrow shape counts when the written label is known.
-  const narrow = [{ id: 'd', type: 'ellipse', x: 100, y: 100, width: 100, height: 70, label: 'Droplet' }];
+  const narrow = [{ id: 'd', type: 'ellipse', x: 100, y: 100, width: 120, height: 90, label: 'Droplet' }];
   assert.equal(sceneMetrics(layoutScene(narrow), undefined, narrow).overflow, 1);
-  assert.equal(sceneMetrics(layoutScene(narrow), undefined, [{ ...narrow[0], label: 'Drop' }]).overflow, 0);
+  const short = [{ ...narrow[0], label: 'Drop' }];
+  assert.equal(sceneMetrics(layoutScene(short), undefined, short).overflow, 0);
 });
 
 test('edges through shapes and arrow crossings', () => {

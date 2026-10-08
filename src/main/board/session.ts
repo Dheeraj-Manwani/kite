@@ -1,4 +1,4 @@
-import { applyBeat, boardLimits, layoutScene, readingMs, speechMs, type BeatInput, type BoardStatus, type BoardView, type ElementInput, type LaidElement } from '../../shared/board';
+import { applyBeat, boardLimits, layoutScene, readingMs, repairBeats, speechMs, type BeatInput, type BoardStatus, type BoardView, type ElementInput, type LaidElement, type LessonInput } from '../../shared/board';
 /** How a spoken beat ended: heard in full, cut off (the user took over), or the voice failed. */
 export type SpeechEnd = 'spoken' | 'cut' | 'failed';
 export interface BoardSessionDeps {
@@ -46,7 +46,7 @@ export class BoardSession {
   private waiting = false;
   private tail: number;
   constructor(readonly id: number, private title: string, beats: BeatInput[], private deps: BoardSessionDeps, private base: ElementInput[] = [], private timing: BoardTiming = boardTiming) {
-    this.beats = beats.slice(0, boardLimits.beats);
+    this.beats = repairBeats(beats.slice(0, boardLimits.beats * 2), base);
     this.tail = this.beats.length;
   }
   get ended() { return this.finished; }
@@ -63,6 +63,7 @@ export class BoardSession {
   scene(): LaidElement[] { return layoutScene(this.applied(this.through)); }
   /** The board as it will look when the whole lesson has played (for follow-up questions). */
   inputs(): ElementInput[] { return this.applied(this.beats.length); }
+  script(): LessonInput { return { title: this.title, mode: 'new', beats: [...this.beats] }; }
   private current() { return this.beats[Math.min(this.index, this.beats.length - 1)]; }
   view(): BoardView {
     const beat = this.current(), drawing = this.status === 'playing' && this.started && !this.drawn;
@@ -136,7 +137,7 @@ export class BoardSession {
     if (this.finished || !beats.length) return;
     const added = beats.slice(0, Math.max(0, boardLimits.beats * 2 - this.beats.length));
     if (!added.length) return;
-    this.beats.splice(this.tail, 0, ...added);
+    this.beats.splice(this.tail, 0, ...repairBeats(added, this.applied(this.tail)));
     if (this.pauseAfter >= 0) this.pauseAfter = this.tail + added.length - 1;
     this.tail += added.length;
     if (this.waiting && this.status === 'playing') { this.waiting = false; this.begin(this.index + 1); } else this.emit();
@@ -190,7 +191,9 @@ export class BoardSession {
     if (!added.length) return;
     const at = this.status === 'done' ? this.beats.length : this.through;
     const remaining = this.beats.length - at;
-    this.beats.splice(at, 0, ...added);
+    this.beats.splice(at, 0, ...repairBeats(added, this.applied(at)));
+    // Repair the remaining original beats around the inserted follow-up, without moving the prefix.
+    this.beats.splice(at + added.length, remaining, ...repairBeats(this.beats.slice(at + added.length), this.applied(at + added.length)));
     this.pauseAfter = remaining > 0 ? at + added.length - 1 : -1;
     this.tail = at + added.length;
     this.deps.silence(); this.begin(at);

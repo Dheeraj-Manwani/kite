@@ -19,7 +19,7 @@ export function registerHistoryIPC(db: ReturnType<typeof openDatabase>, reset: (
   ipcMain.handle('history:delete', async (e, id) => {
     if (!trusted(e, 'settings') || !(id === null || idOK(id))) return { ok: false };
     const choice = await dialog.showMessageBox(getSettingsWindow(), { type: 'warning', buttons: ['Cancel', 'Delete'], defaultId: 0, cancelId: 0,
-      message: id === null ? 'Delete all conversation history?' : 'Delete this conversation?', detail: 'Messages, tool-call history, and retained screenshots will be removed. Created notes and active reminders remain.' });
+      message: id === null ? 'Delete all conversation history?' : 'Delete this conversation?', detail: 'Messages, saved whiteboards, tool-call history, and retained screenshots will be removed. Created notes and active reminders remain.' });
     if (choice.response !== 1) return { ok: false };
     await reset();
     const root = path.resolve(app.getPath('userData'), 'screens');

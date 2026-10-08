@@ -136,6 +136,7 @@ export function startVoiceService() {
     } };
   };
   const board = new BoardService({
+    save: saved => { history.saveBoard(saved); },
     log: logEvent, enabled: () => preferences.get().whiteboard, speed: () => preferences.get().speed,
     // Spoken lines repeat as captions only when asked, or when they would not be heard (no voice, or a screen reader).
     captions: () => { const s = preferences.get(); return s.boardCaptions || !s.ttsEnabled || !s.voiceId || app.isAccessibilitySupportEnabled(); },
@@ -200,8 +201,8 @@ export function startVoiceService() {
       imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
       definitions: [...createTools(apps, history, preferences.get()),
         ...memoryTools({ store: memory, show: text => appEvent({ type: 'memory:show', text }), saved: savedNotice, source: () => `From what you said, ${today()}` }), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
-        ...(preferences.get().whiteboard ? [explainOnWhiteboard((input, callId) => board.start(input, { requestedAt: lesson.requestedAt, callId }), {
-          update: (callId, partial) => board.preview(callId, partial, { requestedAt: lesson.requestedAt }), end: (callId, end) => board.endStream(callId, end) })] : []),
+        ...(preferences.get().whiteboard ? [explainOnWhiteboard((input, callId) => board.start(input, { requestedAt: lesson.requestedAt, callId, messageId }), {
+          update: (callId, partial) => board.preview(callId, partial, { requestedAt: lesson.requestedAt, messageId }), end: (callId, end) => board.endStream(callId, end) })] : []),
         ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions),
           reorder({ orders: () => taskMemory.orders(),
             handsOver: site => { const p = preferences.get().permissions; return (ruleFor(p, 'money', site)?.permission ?? permissionTable(p).money) === 'never'; },
@@ -234,7 +235,18 @@ export function startVoiceService() {
   // Pausing Kite keeps the guide's goal and progress; "continue" picks it up again.
   appRuntime.changed = tray.update; appRuntime.cancel = () => { controller.cancel(); guide.pause(); board.pause(); agent.pause(); };
   const stopUpdates = startUpdates();
-  registerHistoryIPC(history, async () => { controller.cancel(); await waitForTools(); conversation.reset(); });
+  registerHistoryIPC(history, async () => { controller.cancel(); await waitForTools(); board.close(); conversation.reset(); });
+  ipcMain.handle('boards:list', (event, query = '') => trusted(event, 'settings') && typeof query === 'string' && query.length <= 300 ? history.listBoards(query) : []);
+  ipcMain.handle('boards:reopen', (event, id: unknown): OperationResult => {
+    if (!trusted(event, 'settings') || typeof id !== 'string' || id.length > 100) return { ok: false };
+    const saved = history.readBoard(id); if (!saved) return { ok: false, error: 'That whiteboard is no longer in History.' };
+    const result = board.reopen(saved); return { ok: result.ok, error: result.ok ? undefined : result.message };
+  });
+  ipcMain.on('boards:thumbnail', (event, id: unknown, png: unknown) => {
+    if (!trusted(event, 'overlay') || typeof id !== 'string' || id.length > 100 || !(png instanceof Uint8Array) || png.length > 2_000_000) return;
+    if (png.length < 8 || !Buffer.from(png.subarray(0, 8)).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) return;
+    history.boardThumbnail(id, png);
+  });
   let rendererFPS=0, frameMs=0;
   ipcMain.on('perf:frame',(event,fps,ms)=>{if(trusted(event,'overlay')&&Number.isFinite(fps)&&Number.isFinite(ms)&&fps>=0&&fps<=1000&&ms>=0&&ms<=10000){rendererFPS=fps;frameMs=ms;}});
   ipcMain.handle('dev:perf', async event => {
@@ -273,6 +285,7 @@ export function startVoiceService() {
   ipcMain.on('task:choose', (event, index: unknown, remember: unknown) => { if (trusted(event, 'overlay') && Number.isInteger(index)) agent.choose(index as number, remember === true); });
   ipcMain.on('board:control', (event, action: unknown) => { if (trusted(event, 'overlay') && boardActions.includes(action as BoardAction)) board.control(action as BoardAction); });
   ipcMain.on('board:drawn', (event, id: unknown, key: unknown) => { if (trusted(event, 'overlay') && Number.isSafeInteger(id) && Number.isSafeInteger(key)) board.drawn(id as number, key as number); });
+  ipcMain.on('board:started', (event, id: unknown, key: unknown) => { if (trusted(event, 'overlay') && Number.isSafeInteger(id) && Number.isSafeInteger(key)) board.started(id as number, key as number); });
   ipcMain.handle('dev:boardDemo', (event): OperationResult => {
     if (app.isPackaged || !trusted(event, 'overlay')) return { ok: false };
     const result = board.demo(); return result.ok ? { ok: true } : { ok: false, error: result.message };

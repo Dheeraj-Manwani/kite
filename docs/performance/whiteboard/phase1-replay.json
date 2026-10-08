@@ -1,0 +1,17 @@
+{
+  "checkedAt": "2026-10-08T04:07:01.359Z",
+  "source": "phase0-baseline.json (model generations from 2 October; deterministic replay only)",
+  "prompts": 60,
+  "lessons": 122,
+  "beats": 565,
+  "overlaps": 0,
+  "overflow": 0,
+  "minimumTextPx": 14,
+  "layoutAndLint60": {
+    "samples": 10,
+    "medianMs": 3.374799999999823,
+    "maxMs": 4.6025999999999385,
+    "targetMs": 50
+  },
+  "latency": "Fresh first-stroke measurements are in phase1-live.json, using the real overlay; historical timings below are unchanged."
+}

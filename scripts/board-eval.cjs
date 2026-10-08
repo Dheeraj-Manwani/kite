@@ -18,9 +18,9 @@ const { voiceOutputTokens } = require('../src/main/ai/agentLoop.ts');
 const { buildSystemPrompt } = require('../src/main/ai/systemPrompt.ts');
 const { routingHints } = require('../src/main/ai/routing.ts');
 const { BoardService } = require('../src/main/board/service.ts');
-const { applyBeat, panelSize, sanitizeLesson } = require('../src/shared/board.ts');
+const { applyBeat, panelSize, sanitizeLesson, repairLesson } = require('../src/shared/board.ts');
 const { lessonMetrics, referenceDisplay } = require('../src/shared/boardMetrics.ts');
-const { lessonInput, toLesson } = require('../src/main/tools/impl/explain_on_whiteboard.ts');
+const { lessonInput, toLesson, completeBeats } = require('../src/main/tools/impl/explain_on_whiteboard.ts');
 
 const argv = process.argv.slice(2);
 const arg = (name, fallback) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : fallback; };
@@ -75,19 +75,19 @@ async function turn(model, key, board, messages) {
 }
 /** One streamed model request: timings for the first token, the lesson starting, its first complete beat, and the call. */
 async function attempt(model, key, board, messages) {
-  const definitions = voiceDefinitions(model, { whiteboard: lesson => board.start(lesson) });
+  const definitions = voiceDefinitions(model, { whiteboard: (lesson, callId) => board.start(lesson, { callId }) });
   const tools = Object.fromEntries(definitions.map(d => [d.name, tool({ description: d.description, inputSchema: d.inputSchema,
     toModelOutput: ({ output }) => ({ type: 'text', value: JSON.stringify(output) }),
     // Only the lesson and the clock run; any other tool ends the turn as it would await approval.
-    ...(d.name === 'explain_on_whiteboard' || d.name === 'get_datetime' ? { execute: async input => d.execute(input, { signal: new AbortController().signal, dryRun: false }) } : {}) })]));
+    ...(d.name === 'explain_on_whiteboard' || d.name === 'get_datetime' ? { execute: async (input, ctx) => d.execute(input, { signal: new AbortController().signal, dryRun: false, callId: ctx.toolCallId }) } : {}) })]));
   const system = buildSystemPrompt(model, board.context() ?? [routingHints.task, routingHints.board, routingHints.guide].join('\n'));
   await slot(model.provider);
   const started = performance.now(), at = () => Math.round(performance.now() - started);
-  const record = { firstTokenMs: null, lessonStartMs: null, firstBeatMs: null, firstStrokeMs: null, totalMs: null, attempts: 0, invalid: 0, tool: null, reply: '', outputTokens: null, reasoningTokens: null };
+  const record = { firstTokenMs: null, lessonStartMs: null, firstBeatMs: null, firstStrokeMs: null, lessonCallMs: null, totalMs: null, attempts: 0, invalid: 0, tool: null, reply: '', outputTokens: null, reasoningTokens: null };
   const inputs = new Map();
   const result = streamText({ model: getModel(model.provider, model.id, { getKey: () => key }), system, messages, tools, maxRetries: 0,
     maxOutputTokens: voiceOutputTokens, providerOptions: providerOptionsFor(model), abortSignal: AbortSignal.timeout(180_000), onError: () => undefined,
-    // The real loop goes on after a lesson for a filler line; the harness stops at the moment Kite could start drawing.
+    // A lesson ends the voice turn; no filler model call follows it.
     stopWhen: [stepCountIs(3), ({ steps }) => steps.at(-1).toolResults.some(r => r.toolName === 'explain_on_whiteboard') || !steps.at(-1).toolCalls.length] });
   let accepted = null, lesson = null;
   for await (const part of result.fullStream) {
@@ -97,18 +97,15 @@ async function attempt(model, key, board, messages) {
     if (part.type === 'tool-input-start' && part.toolName === 'explain_on_whiteboard') inputs.set(part.id, { started: at(), text: '', firstBeat: null });
     if (part.type === 'tool-input-delta' && inputs.has(part.id)) {
       const input = inputs.get(part.id); input.text += part.delta;
-      // When streaming lands (phase 1), beat 1 can play once the model has moved on to beat 2.
-      if (input.firstBeat === null && part.delta.includes('{')) {
-        const { value } = await parsePartialJson(input.text);
-        if (Array.isArray(value?.beats) && value.beats.length >= 2) input.firstBeat = at();
-      }
+      const { value } = await parsePartialJson(input.text), complete = completeBeats(value);
+      if (complete) { board.preview(part.id, complete); input.firstBeat ??= at(); }
     }
     if (part.type === 'tool-call') {
       record.tool ??= part.toolName;
       if (part.toolName === 'explain_on_whiteboard') record.attempts++;
     }
     if (part.type === 'tool-result' && part.toolName === 'explain_on_whiteboard' && part.output?.ok) {
-      accepted = part.toolCallId; lesson = part.input; record.tool = 'explain_on_whiteboard'; record.firstStrokeMs = at();
+      accepted = part.toolCallId; lesson = part.input; record.tool = 'explain_on_whiteboard'; record.lessonCallMs = at();
     }
   }
   record.totalMs = at();
@@ -118,7 +115,7 @@ async function attempt(model, key, board, messages) {
   // Repairs: lesson calls that failed validation before the one that was accepted (each costs a model round trip).
   record.invalid = steps.flatMap(s => s.content).filter(c => c.type === 'tool-error' && c.toolName === 'explain_on_whiteboard').length;
   const call = accepted ? inputs.get(accepted) : undefined;
-  if (call) { record.lessonStartMs = call.started; record.firstBeatMs = call.firstBeat ?? record.firstStrokeMs; }
+  if (call) { record.lessonStartMs = call.started; record.firstBeatMs = call.firstBeat ?? record.lessonCallMs; }
   record.reply = record.reply.trim().slice(0, 300);
   return { record, lesson, response: (await result.response).messages };
 }
@@ -143,9 +140,10 @@ async function runPrompt(model, key, prompt) {
             // Repaired as the board service repairs it, against what is already on the board.
             const base = written.mode === 'add' && inputs.length ? inputs : [];
             const { lesson: value, fixes } = sanitizeLesson(written, base.map(e => e.id));
-            entry.lesson = value; entry.fixes = fixes; entry.base = base.length ? 'previous' : 'empty';
-            entry.metrics = lessonMetrics(value.beats, base);
-            inputs = value.beats.reduce(applyBeat, base);
+            const repaired = repairLesson(value, base);
+            entry.lesson = repaired; entry.fixes = fixes; entry.base = base.length ? 'previous' : 'empty';
+            entry.metrics = lessonMetrics(repaired.beats, base);
+            inputs = repaired.beats.reduce(applyBeat, base);
           }
           // Let the board finish so the next question sees it as the user would.
           for (let i = 0; i < 40 && board.active; i++) { const before = board.context(); board.control('next'); if (board.context() === before) break; }
@@ -196,7 +194,7 @@ const read = () => { try { return JSON.parse(fs.readFileSync(out, 'utf8')); } ca
 function save(entry, startedAt) {
   const others = (read().models ?? []).filter(m => m.model !== entry.model && m.promptsVersion === golden.version);
   const data = {
-    about: 'Whiteboard harness results: scripts/board-eval.cjs over scripts/board-eval/prompts.json. Times are from the request to each moment; firstStroke is when today\'s Kite could start drawing (the valid lesson call), firstBeat when a streamed lesson could. Rate-limit waits are excluded (retries, waitedMs). Text sizes are on a 1080p display with the default panel.',
+    about: 'Whiteboard harness results: repaired lessons from scripts/board-eval.cjs. firstBeat is streaming readiness; lessonCall is the valid final call. firstStroke is null without an overlay (actual renderer latency is measured by board-live.cjs). Rate-limit waits are excluded. Text sizes use each beat camera on 1080p.',
     updated: startedAt, display: referenceDisplay, panel: panelSize(referenceDisplay), maxOutputTokens: voiceOutputTokens,
     models: [...others, entry],
   };
