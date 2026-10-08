@@ -6,6 +6,7 @@ import { BoardSession, boardTiming, type BoardSessionDeps } from './session';
 import { adaptSavedLesson, type BoardScript } from '../../shared/boardScript';
 import { routingHints } from '../ai/routing';
 import { boardInputContext, type BoardEdit } from '../../shared/boardEditing';
+import type { BoardAppearance } from '../../shared/boardDelight';
 export interface BoardServiceDeps extends Omit<BoardSessionDeps, 'emit'> {
   emit(view: BoardView | null): void;
   enabled(): boolean;
@@ -17,6 +18,7 @@ export interface BoardServiceDeps extends Omit<BoardSessionDeps, 'emit'> {
   save?(board: SavedBoard): void;
   structured?(): boolean;
   editable?(): boolean;
+  delight?(): boolean;
   image?(id: number, revision: string, signal: AbortSignal): Promise<Uint8Array | undefined>;
 }
 interface Stream { session: BoardSession; count: number; base: ElementInput[]; adding: boolean; structureBase?: BoardScript }
@@ -155,6 +157,7 @@ export class BoardService {
       silence: () => { if (this.session === session) this.deps.silence(); },
     }, [], boardTiming, !!lesson.structure);
     session.restoreEdits(lesson.edits);
+    session.restoreAppearance(lesson.appearance);
     this.session = session;
     this.deps.opened?.();
     this.deps.log?.('board:start', { count: lesson.beats.length });
@@ -190,7 +193,8 @@ export class BoardService {
   }
   /** Every view carries the lesson's stats; the renderer acknowledgement stops the first-stroke clock. */
   private annotate(view: BoardView): BoardView {
-    if (this.deps.editable?.()) { const inputs = this.session?.visibleInputs() ?? []; const scene = JSON.stringify([view.id, inputs]); if (scene !== this.lastScene) { this.lastScene = scene; this.sceneRevision++; }
+    if (this.deps.delight?.()) view = { ...view, delight: true, appearance: this.session?.appearance };
+    if (this.deps.editable?.()) { const inputs = this.session?.visibleInputs() ?? []; const scene = JSON.stringify([view.id, inputs, view.appearance]); if (scene !== this.lastScene) { this.lastScene = scene; this.sceneRevision++; }
       view = { ...view, editable: true, revision: String(this.sceneRevision), inputs, canUndo: this.session?.canUndo, canRedo: this.session?.canRedo }; }
     view = { ...view, captions: this.deps.captions?.() ?? true, presenting: this.presenting, savedId: this.archive?.id, breadcrumbs: this.parents.map(p => p.session.name) };
     if (!this.stats) return view;
@@ -206,11 +210,13 @@ export class BoardService {
   /** A voice utterance while a board is open. Returns the spoken reply, or undefined to use the model. */
   command(text: string): string | undefined {
     const session = this.active ? this.session : undefined; if (!session) return undefined;
-    const action = classifyBoardCommand(text);
+    const action = classifyBoardCommand(text, this.deps.delight?.());
     if (action === 'new-request' && session.question) session.answerQuestion(text);
     return action === 'new-request' ? undefined : this.apply(session, action);
   }
   control(action: BoardAction) { const session = this.active ? this.session : undefined; if (session) this.apply(session, action); }
+  appearance(id: number, value: BoardAppearance) { if (!this.deps.delight?.() || !this.active || this.session.id !== id) return false;
+    this.session.setAppearance(value); this.persist(this.session); return true; }
   edit(id: number, action: BoardEdit) {
     if (!this.deps.editable?.() || !this.active || this.session.id !== id) return false;
     const changed = this.session.edit(action); if (!changed) return false;
@@ -218,7 +224,7 @@ export class BoardService {
     this.persist(this.session); return true;
   }
   snapshot() { if (!this.active) return; const view = this.annotate(this.session.view()); return { id: view.id, revision: view.revision, title: view.title,
-    inputs: this.session.visibleInputs(), elements: view.elements, lesson: this.session.script(), structure: this.structure }; }
+    inputs: this.session.visibleInputs(), elements: view.elements, lesson: this.session.script(), structure: this.structure, streaming: this.session.streaming }; }
   async image(signal: AbortSignal) { if (!this.deps.editable?.() || !this.deps.image) return; const snapshot = this.snapshot(); if (!snapshot) return;
     const image = await this.deps.image(snapshot.id, snapshot.revision, signal); signal.throwIfAborted();
     const current = this.snapshot(); return current?.id === snapshot.id && current.revision === snapshot.revision ? image : undefined; }

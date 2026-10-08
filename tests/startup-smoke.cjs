@@ -32,6 +32,12 @@ try {
       assert.equal(result.models.length >= 15, true);
       assert.equal(result.keys.cartesia, false);
       assert.equal(await win.webContents.executeJavaScript('typeof window.kite.releaseOverlay'), 'function', 'Esc can hand focus back');
+      assert.equal(await win.webContents.executeJavaScript("['setBoardAppearance','prepareBoardVideo','boardNarration','cancelBoardVideo','saveBoardVideo'].every(name=>typeof window.kite[name]==='function')"), true);
+      if (process.env.KITE_BOARD_PHASE5 === '1') {
+        assert.equal((await win.webContents.executeJavaScript("window.kite.prepareBoardVideo(1,'1')")).error,'Add a Cartesia key in Settings to export narrated video.');
+        assert.equal((await win.webContents.executeJavaScript("window.kite.setBoardAppearance(1,{theme:'bad',handwriting:true})")).ok,false);
+        assert.equal((await win.webContents.executeJavaScript("window.kite.saveBoardVideo('bad',new Uint8Array([1]))")).ok,false);
+      }
       console.log('PASS bundled main loads, native voice service/tray starts, renderer/preload loads, settings IPC responds');
       clearTimeout(timeout); app.quit();
     } catch (error) { console.error(error); clearTimeout(timeout); app.exit(1); }

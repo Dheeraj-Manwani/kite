@@ -1,9 +1,10 @@
-import { useEffect, useMemo, useState, type RefObject } from 'react';
+import { useEffect, useMemo, useRef, useState, type RefObject } from 'react';
 import { getStroke } from 'perfect-freehand';
 import { elementBounds, layoutScene, type BoardView, type Camera, type ElementInput, type LaidElement, type Point } from '../../shared/board';
 import { boardOutline, moveInput, rerouteInput, type BoardEdit } from '../../shared/boardEditing';
 import type { BoardExportFormat } from '../../shared/boardExports';
 import { exportPng, exportSvg } from './export';
+import { boardAppearance, boardThemes, themeInk } from '../../shared/boardDelight';
 type Tool = 'select' | 'pen' | 'arrow' | 'text' | 'eraser';
 const newId = () => `user_${crypto.randomUUID().replace(/-/g,'').slice(0,28)}`;
 function hit(elements: LaidElement[], p: Point) {
@@ -14,6 +15,9 @@ function hit(elements: LaidElement[], p: Point) {
 export function useBoardEditor(view: BoardView | null, svg: RefObject<SVGSVGElement | null>, cam: Camera, hold: () => void) {
   const [tool,setTool]=useState<Tool>('select'),[selected,setSelected]=useState<string>(),[move,setMove]=useState<{id:string;dx:number;dy:number}>(),[stroke,setStroke]=useState<Point[]>([]);
   const [label,setLabel]=useState<{id:string;text:string;point?:Point}>(),[question,setQuestion]=useState('What does this part do?'),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
+  const video = useRef<{ controller: AbortController; token?: string }>(null);
+  const cancelVideo = () => { const active = video.current; active?.controller.abort(); if (active?.token) window.kite.cancelBoardVideo(active.token); };
+  useEffect(() => () => { cancelVideo(); }, [view?.id, view?.revision]);
   useEffect(()=>{setSelected(undefined);setMove(undefined);setStroke([]);setLabel(undefined);setTool('select');setMessage('');},[view?.id]);
   const elements = useMemo(()=>{
     if (!move || !view?.inputs) return view?.elements ?? [];
@@ -57,22 +61,40 @@ export function useBoardEditor(view: BoardView | null, svg: RefObject<SVGSVGElem
   };
   const share=async(format:BoardExportFormat)=>{if(!view||busy)return;setBusy(true);setMessage('');try{pause();const content=format==='svg'?await exportSvg(svg.current,view.elements):format==='pdf'?await exportPng(svg.current,view.elements):undefined;
     const result=await window.kite.exportBoardFile(format,view.id,view.revision,content);setMessage(result.ok?(format==='excalidraw-open'?'Opened in Excalidraw.':format==='excalidraw-clipboard'?'Copied editable elements.':'Saved to Documents › Kite Boards.'):result.error??'Could not export.');}catch{setMessage('Could not export the board.');}finally{setBusy(false);}};
+  const shareVideo = async () => {
+    if (!view?.delight || busy) return; pause(); setBusy(true); setMessage('Preparing video…');
+    const active = { controller: new AbortController(), token: undefined as string | undefined }; video.current = active;
+    try {
+      const result = await window.kite.prepareBoardVideo(view.id,view.revision); if (!result.ok || !result.plan) throw new Error(result.error ?? 'Could not prepare video.');
+      active.token = result.plan.token;
+      if (active.controller.signal.aborted) { window.kite.cancelBoardVideo(active.token); active.controller.signal.throwIfAborted(); }
+      const { recordBoardVideo } = await import('./video');
+      const bytes = await recordBoardVideo(result.plan, async beat => { const reply = await window.kite.boardNarration(active.token,beat); if (!reply.ok || !reply.audio) throw new Error(reply.error ?? 'Narration failed.'); return reply.audio; },active.controller.signal,setMessage);
+      active.controller.signal.throwIfAborted(); const saved = await window.kite.saveBoardVideo(active.token,bytes); if (!saved.ok) throw new Error(saved.error ?? 'Could not save video.');
+      setMessage('Saved narrated WebM to Documents › Kite Boards.');
+    } catch (error) { setMessage(active.controller.signal.aborted ? 'Video export cancelled.' : error instanceof Error ? error.message : 'Could not export video.'); }
+    finally { if (active.token) window.kite.cancelBoardVideo(active.token); if (video.current === active) video.current = null; setBusy(false); }
+  };
+  const appearance = boardAppearance(view?.appearance);
+  const selectionInk = themeInk(appearance.theme,'blue').stroke;
+  const changeAppearance = async (patch: Partial<typeof appearance>) => { if (!view) return; const result = await window.kite.setBoardAppearance(view.id,{...appearance,...patch}); if (!result.ok) setMessage('Could not change the board style.'); };
   const selectedElement=elements.find(e=>e.id===selected),box=selectedElement&&elementBounds(selectedElement);
   const ink=getStroke(stroke.map(p=>[p.x,p.y]),{size:4,simulatePressure:true});
   const overlay=view?.editable?<g data-transient="1">
-    {box&&<rect x={box.x-5} y={box.y-5} width={box.width+10} height={box.height+10} fill="none" stroke="#1971c2" strokeWidth={2/cam.scale} strokeDasharray={`${5/cam.scale} ${4/cam.scale}`} pointerEvents="none"/>}
-    {!!stroke.length&&(tool==='arrow'?<path d={`M${stroke[0].x} ${stroke[0].y}L${stroke.at(-1).x} ${stroke.at(-1).y}`} stroke="#1971c2" strokeWidth={2} fill="none" pointerEvents="none"/>:<path d={`M${ink.map(p=>p.join(',')).join('L')}Z`} fill="#1971c2" pointerEvents="none"/>)}
+    {box&&<rect x={box.x-5} y={box.y-5} width={box.width+10} height={box.height+10} fill="none" stroke={selectionInk} strokeWidth={2/cam.scale} strokeDasharray={`${5/cam.scale} ${4/cam.scale}`} pointerEvents="none"/>}
+    {!!stroke.length&&(tool==='arrow'?<path d={`M${stroke[0].x} ${stroke[0].y}L${stroke.at(-1).x} ${stroke.at(-1).y}`} stroke={selectionInk} strokeWidth={2} fill="none" pointerEvents="none"/>:<path d={`M${ink.map(p=>p.join(',')).join('L')}Z`} fill={selectionInk} pointerEvents="none"/>)}
   </g>:null;
   const ui=view?.editable?<>
     <div className="board-editor-tools" role="toolbar" aria-label="Sketch tools">{(['select','pen','arrow','text','eraser'] as Tool[]).map(t=><button key={t} aria-pressed={tool===t} onClick={()=>{pause();setTool(t);}}>{t[0].toUpperCase()+t.slice(1)}</button>)}
       <button disabled={!view.canUndo} onClick={()=>void edit({type:'undo'})}>Undo</button><button disabled={!view.canRedo} onClick={()=>void edit({type:'redo'})}>Redo</button>
       <button onClick={()=>void ask([],'Is my sketch on this board right? Please explain any mistakes.')}>Is this right?</button>
+      {view.delight && <div className="board-appearance"><select aria-label="Board theme" disabled={busy} value={appearance.theme} onChange={e=>void changeAppearance({theme:e.target.value as typeof appearance.theme})}>{boardThemes.map(theme=><option key={theme} value={theme}>{theme[0].toUpperCase()+theme.slice(1)}</option>)}</select><label><input type="checkbox" disabled={busy} checked={appearance.handwriting} onChange={e=>void changeAppearance({handwriting:e.target.checked})}/>Handwriting</label></div>}
     </div>
     {selected&&!label&&<form className="board-ask-chip" onSubmit={e=>{e.preventDefault();void ask([selected],question);}}><label className="sr-only" htmlFor="board-question">Question about selected element</label><input id="board-question" maxLength={500} value={question} onChange={e=>setQuestion(e.target.value)}/><button type="submit">Ask about this</button><button type="button" onClick={()=>editLabel(selected)}>Edit label</button><button type="button" onClick={()=>{void edit({type:'delete',id:selected});setSelected(undefined);}}>Delete</button></form>}
     {label&&<form className="board-ask-chip" onSubmit={e=>{e.preventDefault();if(!label.text.trim())return;void edit(label.point?{type:'add',element:{id:label.id,type:'text',text:label.text,x:label.point.x,y:label.point.y}}:{type:'label',id:label.id,text:label.text});setLabel(undefined);}}><label htmlFor="board-label">Label</label><input id="board-label" autoFocus maxLength={500} value={label.text} onChange={e=>setLabel({...label,text:e.target.value})}/><button type="submit">Apply</button><button type="button" onClick={()=>setLabel(undefined)}>Cancel</button></form>}
-    <details className="board-export-menu"><summary>Export</summary><div>{(['svg','excalidraw','excalidraw-clipboard','excalidraw-open','mermaid','pdf'] as BoardExportFormat[]).map(f=><button key={f} disabled={busy} onClick={()=>void share(f)}>{({'svg':'SVG','excalidraw':'.excalidraw','excalidraw-clipboard':'Copy editable elements','excalidraw-open':'Open in Excalidraw','mermaid':'Mermaid for GitHub','pdf':'PDF with notes'})[f]}</button>)}</div></details>
+    <details className="board-export-menu"><summary>Export</summary><div>{(['svg','excalidraw','excalidraw-clipboard','excalidraw-open','mermaid','pdf'] as BoardExportFormat[]).map(f=><button key={f} disabled={busy} onClick={()=>void share(f)}>{({'svg':'SVG','excalidraw':'.excalidraw','excalidraw-clipboard':'Copy editable elements','excalidraw-open':'Open in Excalidraw','mermaid':'Mermaid for GitHub','pdf':'PDF with notes'})[f]}</button>)}{view.delight && <button disabled={busy} onClick={()=>void shareVideo()}>WebM with narration</button>}</div></details>
     <details className="board-outline"><summary>Board outline ({outline.length})</summary><ol>{outline.map(n=><li key={n.id}><button data-focus={n.id} onClick={()=>{setSelected(n.id);void ask([n.id],'What does this part do?');}}>{n.label}</button></li>)}</ol></details>
-    {!!message&&<div className="board-editor-message" role="status">{message}</div>}
+    {!!message&&<div className="board-editor-message" role="status">{message}{busy && video.current && <button onClick={cancelVideo}>Cancel video</button>}</div>}
   </>:null;
   return{elements,outline,selected,start,onKey,editLabel,overlay,ui,setSelected};
 }

@@ -7,7 +7,7 @@ const ranges = ['U+20-7e, U+a0-a3, U+a5-a6, U+a8-ab, U+ad-b1, U+b4, U+b6-b8, U+b
   'U+400-45f, U+490-491, U+2116', 'U+37e, U+384-38a, U+38c, U+38e-393, U+395-3a1, U+3a3-3a8, U+3aa-3cf, U+3d7',
   'U+2c7, U+2d8-2d9, U+2db, U+2dd, U+302, U+306-307, U+30a-30c, U+326-328, U+212e, U+2211, U+fb01-fb02',
   'U+462-463, U+472-475, U+4d8-4d9, U+4e2-4e3, U+4e6-4e9, U+4ee-4ef', 'U+300-301, U+303'];
-function fontStyle() {
+export function fontStyle() {
   embedded ??= Promise.all(Object.entries(faces).map(async ([file, url]) => {
     const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
     let binary = ''; for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
@@ -46,7 +46,7 @@ export async function exportPng(svg: SVGSVGElement | null, elements: LaidElement
   await image.decode();
   const out = new OffscreenCanvas(width, height), context = out.getContext('2d');
   if (!context) throw new Error('Canvas unavailable');
-  context.fillStyle = '#ffffff'; context.fillRect(0, 0, width, height);
+  context.fillStyle = svg?.dataset.paper ?? '#ffffff'; context.fillRect(0, 0, width, height);
   context.drawImage(image, 0, 0, width, height);
   return new Uint8Array(await (await out.convertToBlob({ type: 'image/png' })).arrayBuffer());
 }

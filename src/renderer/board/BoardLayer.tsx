@@ -1,6 +1,7 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { SailMark } from '../kite/SailMark';
-import { boardColors, boardFontFamily, canvas, elementBounds, elementsAt, fitView, lineHeight, panelChrome, panelSize, panelViewport, planCamera, sceneBounds, type BoardAction, type BoardView, type Camera, type LaidElement, type TextBlock } from '../../shared/board';
+import { boardFontFamily, canvas, elementBounds, elementsAt, fitView, lineHeight, panelChrome, panelSize, panelViewport, planCamera, sceneBounds, type BoardAction, type BoardView, type Camera, type LaidElement, type TextBlock } from '../../shared/board';
+import { boardAppearance, handwritingStrokes, themeInk, themePaper, type BoardAppearance } from '../../shared/boardDelight';
 import type { ScreenBounds } from '../../shared/types';
 import { cursorInput } from '../kite/useKiteLoop';
 import { runtime } from '../kite/runtime';
@@ -12,20 +13,25 @@ import { boardRuntime } from './runtime';
 import { exportPng } from './export';
 import { useBoardEditor } from './BoardEditor';
 /** Written line by line; the player clips each line while it is being "handwritten". */
-function Lines({ block, color, clip, order, animated = true }: { block: TextBlock; color: string; clip: string; order: number; animated?: boolean }) {
+function Lines({ block, color, clip, order, animated = true, appearance }: { block: TextBlock; color: string; clip: string; order: number; animated?: boolean; appearance?: BoardAppearance }) {
+  const letters = appearance?.handwriting && handwritingStrokes(block);
+  if (letters) return <g aria-label={block.lines.join(' ')} data-handwriting="1">
+    {block.halo && <rect x={block.x - 4} y={block.y - 2} width={block.width + 8} height={block.height + 4} fill={themePaper(appearance.theme)} />}
+    {letters.map((letter, i) => <path key={i} d={letter.d} transform={letter.transform} data-kind={animated ? 'stroke' : undefined} data-order={order + i} fill="none" stroke={color} strokeWidth={1.05} strokeLinecap="round" strokeLinejoin="round" />)}
+  </g>;
   return <>{block.lines.map((line, i) => {
     const x = block.align === 'center' ? block.x + block.width / 2 : block.x, id = `${clip}-${i}`;
     return <g key={i}>
       <clipPath id={id}><rect x={0} y={0} width={0} height={0} /></clipPath>
       <text data-kind={animated ? 'text' : undefined} data-order={order + i} data-clip={id} x={x} y={block.y + i * block.size * lineHeight + block.size}
-        fontSize={block.size} fontFamily={boardFontFamily} fill={color} stroke={block.halo ? '#ffffff' : undefined} strokeWidth={block.halo ? 6 : undefined} paintOrder={block.halo ? 'stroke' : undefined} strokeLinejoin="round" textAnchor={block.align === 'center' ? 'middle' : 'start'}>{line}</text>
+        fontSize={block.size} fontFamily={boardFontFamily} fill={color} stroke={block.halo ? themePaper(appearance?.theme ?? 'paper') : undefined} strokeWidth={block.halo ? 6 : undefined} paintOrder={block.halo ? 'stroke' : undefined} strokeLinejoin="round" textAnchor={block.align === 'center' ? 'middle' : 'start'}>{line}</text>
     </g>;
   })}</>;
 }
 /** One element in drawing order: fill (under), outline passes, arrowheads, then its words. */
-const Element = memo(function Element({ e, prefix, before, animated = true, dim = false, pulse = false }: { e: LaidElement; prefix: string; before?: LaidElement; animated?: boolean; dim?: boolean; pulse?: boolean }) {
+export const BoardElement = memo(function BoardElement({ e, prefix, before, animated = true, dim = false, pulse = false, appearance }: { e: LaidElement; prefix: string; before?: LaidElement; animated?: boolean; dim?: boolean; pulse?: boolean; appearance?: BoardAppearance }) {
   const strokes = useMemo(() => elementStrokes(e), [e]);
-  const color = boardColors[e.color] ?? boardColors.black, clip = `${prefix}-${e.id}`;
+  const color = themeInk(appearance?.theme ?? 'paper', e.color), clip = `${prefix}-${e.id}`;
   const label = e.kind === 'text' ? e.text : e.kind === 'shape' || e.kind === 'arrow' ? e.label : null;
   const oldLabel = before?.kind === 'text' ? before.text : before?.kind === 'shape' || before?.kind === 'arrow' ? before.label : null;
   const a = before && elementBounds(before), b = elementBounds(e), moving = a && (a.x !== b.x || a.y !== b.y);
@@ -43,14 +49,20 @@ const Element = memo(function Element({ e, prefix, before, animated = true, dim 
       return <path key={i} d={s.d} data-kind={!animated ? undefined : before?.kind === 'arrow' ? 'morph' : before ? undefined : s.dashed ? 'fade' : 'stroke'} data-from-path={oldStrokes.filter(p => p.role !== 'fill')[i]?.d} data-order={s.role === 'head' ? 30 + i : 10 + i} data-fast={second ? '1' : undefined}
         fill="none" stroke={color.stroke} strokeWidth={second ? 1.5 : 2.1} strokeDasharray={s.dashed ? '10 9' : undefined} strokeLinecap="round" strokeLinejoin="round" />;
     })}
-    {e.kind === 'arrow' && e.label && <rect x={e.label.x - 5} y={e.label.y - 2} width={e.label.width + 10} height={e.label.height + 4} rx={6} fill="#ffffff" opacity={0.9} />}
+    {e.kind === 'arrow' && e.label && <rect x={e.label.x - 5} y={e.label.y - 2} width={e.label.width + 10} height={e.label.height + 4} rx={6} fill={themePaper(appearance?.theme ?? 'paper')} opacity={0.9} />}
     {value && animated && <g data-kind="erase" data-order={0}>
-      <Lines block={oldLabel} color={color.stroke} clip={`${clip}-previous`} order={0} animated={false} />
+      <Lines block={oldLabel} color={color.stroke} clip={`${clip}-previous`} order={0} animated={false} appearance={appearance} />
       <path d={`M${oldLabel.x} ${oldLabel.y + oldLabel.height / 2}h${oldLabel.width}`} stroke={color.stroke} strokeWidth={2} />
     </g>}
-    {label && <Lines block={label} color={color.stroke} clip={clip} order={40} animated={animated && (!before || value)} />}
+    {label && <Lines block={label} color={color.stroke} clip={clip} order={40} animated={animated && (!before || value)} appearance={appearance} />}
   </g>;
 });
+export function BoardPaper({ appearance, prefix }: { appearance: BoardAppearance; prefix: string }) {
+  const fill = themePaper(appearance.theme), grid = `${prefix}-grid`;
+  return <><rect className="board-sheet" x={-100000} y={-100000} width={200000} height={200000} fill={fill} />
+    {appearance.theme === 'blueprint' && <><defs><pattern id={grid} patternUnits="userSpaceOnUse" width={32} height={32}><path d="M32 0H0V32" fill="none" stroke="#79aed0" strokeOpacity={0.18} strokeWidth={0.8} /></pattern></defs><rect x={-100000} y={-100000} width={200000} height={200000} fill={`url(#${grid})`} /></>}
+  </>;
+}
 /** Where a new board opens on the display under the cursor; `presenting`: the large presentation panel. */
 function initialFrame(presenting = false): ScreenBounds {
   const g = cursorInput.geometry, origin = g?.origin ?? { x: 0, y: 0 };
@@ -236,8 +248,8 @@ export function BoardLayer() {
       setToast(result.ok ? (action === 'copy' ? 'Copied the board as an image.' : 'Saved to Documents › Kite Boards.') : result.error ?? 'Could not export the board.');
     } catch { setToast('Could not export the board.'); }
   };
-  const prefix = `b${view.id}`, playing = view.status === 'playing';
-  return <section className={`board ${view.status}${view.editable ? ' editable' : ''}`} aria-label={`Whiteboard: ${view.title}`} onKeyDown={editor.onKey}
+  const prefix = `b${view.id}`, playing = view.status === 'playing', appearance = view.delight ? boardAppearance(view.appearance) : undefined;
+  return <section className={`board ${view.status}${view.editable ? ' editable' : ''}${view.delight ? ' delight' : ''}`} aria-label={`Whiteboard: ${view.title}`} onKeyDown={editor.onKey}
     style={{ transform: `translate(${frame.x}px, ${frame.y}px)`, width: frame.width, height: frame.height }}>
     <header onPointerDown={drag('move')}>
       <SailMark size={18} /><strong className="board-title">{view.title}</strong>
@@ -257,19 +269,19 @@ export function BoardLayer() {
       </div>
     </header>
     <div className="board-canvas" onPointerDown={e => { if (!editor.start(e)) pan(e); }} onWheel={zoom}>
-      <svg ref={svg} className="board-svg" data-revision={view.revision} viewBox={`${cam.x} ${cam.y} ${viewport.width / cam.scale} ${viewport.height / cam.scale}`} width={viewport.width} height={viewport.height}
+      <svg ref={svg} className="board-svg" data-theme={appearance?.theme ?? 'paper'} data-paper={themePaper(appearance?.theme ?? 'paper')} data-revision={view.revision} viewBox={`${cam.x} ${cam.y} ${viewport.width / cam.scale} ${viewport.height / cam.scale}`} width={viewport.width} height={viewport.height}
         xmlns="http://www.w3.org/2000/svg" role={view.editable ? 'group' : 'img'} aria-label={`${view.title}: ${elements.length} drawn elements`}>
-        <rect className="board-sheet" x={-4000} y={-4000} width={canvas.width + 8000} height={canvas.height + 8000} fill="#ffffff" />
+        {appearance ? <BoardPaper appearance={appearance} prefix={prefix} /> : <rect className="board-sheet" x={-4000} y={-4000} width={canvas.width + 8000} height={canvas.height + 8000} fill="#ffffff" />}
         {editor.elements.map(e => <g key={e.id} data-focus={view.editable ? e.id : undefined} role={view.editable ? 'button' : undefined} tabIndex={view.editable ? 0 : undefined}
           aria-label={view.editable ? editor.outline.find(n => n.id === e.id)?.label : undefined} onFocus={() => view.editable && editor.setSelected(e.id)} onDoubleClick={() => view.editable && editor.editLabel(e.id)}>
-          <Element key={JSON.stringify(e)} e={e} prefix={prefix} before={view.transition?.changed.includes(e.id) ? view.transition.before.find(old => old.id === e.id) : undefined}
+          <BoardElement key={JSON.stringify(e)} e={e} prefix={prefix} appearance={appearance} before={view.transition?.changed.includes(e.id) ? view.transition.before.find(old => old.id === e.id) : undefined}
             dim={view.effects?.some(f => f.kind === 'dim' && !f.ids.includes(e.id))} pulse={!reduced() && view.effects?.some(f => f.kind === 'pulse' && f.ids.includes(e.id))} /></g>)}
-        {view.transition?.before.filter(e => view.transition.erased.includes(e.id)).map(e => <g key={`erase-${e.id}`} data-el={e.id} data-kind="erase" data-order={0}><Element e={e} prefix={`${prefix}-erase`} animated={false} /></g>)}
+        {view.transition?.before.filter(e => view.transition.erased.includes(e.id)).map(e => <g key={`erase-${e.id}`} data-el={e.id} data-kind="erase" data-order={0}><BoardElement e={e} prefix={`${prefix}-erase`} animated={false} appearance={appearance} /></g>)}
         {(view.effects ?? []).flatMap((effect, i) => {
           const ids = effect.kind === 'badge' ? [effect.id] : effect.ids;
           return ids.map(id => { const e = elements.find(n => n.id === id); if (!e || effect.kind === 'dim' || effect.kind === 'pulse') return null; const b = elementBounds(e);
             return <g key={`${i}-${id}`} data-teaching-effect="1" data-el={`effect-${i}-${id}`}>
-              {effect.kind === 'badge' ? <><circle data-kind="stroke" data-order={0} cx={b.x - 20} cy={b.y + 10} r={14} stroke="#1e1e1e" fill="#fff" /><text data-kind="text" data-order={1} x={b.x - 20} y={b.y + 16} textAnchor="middle" fontFamily={boardFontFamily} fontSize={18}>{effect.number}</text></>
+              {effect.kind === 'badge' ? <><circle data-kind="stroke" data-order={0} cx={b.x - 20} cy={b.y + 10} r={14} stroke={themeInk(appearance?.theme ?? 'paper','black').stroke} fill={themePaper(appearance?.theme ?? 'paper')} /><text data-kind="text" data-order={1} x={b.x - 20} y={b.y + 16} fill={themeInk(appearance?.theme ?? 'paper','black').stroke} textAnchor="middle" fontFamily={boardFontFamily} fontSize={18}>{effect.number}</text></>
                 : <path data-kind="stroke" data-order={0} d={`M${b.x} ${effect.kind === 'strike' ? b.y + b.height / 2 : b.y + b.height + 8}h${b.width}`} stroke="#e03131" strokeWidth={2.5} />}
             </g>;
           });

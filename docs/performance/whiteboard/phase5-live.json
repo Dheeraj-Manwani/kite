@@ -1,0 +1,63 @@
+{
+  "phase": 5,
+  "checkedAt": "2026-10-08T09:25:30.113Z",
+  "conditions": "Real Cartesia narration, Electron window painted at zero opacity, board canvas only, speakers muted.",
+  "themes": [
+    {
+      "theme": "paper",
+      "backgroundBgra": [
+        255,
+        255,
+        255,
+        255
+      ],
+      "bytes": 7375
+    },
+    {
+      "theme": "chalkboard",
+      "backgroundBgra": [
+        46,
+        51,
+        24,
+        255
+      ],
+      "bytes": 7719
+    },
+    {
+      "theme": "blueprint",
+      "backgroundBgra": [
+        99,
+        59,
+        18,
+        255
+      ],
+      "bytes": 8306
+    }
+  ],
+  "handwriting": {
+    "traced": true,
+    "toggle": true
+  },
+  "video": {
+    "bytes": 380989,
+    "durationSeconds": 10.232,
+    "audioRms": 0.1409624639226192,
+    "width": 1280,
+    "height": 720,
+    "frames": [
+      {
+        "time": 0.25,
+        "ink": 0
+      },
+      {
+        "time": 9.931999999999999,
+        "ink": 2889
+      }
+    ],
+    "menu": true
+  },
+  "reviewer": {
+    "implemented": false,
+    "gate": "No scored clarity comparison supports adding a second model pass."
+  }
+}

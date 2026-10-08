@@ -5,7 +5,7 @@ export const boardExportFormats: BoardExportFormat[] = ['svg', 'excalidraw', 'ex
 export const xml = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' }[c]));
 export function validBoardSvg(svg: string) {
   if (svg.length > 10000000 || !/^<svg\s/.test(svg) || /<[^>]+\bon\w+\s*=|<\?|<!|@import\b/i.test(svg)) return false;
-  if ([...svg.matchAll(/<\/?([\w:-]+)/g)].some(m => !['svg','g','path','defs','clipPath','rect','text','circle','ellipse','line','polyline','polygon','style','use'].includes(m[1]))) return false;
+  if ([...svg.matchAll(/<\/?([\w:-]+)/g)].some(m => !['svg','g','path','defs','clipPath','rect','text','circle','ellipse','line','polyline','polygon','style','use','pattern'].includes(m[1]))) return false;
   const tags = svg.match(/<[^>]*>/g)?.join('') ?? '';
   const references = [...tags.matchAll(/\b(?:href|xlink:href)\s*=\s*["']([^"']*)["']/gi)].map(m => m[1]);
   const styles = svg.match(/<style\b[^>]*>[\s\S]*?<\/style>/gi)?.join('') ?? '';

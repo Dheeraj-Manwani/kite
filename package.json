@@ -12,7 +12,7 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
-    "test": "node --require ./tests/register.cjs --test --test-concurrency=1 tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs tests/vision.test.cjs tests/guide.test.cjs tests/board.test.cjs tests/board-script.test.cjs tests/board-teaching.test.cjs tests/board-owned.test.cjs tests/board-metrics.test.cjs tests/agent.test.cjs tests/windows.test.cjs tests/shop.test.cjs tests/job.test.cjs tests/permissions.test.cjs tests/memory.test.cjs tests/checkout.test.cjs tests/repeat.test.cjs",
+    "test": "node --require ./tests/register.cjs --test --test-concurrency=1 tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs tests/vision.test.cjs tests/guide.test.cjs tests/board.test.cjs tests/board-script.test.cjs tests/board-teaching.test.cjs tests/board-owned.test.cjs tests/board-delight.test.cjs tests/board-metrics.test.cjs tests/agent.test.cjs tests/windows.test.cjs tests/shop.test.cjs tests/job.test.cjs tests/permissions.test.cjs tests/memory.test.cjs tests/checkout.test.cjs tests/repeat.test.cjs",
     "test:capture": "electron tests/capture-native.cjs",
     "test:native": "electron tests/native-smoke.cjs",
     "test:clipboard": "electron tests/clipboard-native.cjs",
@@ -40,7 +40,9 @@
     "eval:board:phase3": "node scripts/board-phase3.cjs",
     "eval:board:phase3:providers": "node scripts/board-phase2.cjs --phase3 --formats json --out phase3-provider-probe.json",
     "eval:board:phase3:live": "electron scripts/board-teaching-live.cjs",
-    "eval:board:phase4": "node scripts/board-phase4.cjs"
+    "eval:board:phase4": "node scripts/board-phase4.cjs",
+    "eval:board:phase5": "node scripts/board-phase5.cjs",
+    "eval:board:phase5:live": "node scripts/board-phase5.cjs --live"
   },
   "keywords": [
     "electron",

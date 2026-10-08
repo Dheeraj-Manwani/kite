@@ -114,6 +114,11 @@ export interface KiteAPI {
     onBoardImageRequest(callback: (request: { request: string; id: number; revision: string }) => void): () => void;
     boardImage(request: string, id: number, revision: string, png: Uint8Array): void;
     exportBoardFile(format: import('./boardExports').BoardExportFormat, id: number, revision: string, content?: string | Uint8Array): Promise<OperationResult>;
+    setBoardAppearance(id: number, appearance: import('./boardDelight').BoardAppearance): Promise<OperationResult>;
+    prepareBoardVideo(id: number, revision: string): Promise<OperationResult & { plan?: import('./boardVideo').BoardVideoPlan }>;
+    boardNarration(token: string, beat: number): Promise<OperationResult & { audio?: import('./boardVideo').BoardNarration }>;
+    cancelBoardVideo(token: string): void;
+    saveBoardVideo(token: string, bytes: Uint8Array): Promise<OperationResult>;
   demoBoard(): Promise<OperationResult>;
   onTaskEvent(callback: (view: import('./agent').TaskView | null) => void): () => void;
   taskControl(action: import('./agent').TaskAction): void;

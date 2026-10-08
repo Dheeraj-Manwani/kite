@@ -70,6 +70,20 @@ Use **Pen**, **Arrow**, **Text** or **Eraser** to sketch on the board. Eraser de
 
 Tab moves between drawn elements; **Enter** asks about the focused one and **Space** pauses/resumes. **Board outline** includes every element, its label and its incoming/outgoing connections, with ask buttons. The caption setting continues following screen-reader support. [ADR 020](adr/020-owned-whiteboard.md) describes the edit overlay, visual context and export boundaries.
 
+## Themes, handwriting, languages and video (Phase 5)
+
+Enable **KITE_BOARD_PHASE5=1** to include phases 2–4 and the new controls. **KITE_BOARD_PHASE2=0** overrides it. The released default and Whiteboard Settings toggle retain their existing behavior.
+
+Choose **Paper**, **Chalkboard** or **Blueprint** beside the sketch tools. **Handwriting** traces short Latin/digit/punctuation labels using an authored monoline font. Long text and labels containing unsupported characters keep their normal text reveal. Both choices pause playback and save with the lesson; History reopening restores them. SVG, PNG, PDF and WebM retain the chosen theme. The complete outline remains available.
+
+Local voice controls also recognize exact Hindi and romanized Hindi, Spanish, French and German phrases. Examples: **रुको**, **जारी रखो**, **अगला चरण**, **ruko**, **siguiente paso**, **continuez**, **von vorne**. Longer questions still reach the conversation model. This adds command recognition, not a replacement transcription or narration service.
+
+**Export → WebM with narration** saves a 1280 × 720 lesson replay in Documents › Kite Boards. Choose a voice and configure a Cartesia key first. Export uses that voice even if live voice is muted. It prepares narration, draws every saved beat with your edits and style, and includes captions. Quiz prompts play as narration without waiting for answers. Pulse emphasis becomes a steady frame in the video. Keep Kite open during recording; **Cancel video** stops the job. Changing or closing the board cancels it. Wait for a streaming plan to finish before exporting.
+
+The replay captures only Kite's generated board canvas and generated narration, with no screen capture or microphone recording. Narration is limited to 60 seconds per beat and 64 MB total; export times out after 15 minutes and caps the WebM at 100 MB. [ADR 021](adr/021-whiteboard-delight.md) records implementation and lifecycle.
+
+The optional background reviewer remains deferred: the roadmap requires a scored clarity improvement without delaying the first stroke before a second model pass is built.
+
 ## Privacy
 
 Lesson text goes to the configured conversation model and, with phase 2 enabled, the selected specialist. The specialist receives at most six recent text messages and board structure; conversation images and screenshots are excluded from that request. Phase 4 adds the current edited structure and an optional freshly rendered board PNG for vision-capable follow-ups. This image is Kite's own drawing, uses no screen capture or capture indicator, and is discarded after the request rather than stored in conversation history. Text-only models receive structure, including sampled user strokes.
@@ -77,6 +91,8 @@ Lesson text goes to the configured conversation model and, with phase 2 enabled,
 The board is excluded from Kite's own screen captures. Completed, closed or edited archived lessons, their scene and a small PNG thumbnail are saved locally in Kite's history database. Archive thumbnails are not sent to a model. Deleting conversation history deletes its boards. Save/Copy and Export are explicit user actions; automatic history saving does not export files to Documents. Open in Excalidraw explicitly transfers the editable scene to the online editor through a dedicated sandboxed window.
 
 ## Measuring
+
+Phase 5 has four implemented features and a conditionally deferred reviewer. All **308 unit tests** pass serially; type checking, lint, production builds, the real Phase 5 startup IPC checks and the full renderer smoke test pass. [Synthetic export verification](performance/whiteboard/phase5-verification.json) and [real Cartesia replay](performance/whiteboard/phase5-live.json) decode narration and video frames through Chromium. Reproduce with **npm run eval:board:phase5** and **npm run eval:board:phase5:live** (a Cartesia development key is needed for the latter). These fixtures do not establish human clarity or all-provider/voice performance.
 
 `src/shared/boardMetrics.ts` scores a board as numbers: colliding elements, labels that don't fit their shape (or had a word split), arrows and lines through shapes they don't connect, crossing arrows, free text lying on a line, and the smallest text on screen in the default panel on a 1080p display. Lesson readability is measured at each beat's camera; finished-board overview text is recorded separately. The harness and the dev panel both use it.
 

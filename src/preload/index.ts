@@ -94,6 +94,11 @@ const api: KiteAPI = {
   onBoardImageRequest: callback => { const listener = (_event: IpcRendererEvent, request: { request: string; id: number; revision: string }) => callback(request); ipcRenderer.on('board:imageRequest', listener); return () => ipcRenderer.removeListener('board:imageRequest', listener); },
   boardImage: (request, id, revision, png) => ipcRenderer.send('board:image', request, id, revision, png),
   exportBoardFile: (format, id, revision, content) => ipcRenderer.invoke('board:exportFile', format, id, revision, content),
+  setBoardAppearance: (id, appearance) => ipcRenderer.invoke('board:appearance', id, appearance),
+  prepareBoardVideo: (id, revision) => ipcRenderer.invoke('board:videoPlan', id, revision),
+  boardNarration: (token, beat) => ipcRenderer.invoke('board:narration', token, beat),
+  cancelBoardVideo: token => ipcRenderer.send('board:videoCancel', token),
+  saveBoardVideo: (token, bytes) => ipcRenderer.invoke('board:videoSave', token, bytes),
   demoBoard: () => ipcRenderer.invoke('dev:boardDemo'),
   onTaskEvent(callback) {
     const listener = (_event: IpcRendererEvent, view: import('../shared/agent').TaskView | null) => callback(view);

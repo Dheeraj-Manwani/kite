@@ -45,7 +45,10 @@ import { explainOnWhiteboard } from '../tools/impl/explain_on_whiteboard';
 import { planWhiteboard } from '../tools/impl/plan_whiteboard';
 import { boardModel, boardProviderOptions, planBoard } from '../board/planner';
 import { elkLayout } from '../board/elk';
-import { structuredBoards, teachingBoards, ownedBoards } from '../board/feature';
+import { structuredBoards, teachingBoards, ownedBoards, delightBoards } from '../board/feature';
+import { boardThemes, type BoardAppearance } from '../../shared/boardDelight';
+import { validBoardWebm } from '../../shared/boardVideo';
+import { BoardVideoExports, synthesizeBoardNarration } from '../board/video';
 import { BoardImages } from '../board/images';
 import { parseBoardEdit, editableId } from '../../shared/boardEditing';
 import { boardExportFormats, excalidrawScene, mermaidBoard, validBoardSvg, type BoardExportFormat } from '../../shared/boardExports';
@@ -151,16 +154,18 @@ export function startVoiceService() {
     structured: structuredBoards,
     teaching: teachingBoards,
     editable: ownedBoards, image: (id, revision, signal) => boardImages.request(id, revision, signal),
+    delight: delightBoards,
     prefetch: (text, speed) => controller.prefetchAnnouncement(text, speed), cancelPrefetch: () => controller.cancelPrefetch(),
     save: saved => { history.saveBoard(saved); },
     log: logEvent, enabled: () => preferences.get().whiteboard, speed: () => preferences.get().speed,
     // Spoken lines repeat as captions only when asked, or when they would not be heard (no voice, or a screen reader).
     captions: () => { const s = preferences.get(); return s.boardCaptions || !s.ttsEnabled || !s.voiceId || app.isAccessibilitySupportEnabled(); },
-    emit: view => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('board:state', view); },
+    emit: view => { boardVideo?.changed(view?.id, view?.revision); const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('board:state', view); },
     speak: (text, hooks): boolean => controller.announce(text, hooks), silence: () => { controller.announce(null); },
     // One thing moves the kite at a time: a lesson replaces a guide.
     opened: () => guide.stop(),
   });
+  const boardVideo = new BoardVideoExports(() => board.snapshot(), (text, settings, signal) => synthesizeBoardNarration(text, settings, () => secrets.getKey('cartesia'), signal));
   const agent = new TaskService({
     directory: path.join(app.getPath('userData'), 'agent'), log: logEvent, overlayHit, enabled: () => preferences.get().computerUse,
     emit: view => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('task:state', view); },
@@ -368,6 +373,27 @@ export function startVoiceService() {
       const filename = await saveBoardFile(app.getPath('documents'),snapshot.title,extension,bytes); shell.showItemInFolder(filename); return { ok: true };
     } catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Could not export the board.' }; }
   });
+  ipcMain.handle('board:appearance', (event, id: unknown, value: unknown): OperationResult => {
+    const parsed = z.object({ theme: z.enum(boardThemes), handwriting: z.boolean() }).strict().safeParse(value);
+    return { ok: trusted(event,'overlay') && delightBoards() && Number.isSafeInteger(id) && parsed.success && board.appearance(id as number, parsed.data as BoardAppearance) };
+  });
+  ipcMain.handle('board:videoPlan', (event, id: unknown, revision: unknown) => {
+    if (!trusted(event,'overlay') || !delightBoards() || !Number.isSafeInteger(id) || typeof revision !== 'string') return { ok: false };
+    if (!secrets.hasKey('cartesia')) return { ok: false, error: 'Add a Cartesia key in Settings to export narrated video.' };
+    try { return { ok: true, plan: boardVideo.prepare(id as number, revision, preferences.get()) }; }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Could not prepare video.' }; }
+  });
+  ipcMain.handle('board:narration', async (event, token: unknown, beat: unknown) => {
+    if (!trusted(event,'overlay') || !delightBoards() || !z.string().uuid().safeParse(token).success || !Number.isInteger(beat)) return { ok: false };
+    try { return { ok: true, audio: await boardVideo.narration(token as string, beat as number) }; }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Narration failed.' }; }
+  });
+  ipcMain.on('board:videoCancel', (event, token: unknown) => { if (trusted(event,'overlay') && typeof token === 'string') boardVideo.cancel(token); });
+  ipcMain.handle('board:videoSave', async (event, token: unknown, bytes: unknown): Promise<OperationResult> => {
+    if (!trusted(event,'overlay') || !delightBoards() || typeof token !== 'string' || !validBoardWebm(bytes)) return { ok: false, error: 'Invalid video.' };
+    try { const title = boardVideo.complete(token); const filename = await saveBoardFile(app.getPath('documents'),title,'webm',bytes); shell.showItemInFolder(filename); return { ok: true }; }
+    catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Could not save video.' }; }
+  });
   ipcMain.handle('board:export', async (event, action: unknown, bytes: unknown, title: unknown): Promise<OperationResult> => {
     const image = pngSchema.safeParse(bytes);
     if (!trusted(event, 'overlay') || !['copy', 'save'].includes(action as string) || !image.success || typeof title !== 'string') return { ok: false, error: 'Invalid image.' };
@@ -498,5 +524,5 @@ export function startVoiceService() {
   overlay?.webContents.on('did-finish-load', () => { guide.refresh(); board.refresh(); agent.refresh(); });
   overlay?.webContents.on('render-process-gone', reset);
   overlay?.on('closed', reset);
-  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); guide.dispose(); board.close(); boardImages.close(); agent.dispose(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
+  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); guide.dispose(); boardVideo.cancel(); board.close(); boardImages.close(); agent.dispose(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
 }

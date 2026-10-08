@@ -1,6 +1,7 @@
 import { applyBeat, boardLimits, layoutScene, readingMs, repairBeats, speechMs, type BeatInput, type BoardStatus, type BoardView, type ElementInput, type LaidElement, type LessonInput } from '../../shared/board';
 import { cueTimings, type WordTiming } from '../../shared/boardTeaching';
 import { applyEdits, moveInput, rerouteInput, type BoardEdit, type BoardEdits } from '../../shared/boardEditing';
+import { boardAppearance, type BoardAppearance } from '../../shared/boardDelight';
 /** How a spoken beat ended: heard in full, cut off (the user took over), or the voice failed. */
 export type SpeechEnd = 'spoken' | 'cut' | 'failed';
 export interface BoardSessionDeps {
@@ -57,6 +58,9 @@ export class BoardSession {
   private answered = new Set<number>();
   private answerText?: string;
   private edits: BoardEdits = { elements: [], deleted: [] };
+  appearance = boardAppearance();
+  restoreAppearance(value?: Partial<BoardAppearance>) { this.appearance = boardAppearance(value); }
+  setAppearance(value: BoardAppearance) { this.pause(); this.appearance = boardAppearance(value); this.emit(); }
   private undo: BoardEdits[] = []; private redo: BoardEdits[] = [];
   get canUndo() { return !!this.undo.length; } get canRedo() { return !!this.redo.length; }
   restoreEdits(edits?: BoardEdits) { if (edits) this.edits = { elements: edits.elements.slice(0, 200), deleted: edits.deleted.slice(0, 200) }; }
@@ -99,7 +103,7 @@ export class BoardSession {
   /** The board as it will look when the whole lesson has played (for follow-up questions). */
   inputs(): ElementInput[] { return this.applied(this.beats.length); }
   visibleInputs(): ElementInput[] { return this.applied(this.through); }
-  script(): LessonInput { return { title: this.title, mode: 'new', beats: [...this.beats], ...(this.edits.elements.length || this.edits.deleted.length ? { edits: this.edits } : {}) }; }
+  script(): LessonInput { return { title: this.title, mode: 'new', beats: [...this.beats], appearance: this.appearance, ...(this.edits.elements.length || this.edits.deleted.length ? { edits: this.edits } : {}) }; }
   private current() { return this.beats[Math.min(this.index, this.beats.length - 1)]; }
   view(): BoardView {
     const beat = this.current(), drawing = this.status === 'playing' && this.started && !this.drawn;

@@ -1,6 +1,7 @@
 import type { ScreenBounds } from './types';
 import { excalifontFallbackWidth, excalifontWidths } from './boardFont';
 import type { CueTiming, FormulaPaths, TeachingBeat } from './boardTeaching';
+import { multilingualBoardCommand } from './boardDelight';
 export { fixScene, lintScene, repairBeats, repairLesson } from './boardLayout';
 /**
  * Whiteboard model shared by main (layout, context for the model) and the overlay (drawing).
@@ -45,7 +46,7 @@ export interface ElementInput {
   user?: boolean; freehand?: boolean;
 }
 export interface BeatInput extends TeachingBeat { say: string; draw?: ElementInput[]; highlight?: string[]; erase?: string[] }
-export interface LessonInput { title: string; mode?: 'new' | 'add'; beats: BeatInput[]; structure?: import('./boardScript').BoardScript; edits?: import('./boardEditing').BoardEdits }
+export interface LessonInput { title: string; mode?: 'new' | 'add'; beats: BeatInput[]; structure?: import('./boardScript').BoardScript; edits?: import('./boardEditing').BoardEdits; appearance?: import('./boardDelight').BoardAppearance }
 export const boardLimits = { beats: 16, perBeat: 24, elements: 200 };
 
 export interface TextBlock { lines: string[]; size: number; x: number; y: number; width: number; height: number; align: 'left' | 'center'; halo?: boolean }
@@ -426,6 +427,7 @@ export interface BoardView {
   /** A prompt shown instead of the caption, e.g. while paused. */
   note: string | null;
   editable?: boolean; revision?: string; inputs?: ElementInput[]; canUndo?: boolean; canRedo?: boolean;
+  delight?: boolean; appearance?: import('./boardDelight').BoardAppearance;
   /** Numbers about how this lesson was made (dev panel); never lesson content. */
   stats?: LessonStats;
   /** Show the spoken line as a caption. When false it repeats what is being heard: it stays for screen readers only. */
@@ -455,7 +457,8 @@ export interface LessonStats {
 export const boardActions = ['pause', 'resume', 'next', 'previous', 'repeat', 'replay', 'close', 'bigger', 'smaller', 'back'] as const;
 export type BoardAction = typeof boardActions[number] | { type: 'jump'; beat: number } | { type: 'speed'; speed: number };
 /** Deterministic: only short, exact phrases control a lesson; anything else goes to the model. */
-export function classifyBoardCommand(text: string): BoardAction | 'new-request' {
+export function classifyBoardCommand(text: string, multilingual = false): BoardAction | 'new-request' {
+  const local = multilingual && multilingualBoardCommand(text); if (local) return local;
   const s = text.toLowerCase().trim().replace(/’/g, "'").replace(/[.!?,]+/g, '').replace(/\s+/g, ' ').replace(/^(ok|okay|kite|hey kite) /, '').replace(/ please$/, '');
   if (/^(wait|hold on|hang on|pause|pause (it|the lesson|the board)|one sec(ond)?|just a (sec|second|moment|minute))$/.test(s)) return 'pause';
   if (/^(continue|resume|go on|keep going|carry on|i'm ready|ready|let's continue|continue the lesson|go ahead)$/.test(s)) return 'resume';
