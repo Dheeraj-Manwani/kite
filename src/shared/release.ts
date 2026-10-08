@@ -34,4 +34,5 @@ export interface StageKite { x: number; y: number; scale: number }
 export type AppEvent = { type: 'paused'; until: number | null } | { type: 'resumed' | 'update:ready' | 'fault' | 'hotkey:detected' }
   /** Memory: a fact was saved (Undo by token), or saved values to show the user and never a model. */
   | { type: 'memory:saved'; token: string; text: string } | { type: 'memory:show'; text: string }
+  | { type: 'background:notice'; text: string }
   | { type: 'onboarding:done'; from: StageKite };

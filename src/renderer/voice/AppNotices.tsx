@@ -39,6 +39,7 @@ export function AppNotices() {
         // Memory is never silent (docs/end-to-end-jobs.md §3.4): what was saved, with Undo and Edit.
         say(`${e.text}.`, 8000, { label: 'Undo', run: () => { void window.kite.undoMemory(e.token); } }, { label: 'Edit', run: () => window.kite.openView('memory') });
       } else if (e.type === 'memory:show') say(e.text, 15000, { label: 'Hide', run: () => undefined });
+      else if (e.type === 'background:notice') say(e.text, 12000, { label: 'Open Agents', run: () => window.kite.openView('agents') });
       else if (e.type === 'onboarding:done') runtime.flight = e.from;
     });
     // One notice at a time, and never over an answer: it waits, and a notice that waited past its moment is dropped.

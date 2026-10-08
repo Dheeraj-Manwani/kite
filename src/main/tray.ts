@@ -36,6 +36,7 @@ export function createKiteTray(preferences: ReturnType<typeof openPreferences>) 
       { type: 'separator' },
       { label: 'Settings', click: () => { createSettingsWindow(); } },
       { label: 'History', click: () => createSettingsWindow('history') },
+      { label: 'Agents', click: () => createSettingsWindow('agents') },
       { label: 'Help', submenu: [
         { label: 'Replay tutorial', click: () => createSettingsWindow('onboarding') },
         { label: 'Keyboard controls', accelerator: keyboardControlsShortcut(), registerAccelerator: false, click: focusOverlayControls },

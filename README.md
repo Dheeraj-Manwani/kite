@@ -46,6 +46,10 @@ Ask Kite to explain something (“how does a TCP handshake work?”) and it open
 
 Ask “write a shopping list in Notepad and save it as list.txt” and approve the task. Kite opens the app if needed and works through it step by step, clicking, selecting, and typing through Windows UI Automation and the keyboard. **It never moves your mouse pointer.** A card shows each step and a Stop button; the kite points at every control before using it. Anything that sends, deletes, buys, or submits asks again, even in an approved task. Touching your mouse or keyboard pauses it, and it stops after 15 steps. [Task details](docs/agent.md).
 
+### Background agents
+
+Open **Agents** from the tray or sidebar to save PDF helpers and start background runs. Paste text or select `.txt` / `.md` files; Kite creates checked PDFs while you keep working. The panel restores progress, questions, approvals, and outputs after reopening. Markdown is preserved as source text. Runs persist locally and pause when Kite quits or sleeps. Mail, compression, browser automation, and job applications are later capabilities. [Background agent details](docs/background-agents.md).
+
 ### Circle to ask
 
 ![Circle illustration](assets/circle.gif)
@@ -71,6 +75,7 @@ Cursor polling changes from 16 ms while moving to 100 ms after two stationary se
 - Keys use Windows DPAPI through Electron `safeStorage`. Saved keys never return to a renderer; newly entered keys cross preload once to main. No plaintext fallback exists.
 - Provider calls go directly from main to chosen services. There is no Kite backend or telemetry. Transcripts, selected screen content, and relevant tool context go to those providers.
 - SQLite history and audits are **local plaintext** and may contain sensitive text. Raw audio is not saved. Screenshots stay in memory by default; optional history saves JPEGs in `userData/screens/`. Deletion removes associated files and search records; backups may retain copies.
+- Background run payloads use OS encryption in a separate database. Generated PDFs and exported copies are ordinary unencrypted files; agent work has no retention/delete UI yet. The text-to-PDF workflow stays local and never overwrites sources.
 - Capture protection and overlay hiding are enabled briefly and restored in `finally`. Protection stays off during normal use so recordings can show Kite. Verify exclusion on your Windows/capture setup.
 - Guide mode reads control names and positions locally through a read-only UI Automation sidecar (inbox Windows PowerShell). It has no way to click, type, or invoke controls. Screens leave the PC only for an approved guide's vision fallback, with the capture indicator shown.
 - Tasks use a separate sidecar, started only for an approved task. It acts through UI Automation patterns and keyboard input to the task's own window, and has no mouse code. The task's control names and values (never password fields) go to your model while it runs; risky steps always ask; every step is audited.

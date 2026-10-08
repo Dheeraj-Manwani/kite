@@ -21,3 +21,4 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [Repeat orders take one question, and Kite learns when to stop asking](017-repeat-orders.md)
 - [The whiteboard model writes structure; code places it](018-structured-whiteboard.md)
 - [Whiteboard teaching follows the audio clock and explicit changes](019-whiteboard-teaching.md)
+- [App-owned background runs with deterministic executors](022-background-agents.md)

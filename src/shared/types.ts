@@ -34,8 +34,19 @@ export interface ApprovalCard { approvalId: string; toolName: string; summary: s
 export interface ToolAudit { id: number; message_id: number | null; tool: string; input_json: string; summary: string; decision: ToolDecision; result_json: string | null; error: string | null; dry_run: number; duration_ms: number; created_at: number }
 export interface Reminder { id: number; at: number; label: string; status: 'pending' | 'fired' | 'cancelled' }
 export interface OperationResult { ok: boolean; error?: string }
-export type View = 'settings' | 'history' | 'memory' | 'onboarding';
+export type View = 'settings' | 'history' | 'memory' | 'onboarding' | 'agents';
 export interface KiteAPI {
+  backgroundSnapshot(): Promise<import('./background').BackgroundSnapshot | null>;
+  backgroundHealth(): Promise<import('./background').BackgroundHealth | null>;
+  backgroundDetail(id: string, after?: number): Promise<import('./background').BackgroundDetail | null>;
+  saveBackgroundAgent(input: import('./background').AgentDraft): Promise<import('./background').BackgroundResult>;
+  archiveBackgroundAgent(id: string, revision: number): Promise<import('./background').BackgroundResult>;
+  startBackgroundRun(input: import('./background').StartRunInput): Promise<import('./background').BackgroundResult>;
+  controlBackgroundRun(input: import('./background').RunControl): Promise<import('./background').BackgroundResult>;
+  answerBackgroundRun(input: import('./background').RunAnswer): Promise<import('./background').BackgroundResult>;
+  chooseBackgroundFiles(): Promise<import('./background').BackgroundResult & { files: import('./background').BackgroundFile[] }>;
+  backgroundArtifact(input: { runId: string; artifactId: string; action: 'open' | 'reveal' | 'save' }): Promise<import('./background').BackgroundResult>;
+  onBackgroundChanged(callback: () => void): () => void;
   setHotkeyRecording(active: boolean): void;
   onViewChange(callback: (view: View) => void): () => void;
   onAppEvent(callback: (event: import('./release').AppEvent) => void): () => void;

@@ -2,6 +2,17 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type { CursorPoint, CursorGeometry, KiteAPI, VoiceEvent, VoiceEventType } from '../shared/types';
 
 const api: KiteAPI = {
+  backgroundSnapshot: () => ipcRenderer.invoke('background:snapshot'),
+  backgroundHealth: () => ipcRenderer.invoke('background:health'),
+  backgroundDetail: (id, after) => ipcRenderer.invoke('background:detail', id, after),
+  saveBackgroundAgent: input => ipcRenderer.invoke('background:saveAgent', input),
+  archiveBackgroundAgent: (id, revision) => ipcRenderer.invoke('background:archiveAgent', id, revision),
+  startBackgroundRun: input => ipcRenderer.invoke('background:start', input),
+  controlBackgroundRun: input => ipcRenderer.invoke('background:control', input),
+  answerBackgroundRun: input => ipcRenderer.invoke('background:answer', input),
+  chooseBackgroundFiles: () => ipcRenderer.invoke('background:chooseFiles'),
+  backgroundArtifact: input => ipcRenderer.invoke('background:artifact', input),
+  onBackgroundChanged(callback) { const listener = () => callback(); ipcRenderer.on('background:changed', listener); return () => ipcRenderer.removeListener('background:changed', listener); },
   setHotkeyRecording: active => ipcRenderer.send('hotkey:recording', active),
   onViewChange(callback) { const listener = (_e: IpcRendererEvent, view: import('../shared/types').View) => callback(view); ipcRenderer.on('view:change', listener); return () => ipcRenderer.removeListener('view:change', listener); },
   onAppEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/release').AppEvent) => callback(event); ipcRenderer.on('app:event', listener); return () => ipcRenderer.removeListener('app:event', listener); },

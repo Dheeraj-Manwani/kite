@@ -12,12 +12,13 @@ export function setLaunchOnStartup(enabled: boolean) {
   const executable = app.isPackaged && fs.existsSync(stub) ? stub : process.execPath;
   app.setLoginItemSettings({ openAtLogin: enabled, path: executable, args: app.isPackaged ? [] : [app.getAppPath()] });
 }
-export const appRuntime = { pausedUntil: 0, updateReady: false, updateStatus: 'Idle', changed: () => undefined as void, cancel: () => undefined as void };
+export const appRuntime: { pausedUntil: number; updateReady: boolean; updateStatus: string; changed(): void; cancel(): void; backgroundPause(paused: boolean): void } = { pausedUntil: 0, updateReady: false, updateStatus: 'Idle', changed: () => undefined, cancel: () => undefined, backgroundPause: () => undefined };
 let pauseTimer: ReturnType<typeof setTimeout>;
 export function appEvent(event: AppEvent) { for (const win of BrowserWindow.getAllWindows()) if (!win.isDestroyed()) win.webContents.send('app:event', event); }
 export function pauseKite(minutes: number | null) {
   clearTimeout(pauseTimer); appRuntime.cancel();
   appRuntime.pausedUntil = minutes === null ? Infinity : minutes > 0 ? Date.now() + minutes * 60000 : 0;
+  appRuntime.backgroundPause(!!appRuntime.pausedUntil);
   if (!appRuntime.pausedUntil) { getOverlayWindow()?.showInactive(); appEvent({ type: 'resumed' }); }
   else {
     appEvent({ type: 'paused', until: Number.isFinite(appRuntime.pausedUntil) ? appRuntime.pausedUntil : null });

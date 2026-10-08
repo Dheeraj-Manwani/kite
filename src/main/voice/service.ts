@@ -1,4 +1,6 @@
 import { registerHistoryIPC } from '../ipc/history';
+import { getBackgroundService } from '../background/bootstrap';
+import { startBackground } from '../tools/impl/start_background';
 import { createSettingsWindow, getSettingsWindow } from '../window/settings';
 import { appRuntime, appEvent, startUpdates, onResume, setLaunchOnStartup } from '../runtime';
 import { logEvent } from '../logging';
@@ -76,6 +78,8 @@ export function startVoiceService() {
   const history = openDatabase(path.join(app.getPath('userData'), 'kite.db'));
   configureProviders(secrets);
   const preferences = openPreferences(id => secrets.hasKey(id));
+  const background = getBackgroundService();
+  background?.setSettings(() => ({ permissions: preferences.get().permissions, dryRun: preferences.get().dryRun }));
   // Memory (docs/end-to-end-jobs.md §3.4): values encrypted like API keys; the Memory view hears about every change.
   const memory = createMemory(history.memory, osCipher, { enabled: () => preferences.get().memory !== false,
     changed: () => { const win = getSettingsWindow(); if (win && !win.isDestroyed()) win.webContents.send('memory:changed'); } });
@@ -221,7 +225,7 @@ export function startVoiceService() {
     approvals,
     tools: (messageId, signal, activity, model, captureTiming) => { const lesson = lessonTurn(); return new ToolSession({
       imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
-      definitions: [...createTools(apps, history, preferences.get()),
+      definitions: [...createTools(apps, history, preferences.get()), ...(background ? [startBackground(background)] : []),
         ...memoryTools({ store: memory, show: text => appEvent({ type: 'memory:show', text }), saved: savedNotice, source: () => `From what you said, ${today()}` }), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
         ...(preferences.get().whiteboard ? [structuredBoards() ? planWhiteboard(async (request, ctx) => {
           const epoch = board.beginPlan(), callId = ctx.callId ?? randomUUID();
