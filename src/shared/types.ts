@@ -109,6 +109,11 @@ export interface KiteAPI {
   boardStarted(id: number, key: number): void;
   setBoardBounds(bounds: ScreenBounds | null): void;
   exportBoard(action: 'copy' | 'save', png: Uint8Array, title: string): Promise<OperationResult>;
+    editBoard(id: number, action: import('./boardEditing').BoardEdit): Promise<OperationResult>;
+    askBoard(id: number, ids: string[], question: string): Promise<OperationResult>;
+    onBoardImageRequest(callback: (request: { request: string; id: number; revision: string }) => void): () => void;
+    boardImage(request: string, id: number, revision: string, png: Uint8Array): void;
+    exportBoardFile(format: import('./boardExports').BoardExportFormat, id: number, revision: string, content?: string | Uint8Array): Promise<OperationResult>;
   demoBoard(): Promise<OperationResult>;
   onTaskEvent(callback: (view: import('./agent').TaskView | null) => void): () => void;
   taskControl(action: import('./agent').TaskAction): void;

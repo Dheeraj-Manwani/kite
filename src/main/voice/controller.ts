@@ -33,7 +33,7 @@ interface Dependencies {
    * Running sessions (task, whiteboard, guide): local voice commands, per-turn system context, and
    * descriptions of whiteboard elements the user marked while speaking.
    */
-  guide?: { command(text: string): string | undefined; context(): string | undefined; marks?(ids: string[]): string | undefined };
+  guide?: { command(text: string): string | undefined; context(): string | undefined; marks?(ids: string[]): string | undefined; image?(signal: AbortSignal): Promise<Uint8Array | undefined> };
   now?: () => number;
 }
 interface Interaction {
@@ -268,7 +268,15 @@ export class VoiceController {
       : { title: 'I couldn’t record your microphone', text: 'Check the input device, then try again.' });
     if (job.approvalReply) this.cancel('voice:aborted'); else { job.controller.abort(); this.finish(job); }
   }
-  async submit(id: number, buffer: ArrayBuffer, strokes: Stroke[] = [], marks: string[] = []) {
+  async submitText(text: string, marks: string[] = []) {
+    if (this.closing) return;
+    this.cancel();
+    const job: Interaction = { id: ++this.sequence, phase: 'awaiting', controller: new AbortController(), releasedAt: this.now(),
+      timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text: '', saved: false, llmDone: false, playbackDone: true, speaking: false };
+    this.active = job; this.deps.setEscape(true, () => this.cancel('voice:aborted')); this.emit('model:changed', job);
+    await this.submit(job.id, new ArrayBuffer(0), [], marks, text);
+  }
+  async submit(id: number, buffer: ArrayBuffer, strokes: Stroke[] = [], marks: string[] = [], typedText?: string) {
     const job = this.active; if (!job || id !== job.id || job.phase !== 'awaiting') return;
     clearTimeout(job.timeout); job.phase = 'processing';
     job.timeout = setTimeout(() => {
@@ -279,14 +287,14 @@ export class VoiceController {
     const current = () => this.active === job && !job.controller.signal.aborted;
     this.emit('voice:thinking', job); let provider: ProviderId = 'groq';
     try {
-      const vision = job.approvalReply ? undefined : await this.deps.vision?.prepare(id, strokes, job.controller.signal);
+      const vision = job.approvalReply || typedText !== undefined ? undefined : await this.deps.vision?.prepare(id, strokes, job.controller.signal);
       if (!current()) return;
       if (vision) job.timing.captureMs = vision.captureMs;
       const groqKey = this.deps.getKey('groq'); if (buffer.byteLength && !groqKey) throw new MissingKeyError('groq');
       const started = this.now();
       const transcript = buffer.byteLength ? (await this.deps.transcribe(new Uint8Array(buffer), groqKey, job.controller.signal)).trim() : '';
       const marked = job.approvalReply ? undefined : this.deps.guide?.marks?.(marks);
-      const text = transcript || (vision || marked ? 'What is this?' : '');
+      const text = typedText?.trim() || transcript || (vision || marked ? 'What is this?' : '');
       if (!current()) return;
       job.timing.transcribeMs = this.now() - started;
       if (!text) { this.emit('voice:empty', job); if (job.approvalReply) this.cancel('voice:aborted'); else this.finish(job); return; }
@@ -340,7 +348,10 @@ export class VoiceController {
         }
         provider = job.model.provider;
         const key = this.deps.getKey(provider); if (!key) throw new MissingKeyError(provider);
-        return this.deps.ask(this.deps.conversation.context(), key, job.controller.signal, delta => {
+        const messages = this.deps.conversation.context();
+        if (!vision && job.model.supportsVision && this.deps.guide?.image) { const image = await this.deps.guide.image(job.controller.signal); if (!current()) return '';
+          if (image) { const last = messages.findLastIndex(m => m.role === 'user'); if (last >= 0) { const m = messages[last]; messages[last] = { role: 'user', content: [...(typeof m.content === 'string' ? [{ type: 'text' as const, text: m.content }] : m.content), { type: 'file', data: image, mediaType: 'image/png' }] }; } } }
+        return this.deps.ask(messages, key, job.controller.signal, delta => {
           if (!current() || !delta) return;
           if (!job.text) job.timing.firstTokenMs = this.now() - job.releasedAt;
           // A lesson already narrating beside this turn keeps the voice; anything the model adds is shown, not spoken.

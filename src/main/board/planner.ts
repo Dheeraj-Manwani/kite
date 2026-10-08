@@ -7,6 +7,7 @@ import type { ChatMessage } from '../ai/conversation';
 import { providerOptionsFor } from '../ai/ask';
 import type { ModelEntry } from '../../shared/types';
 import type { FormulaPaths } from '../../shared/boardTeaching';
+import { boardInputContext } from '../../shared/boardEditing';
 export interface BoardRequest { topic: string; focus?: string; level?: 'beginner' | 'intermediate' | 'advanced'; mode: 'new' | 'add' }
 export type BoardFormat = 'lines' | 'json';
 export const boardOutputTokens = 4096;
@@ -85,6 +86,7 @@ export interface PlanBoardOptions {
   recent?: ChatMessage[]; format?: BoardFormat; layout?: GraphLayout;
   providerOptions?: Parameters<typeof streamText>[0]['providerOptions'];
   teaching?: boolean; formula?: (tex: string, signal?: AbortSignal) => Promise<FormulaPaths>;
+  image?: Uint8Array;
   onLesson?(lesson: LessonInput): void;
 }
 export interface PlannedBoard { lesson: LessonInput; script: BoardScript; fixes: string[]; outputTokens?: number; firstBeatMs?: number; layoutMs: number; truncated: boolean }
@@ -104,7 +106,8 @@ export async function planBoard(options: PlanBoardOptions): Promise<PlannedBoard
   const recent = (options.recent ?? []).slice(-6).map(m => ({ role: m.role, text: typeof m.content === 'string' ? m.content.slice(0, 2000)
     : m.content.filter(p => p.type === 'text').map(p => p.text).join('\n').slice(0, 2000) }));
   const result = streamText({ model: options.model, system: boardPlannerPrompt(format, options.teaching),
-    prompt: JSON.stringify({ request: options.request, recent, current: options.current ?? base.map(e => ({ id: e.id, label: e.label ?? e.text, from: e.from, to: e.to })) }),
+    messages: [{ role: 'user', content: [{ type: 'text', text: JSON.stringify({ request: options.request, recent, current: options.current ?? base.map(e => ({ id: e.id, label: e.label ?? e.text, from: e.from, to: e.to })),
+      scene: base.length ? boardInputContext(base) : undefined }) }, ...(options.image ? [{ type: 'file' as const, data: options.image, mediaType: 'image/png' }] : [])] }],
     maxOutputTokens: boardOutputTokens, maxRetries: 0, providerOptions: options.providerOptions,
     abortSignal: AbortSignal.any([options.signal, AbortSignal.timeout(90_000)]), onError: () => undefined });
   const accept = async (parsed: ReturnType<typeof sanitizeScript>) => {

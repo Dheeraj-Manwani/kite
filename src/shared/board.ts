@@ -42,9 +42,10 @@ export interface ElementInput {
   labelOffset?: Point; halo?: boolean;
   icon?: string;
   formula?: FormulaPaths;
+  user?: boolean; freehand?: boolean;
 }
 export interface BeatInput extends TeachingBeat { say: string; draw?: ElementInput[]; highlight?: string[]; erase?: string[] }
-export interface LessonInput { title: string; mode?: 'new' | 'add'; beats: BeatInput[]; structure?: import('./boardScript').BoardScript }
+export interface LessonInput { title: string; mode?: 'new' | 'add'; beats: BeatInput[]; structure?: import('./boardScript').BoardScript; edits?: import('./boardEditing').BoardEdits }
 export const boardLimits = { beats: 16, perBeat: 24, elements: 200 };
 
 export interface TextBlock { lines: string[]; size: number; x: number; y: number; width: number; height: number; align: 'left' | 'center'; halo?: boolean }
@@ -52,7 +53,7 @@ interface Laid { id: string; color: BoardColor; seed: number }
 export interface LaidShape extends Laid { kind: 'shape'; shape: ShapeKind; box: ScreenBounds; label: TextBlock | null; fill: BoardFill; icon?: string }
 export interface LaidText extends Laid { kind: 'text'; box: ScreenBounds; text: TextBlock }
 export interface LaidArrow extends Laid { kind: 'arrow'; points: Point[]; label: TextBlock | null; dashed: boolean; heads: 'end' | 'both' | 'none'; from?: string; to?: string }
-export interface LaidLine extends Laid { kind: 'line'; points: Point[]; dashed: boolean; fill?: BoardFill }
+export interface LaidLine extends Laid { kind: 'line'; points: Point[]; dashed: boolean; fill?: BoardFill; freehand?: boolean }
 export interface LaidFormula extends Laid { kind: 'formula'; box: ScreenBounds; formula: FormulaPaths; label: string }
 export type LaidElement = LaidShape | LaidText | LaidArrow | LaidLine | LaidFormula;
 
@@ -220,7 +221,7 @@ export function layoutScene(inputs: ElementInput[], cachedNodes?: LaidElement[],
     else if (e.type === 'arrow') { const arrow = layoutArrow(e, placed, slotOf(e)); if (arrow) out.push(arrow); }
     else if (e.type === 'line') {
       const points = (e.points ?? []).map(p => ({ x: coord(p.x), y: coord(p.y) }));
-      if (points.length >= 2) out.push({ id: e.id, kind: 'line', points, dashed: !!e.dashed, color: e.color ?? 'black', seed: seedOf(e.id), fill: e.fill });
+      if (points.length >= 2) out.push({ id: e.id, kind: 'line', points, dashed: !!e.dashed, color: e.color ?? 'black', seed: seedOf(e.id), fill: e.fill, freehand: e.freehand });
     }
     else if (e.type === 'formula' && e.formula) out.push({ id: e.id, kind: 'formula', box: { x: coord(e.x), y: coord(e.y), width: e.width ?? e.formula.box.width * 0.03, height: e.height ?? e.formula.box.height * 0.03 }, formula: e.formula, label: e.label ?? '', color: e.color ?? 'black', seed: seedOf(e.id) });
   }
@@ -403,7 +404,7 @@ export function elementsAt(elements: LaidElement[], region: ScreenBounds, slack 
   return elements.filter(e => intersects(elementBounds(e), r)).reverse();
 }
 export function markLabel(e: LaidElement) {
-  const text = e.kind === 'shape' ? e.label?.lines.join(' ') : e.kind === 'text' ? e.text.lines.join(' ') : e.kind === 'arrow' ? e.label?.lines.join(' ') : '';
+  const text = e.kind === 'shape' ? e.label?.lines.join(' ') : e.kind === 'text' ? e.text.lines.join(' ') : e.kind === 'arrow' ? e.label?.lines.join(' ') : e.kind === 'formula' ? e.label : '';
   return `${e.id} (${e.kind === 'shape' ? e.shape : e.kind}${text ? ' ' + quote(text) : ''})`;
 }
 
@@ -424,6 +425,7 @@ export interface BoardView {
   highlight: string[];
   /** A prompt shown instead of the caption, e.g. while paused. */
   note: string | null;
+  editable?: boolean; revision?: string; inputs?: ElementInput[]; canUndo?: boolean; canRedo?: boolean;
   /** Numbers about how this lesson was made (dev panel); never lesson content. */
   stats?: LessonStats;
   /** Show the spoken line as a caption. When false it repeats what is being heard: it stays for screen readers only. */

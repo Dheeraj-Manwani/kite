@@ -1,11 +1,12 @@
 import type { LaidElement, LaidShape, Point } from '../../shared/board';
 import { boardIcons } from '../../shared/boardIcons';
+import { getStroke } from 'perfect-freehand';
 /**
  * Hand-drawn (Excalidraw-like) outlines, after rough.js: every straight edge is a slightly bowed cubic
  * with jittered ends, drawn twice. Each pass is one continuous path so the pen can trace it. All output is
  * deterministic for a seed, so an element keeps its wobble across re-renders and in exported images.
  */
-export interface StrokePlan { d: string; role: 'outline' | 'fill' | 'head' | 'icon'; dashed?: boolean; solidFill?: boolean }
+export interface StrokePlan { d: string; role: 'outline' | 'fill' | 'head' | 'icon'; dashed?: boolean; solidFill?: boolean; ink?: boolean }
 export type Rand = () => number;
 export function random(seed: number): Rand {
   let t = seed >>> 0;
@@ -109,6 +110,8 @@ function behind(points: Point[], end: 'start' | 'end', distance: number): Point 
 }
 /** Strokes in drawing order: outline passes, then fill, then arrowheads. Text is rendered separately. */
 export function elementStrokes(e: LaidElement): StrokePlan[] {
+  if (e.kind === 'line' && e.freehand) { const outline = getStroke(e.points.map(p => [p.x, p.y]), { size: 4, thinning: .4, smoothing: .5, simulatePressure: true });
+    return outline.length ? [{ d: `M${outline.map(p => p.join(',')).join('L')}Z`, role: 'fill', solidFill: true, ink: true }] : []; }
   const rand = random(e.seed);
   if (e.kind === 'text' || e.kind === 'formula') return [];
   if (e.kind === 'shape') {

@@ -45,7 +45,11 @@ import { explainOnWhiteboard } from '../tools/impl/explain_on_whiteboard';
 import { planWhiteboard } from '../tools/impl/plan_whiteboard';
 import { boardModel, boardProviderOptions, planBoard } from '../board/planner';
 import { elkLayout } from '../board/elk';
-import { structuredBoards, teachingBoards } from '../board/feature';
+import { structuredBoards, teachingBoards, ownedBoards } from '../board/feature';
+import { BoardImages } from '../board/images';
+import { parseBoardEdit, editableId } from '../../shared/boardEditing';
+import { boardExportFormats, excalidrawScene, mermaidBoard, validBoardSvg, type BoardExportFormat } from '../../shared/boardExports';
+import { boardPdf, openInExcalidraw, saveBoardFile } from '../board/files';
 import { formulaPaths } from '../board/math';
 import { safeFilename } from '../tools/impl/create_note';
 import { TaskService } from '../agent/service';
@@ -142,9 +146,11 @@ export function startVoiceService() {
       else board.usage(tokens || undefined, repairs);
     } };
   };
+  const boardImages = new BoardImages(request => { getOverlayWindow()?.webContents.send('board:imageRequest', request); });
   const board = new BoardService({
     structured: structuredBoards,
     teaching: teachingBoards,
+    editable: ownedBoards, image: (id, revision, signal) => boardImages.request(id, revision, signal),
     prefetch: (text, speed) => controller.prefetchAnnouncement(text, speed), cancelPrefetch: () => controller.cancelPrefetch(),
     save: saved => { history.saveBoard(saved); },
     log: logEvent, enabled: () => preferences.get().whiteboard, speed: () => preferences.get().speed,
@@ -192,6 +198,7 @@ export function startVoiceService() {
     command: (text: string) => agent.command(text) ?? board.command(text) ?? guide.command(text),
     context: () => [agent.context(), board.context(), guide.context(), memory.context()].filter(Boolean).join('\n') || undefined,
     marks: (ids: string[]) => board.marks(ids),
+    image: (signal: AbortSignal) => board.image(signal),
   };
   const controller = new VoiceController({
     vision: {
@@ -217,11 +224,12 @@ export function startVoiceService() {
             const snapshot = preferences.snapshot(), model = boardModel(snapshot.settings, snapshot.models, id => secrets.hasKey(id));
             const planned = await planBoard({ model: getModel(model.provider, model.id), request, signal: AbortSignal.any([ctx.signal, board.planSignal()]),
               recent: conversation.context(), current: board.structuredContext(), base: board.inputs(), visible: board.visibleIds(), layout: elkLayout, formula: formulaPaths, teaching: teachingBoards(), providerOptions: boardProviderOptions(model),
+              image: ownedBoards() && model.supportsVision && request.mode === 'add' ? await board.image(ctx.signal) : undefined,
               onLesson: partial => { if (board.currentPlan(epoch)) board.preview(callId, partial, { requestedAt: lesson.requestedAt, messageId }); } });
             if (!board.currentPlan(epoch)) return { ok: true, message: 'The board was put away while planning.', transcript: '(Whiteboard closed)' };
             const result = board.start(planned.lesson, { callId, requestedAt: lesson.requestedAt, messageId });
             board.usage(planned.outputTokens, planned.fixes.length);
-            logEvent('board:planner', { provider: model.provider, model: model.id, family: planned.script.family, format: 'lines', outputTokens: planned.outputTokens,
+            logEvent('board:planner', { provider: model.provider, model: model.id, family: planned.script.family, format: teachingBoards() ? 'json' : 'lines', outputTokens: planned.outputTokens,
               firstBeatMs: planned.firstBeatMs, layoutMs: planned.layoutMs, fixes: planned.fixes.length, truncated: planned.truncated });
             return result;
           } catch (error) {
@@ -331,6 +339,35 @@ export function startVoiceService() {
     const result = board.demo(); return result.ok ? { ok: true } : { ok: false, error: result.message };
   });
   const pngSchema = z.instanceof(Uint8Array).refine(b => b.byteLength > 8 && b.byteLength < 30_000_000 && [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a].every((v, i) => b[i] === v), 'PNG');
+  ipcMain.handle('board:edit', (event, id: unknown, input: unknown): OperationResult => {
+    if (!trusted(event, 'overlay') || !ownedBoards() || !Number.isSafeInteger(id)) return { ok: false };
+    const action = parseBoardEdit(input); return { ok: !!action && board.edit(id as number, action) };
+  });
+  ipcMain.handle('board:ask', (event, id: unknown, ids: unknown, question: unknown): OperationResult => {
+    const snapshot = board.snapshot();
+    if (!trusted(event, 'overlay') || !ownedBoards() || !snapshot || snapshot.id !== id || !Array.isArray(ids) || ids.length > 8 || !ids.every(editableId)
+      || ids.some(id => !snapshot.inputs.some(e => e.id === id)) || typeof question !== 'string' || !question.trim() || question.length > 500) return { ok: false, error: 'The selected board element is no longer available.' };
+    board.pause(); void controller.submitText(question, ids); return { ok: true };
+  });
+  ipcMain.on('board:image', (event, request: unknown, id: unknown, revision: unknown, png: unknown) => {
+    const image = pngSchema.safeParse(png); if (trusted(event,'overlay') && ownedBoards() && z.string().uuid().safeParse(request).success && Number.isSafeInteger(id)
+      && typeof revision === 'string' && image.success && image.data.length <= 4_000_000) boardImages.reply(request as string,id as number,revision,image.data);
+  });
+  ipcMain.handle('board:exportFile', async (event, format: unknown, id: unknown, revision: unknown, content: unknown): Promise<OperationResult> => {
+    const snapshot = board.snapshot(); if (!trusted(event,'overlay') || !ownedBoards() || !snapshot || snapshot.id !== id || snapshot.revision !== revision
+      || !boardExportFormats.includes(format as BoardExportFormat)) return { ok: false, error: 'The board changed. Try exporting again.' };
+    try { let bytes: string | Uint8Array, extension: string;
+      if (format === 'svg') { if (typeof content !== 'string' || !validBoardSvg(content)) throw new Error('Invalid board SVG.'); bytes = content; extension = 'svg'; }
+      else if (format === 'pdf') { const png = pngSchema.safeParse(content); if (!png.success || nativeImage.createFromBuffer(Buffer.from(png.data)).isEmpty()) throw new Error('Invalid board image.');
+        bytes = await boardPdf(snapshot.title,png.data,snapshot.lesson.beats.map(b => `${b.say}${b.ask ? ` ${b.ask}` : ''}`)); extension = 'pdf'; }
+      else if (format === 'mermaid') { bytes = '```mermaid\n' + mermaidBoard(snapshot.structure,snapshot.elements) + '```\n'; extension = 'md'; }
+      else { const json = JSON.stringify(excalidrawScene(snapshot.elements,format !== 'excalidraw'));
+        if (format === 'excalidraw-clipboard') { await clipboard.writeText(json); return { ok: true }; }
+        if (format === 'excalidraw-open') { await openInExcalidraw(json); return { ok: true }; }
+        bytes = json; extension = 'excalidraw'; }
+      const filename = await saveBoardFile(app.getPath('documents'),snapshot.title,extension,bytes); shell.showItemInFolder(filename); return { ok: true };
+    } catch (error) { return { ok: false, error: error instanceof Error ? error.message : 'Could not export the board.' }; }
+  });
   ipcMain.handle('board:export', async (event, action: unknown, bytes: unknown, title: unknown): Promise<OperationResult> => {
     const image = pngSchema.safeParse(bytes);
     if (!trusted(event, 'overlay') || !['copy', 'save'].includes(action as string) || !image.success || typeof title !== 'string') return { ok: false, error: 'Invalid image.' };
@@ -461,5 +498,5 @@ export function startVoiceService() {
   overlay?.webContents.on('did-finish-load', () => { guide.refresh(); board.refresh(); agent.refresh(); });
   overlay?.webContents.on('render-process-gone', reset);
   overlay?.on('closed', reset);
-  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); guide.dispose(); board.close(); agent.dispose(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
+  return async () => { stopUpdates(); offResume(); screen.removeListener('display-metrics-changed', reset); screen.removeListener('display-removed', reset); screen.removeListener('display-added', reset); stopHook(); guide.dispose(); board.close(); boardImages.close(); agent.dispose(); reminders.stop(); unsubscribe(); await controller.shutdown(); await waitForTools(); tts.close(); tray.destroy(); history.close(); };
 }

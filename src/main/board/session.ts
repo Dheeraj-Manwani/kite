@@ -1,5 +1,6 @@
 import { applyBeat, boardLimits, layoutScene, readingMs, repairBeats, speechMs, type BeatInput, type BoardStatus, type BoardView, type ElementInput, type LaidElement, type LessonInput } from '../../shared/board';
 import { cueTimings, type WordTiming } from '../../shared/boardTeaching';
+import { applyEdits, moveInput, rerouteInput, type BoardEdit, type BoardEdits } from '../../shared/boardEditing';
 /** How a spoken beat ended: heard in full, cut off (the user took over), or the voice failed. */
 export type SpeechEnd = 'spoken' | 'cut' | 'failed';
 export interface BoardSessionDeps {
@@ -55,6 +56,26 @@ export class BoardSession {
   private prepared = '';
   private answered = new Set<number>();
   private answerText?: string;
+  private edits: BoardEdits = { elements: [], deleted: [] };
+  private undo: BoardEdits[] = []; private redo: BoardEdits[] = [];
+  get canUndo() { return !!this.undo.length; } get canRedo() { return !!this.redo.length; }
+  restoreEdits(edits?: BoardEdits) { if (edits) this.edits = { elements: edits.elements.slice(0, 200), deleted: edits.deleted.slice(0, 200) }; }
+  edit(action: BoardEdit) {
+    if (this.finished) return false;
+    const visible = this.visibleInputs(), byId = new Map(visible.map(e => [e.id, e]));
+    if (action.type === 'undo' || action.type === 'redo') { const from = action.type === 'undo' ? this.undo : this.redo, to = action.type === 'undo' ? this.redo : this.undo; if (!from.length) return false; this.pause(); to.push(this.edits); this.edits = from.pop(); this.emit(); return true; }
+    const elements = new Map(this.edits.elements.map(e => [e.id, e])), deleted = new Set(this.edits.deleted);
+    if (action.type === 'add') { if (this.inputs().length >= boardLimits.elements || this.inputs().some(e => e.id === action.element.id)
+      || action.element.from && !byId.has(action.element.from) || action.element.to && !byId.has(action.element.to)) return false; elements.set(action.element.id, rerouteInput(action.element)); deleted.delete(action.element.id); }
+    else { const e = byId.get(action.id); if (!e) return false;
+      if (action.type === 'move') { const moved = moveInput(e, action.dx, action.dy); if ([moved.x, moved.y, ...(moved.points?.flatMap(p => [p.x, p.y]) ?? [])].some(v => v !== undefined && (!Number.isFinite(v) || Math.abs(v) > 100000))) return false; elements.set(e.id, moved); }
+      if (action.type === 'label') { if (!['rectangle', 'ellipse', 'diamond', 'text', 'arrow'].includes(e.type)) return false;
+        elements.set(e.id, { ...e, ...(e.type === 'text' ? { text: action.text } : { label: action.text }), ...(e.type === 'text' || e.type === 'arrow' ? {} : { width: undefined, height: undefined }) }); }
+      if (action.type === 'delete') { const remove = (n: ElementInput) => { if (n.user) elements.delete(n.id); else deleted.add(n.id); }; remove(e); for (const n of this.inputs()) if (n.type === 'arrow' && (n.from === e.id || n.to === e.id)) remove(n); }
+    }
+    this.pause(); this.undo.push(this.edits); this.undo = this.undo.slice(-30); this.redo = [];
+    this.edits = { elements: [...elements.values()], deleted: [...deleted] }; this.emit(); return true;
+  }
   constructor(readonly id: number, private title: string, beats: BeatInput[], private deps: BoardSessionDeps, private base: ElementInput[] = [], private timing: BoardTiming = boardTiming, private planned = false) {
     this.beats = planned ? beats.slice(0, boardLimits.beats * 2) : repairBeats(beats.slice(0, boardLimits.beats * 2), base);
     this.tail = this.beats.length;
@@ -72,13 +93,13 @@ export class BoardSession {
   private line() { const beat = this.current(); return beat.ask ? `${beat.say} ${beat.ask}` : beat.say; }
   stream() { this.open = true; }
   rename(title: string) { if (title && title !== this.title) { this.title = title; this.emit(); } }
-  private applied(through: number) { return this.beats.slice(0, through).reduce(applyBeat, this.base); }
+  private applied(through: number) { return applyEdits(this.beats.slice(0, through).reduce(applyBeat, this.base), this.edits); }
   /** Everything on the board right now. */
   scene(): LaidElement[] { return layoutScene(this.applied(this.through)); }
   /** The board as it will look when the whole lesson has played (for follow-up questions). */
   inputs(): ElementInput[] { return this.applied(this.beats.length); }
   visibleInputs(): ElementInput[] { return this.applied(this.through); }
-  script(): LessonInput { return { title: this.title, mode: 'new', beats: [...this.beats] }; }
+  script(): LessonInput { return { title: this.title, mode: 'new', beats: [...this.beats], ...(this.edits.elements.length || this.edits.deleted.length ? { edits: this.edits } : {}) }; }
   private current() { return this.beats[Math.min(this.index, this.beats.length - 1)]; }
   view(): BoardView {
     const beat = this.current(), drawing = this.status === 'playing' && this.started && !this.drawn;

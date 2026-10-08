@@ -1,18 +1,18 @@
 # Whiteboard — implementation phases
 
-Plan date: **1 October 2026**, checked against the code on **8 October 2026**. Code baseline: `8a00563` on `master` (phase 1), plus the phase 2 and phase 3 changes in this working tree.
+Plan date: **1 October 2026**, checked against the code on **8 October 2026**. Code baseline: `7414a02` on `master` (phases 1–3), plus the phase 4 changes in this working tree.
 
 This file turns the whiteboard research into the order we build it. The research, the evidence behind each problem, and the rationale for each recommendation are in [Kite whiteboard: research and plan to make it mature](https://claude.ai/code/artifact/2d56d024-83cb-43ad-b4cc-31ecf795a476). How the whiteboard works today is in [whiteboard.md](whiteboard.md) and [ADR 013](adr/013-whiteboard.md).
 
 ## Implementation status — 8 October 2026
 
-**Phase 1 is complete. Phase 2 has 10/10 implementation items; Phase 3 has 8/8.** Phase 2's release latency gate and Phase 3's scored provider-clarity gate remain pending. Phase 0 has all six implementation items, but its original three-provider baseline gate remains pending. Checked boxes mean the implementation exists; each phase's gate is recorded separately. Phase 2 is available through `KITE_BOARD_PHASE2=1`; Phase 3 through `KITE_BOARD_PHASE3=1`. The released default retains the legacy tool.
+**Phase 1 is complete. Phase 2 has 10/10 implementation items; Phase 3 has 8/8; Phase 4 has 6/6.** Phase 2's release latency gate, Phase 3's scored provider-clarity gate and Phase 4's hosted export gates remain pending. Phase 0 has all six implementation items, but its original three-provider baseline gate remains pending. Checked boxes mean the implementation exists; each phase's gate is recorded separately. Development flags are `KITE_BOARD_PHASE2=1`, `KITE_BOARD_PHASE3=1` and `KITE_BOARD_PHASE4=1`. Phase 4 implies phases 2 and 3; `KITE_BOARD_PHASE2=0` disables all extensions. The released default retains the legacy tool.
 
 - **Phase 0 · Measure: 6/6 implemented; exit gate pending.** The 60-prompt golden set, metrics, eval runner, gallery generator, DeepSeek adapter, and lesson log exist. The frozen [baseline](performance/whiteboard/phase0-baseline.json) covers DeepSeek Flash from 2 October. A [gallery of 122 repaired boards](performance/whiteboard/index.html) is now present. The gate still requires baselines and galleries for two additional providers.
 - **Phase 1 · Readable and fast: 9/9 implemented; gates passed.** Streaming, turn ending, input repair, the 8,192-token budget, Excalifont, camera/presentation mode, captions, scene repairs, and saved boards are implemented. Repairs preserve existing placements, resize labels, separate collisions, detour obstructed arrows, and halo text on lines. Boards save locally on completion/close with thumbnails, title/label search, History replay, and cascade deletion. The latency log now waits for the renderer's first drawing frame.
 - **Phase 2 · Structure first: 10/10 implemented; release gate pending.** The small voice tool delegates to a streaming specialist with its own model setting and coordinate-free script. Nine diagram families, incremental parsing/repair, a lazy ELK worker, 60 drawable icons, pinned follow-ups, saved-board compatibility and [ADR 018](adr/018-structured-whiteboard.md) are implemented. The three-provider lint-clean and half-token gates pass. DeepSeek meets the 3 s first-stroke target; Groq's latest median is 4.01 s, so the new path stays behind the development flag.
 - **Phase 3 · Teach like a person: 8/8 implemented; clarity gate pending.** Word-cued drawing and next-beat audio prefetch, emphasis/eraser/value/move/swap animations, teacher gestures, data/steps/plot families, answer-waiting quizzes, child boards, beat navigation and lesson speed are implemented. A real Cartesia fixture measured **19.5 ms median cue error** and **406 ms maximum dead air**. Three targeted JSON probes per provider draw cleanly and sort the test array correctly, but do not establish clarity above Phase 2. See [ADR 019](adr/019-whiteboard-teaching.md).
-- **Phase 4 · Yours to keep: 1/6 roadmap items complete.** Board History/search/thumbnails/replay landed with phase 1 persistence. Structured board context, shortcut marks, PNG export, and screen-reader-aware captions are existing foundations. Vision PNG context, direct-click pointing, element editing, SVG/Excalidraw/Mermaid/PDF exports, and the element outline/keyboard walkthrough remain.
+- **Phase 4 · Yours to keep: 6/6 implemented; hosted export gates pending.** Visual follow-ups use the edited structure and an ephemeral PNG of Kite's own drawing for vision models. Click-to-ask, pinned drag/label/delete edits, undo/redo, pen/arrow/text/eraser, saved edits, SVG/Excalidraw/Mermaid/PDF exports and a complete accessible outline are implemented. The keyboard walkthrough passes. All 314 stored boards load in Excalidraw's SDK with reciprocal arrow bindings; 82 applicable Mermaid exports render locally. Actual all-golden excalidraw.com imports and hosted GitHub rendering remain separate checks. See [ADR 020](adr/020-owned-whiteboard.md).
 - **Phase 5 · Delight: 0/5 implemented.** Themes, single-stroke handwriting, video export, multilingual board commands, and the background reviewer remain.
 
 ### Verification and remaining gates
@@ -51,6 +51,16 @@ The phase-2 reports preserve original provider timings/tokens and recompile thei
 - **Synthetic renderer timing:** [phase3-renderer.json](performance/whiteboard/phase3-renderer.json) separately records onset against a supplied local cue schedule. It exercises swap/arrow animation and erasure without claiming provider word accuracy.
 - **Provider capability probes:** [the final JSON run](performance/whiteboard/phase3-provider-probe.json) covers an array quiz, worked equations and a shaded parabola on DeepSeek Flash, Groq GPT OSS 120B and Kimi K2.6. All nine lessons are lint-clean; all three array lessons emit real swaps, end at `[3, 5, 7]`, and include an `ask` pause. Formula and plotted-point metadata are present. Earlier line probes are retained separately; some described changes without emitting them or used the wrong node identities. The prompt now explains stable identities and actual action fields. Phase 3 defaults to JSON for its nested metadata; Phase 2 retains lines. These are targeted probes with prompt revisions, not a controlled format comparison or full golden set.
 - **Release gate remains pending:** no scored human comparison establishes clarity above Phase 2 on every provider. Timing passes the recorded fixture scope, but cannot establish that clarity gate. Phase 3 remains opt-in; enabling it implies Phase 2 unless `KITE_BOARD_PHASE2=0` explicitly disables the structured path.
+
+### Phase 4 verification — 8 October 2026
+
+- **297/297 unit tests passed serially**, including 16 new tests for input validation, pin/replay/undo behavior, cascade deletion, user strokes, archive reopening, stale/cancelled images, typed questions without microphone or screen capture, complete outlines, safe exports, specialist image context and the sandboxed keyboard-paste/clipboard transaction. Type checking, lint, Forge production main/preload builds, renderer build, bundled startup, native smoke, clipboard restoration and the existing renderer smoke passed. An earlier run failed the existing Balanced checkout permissions test; that file passed alone and the complete rerun passed. No permissions code changed. The final invalid-edit planning guard also passed the 36-test board/script/teaching subset.
+- **Excalidraw compatibility:** [the native report](performance/whiteboard/phase4-verification.json) imports all **314 stored playable boards** through `loadFromBlob` in SDK 0.18.1 and restores the clipboard elements with binding repair. It checks every element id, formula file, **1,340 arrows and 2,160 endpoint bindings**, including reciprocal references. Sources are the 122 Phase 1 lessons, 178 Phase 2 lessons, five teaching fixtures and nine provider probes. This is an SDK check, not a claim of 314 imports on the hosted website. Formulae become embedded SVG images with TeX metadata; shape icons are omitted from the editable mapping. SVG/PDF retain the drawn icons.
+- **Mermaid compatibility:** all **82 applicable flow/sequence scenes** render with Mermaid 12.1.0. Exports are fenced `.md` files, with escaped labels and sequence message order preserved. Mermaid represents the structured diagram; freehand ink is retained by the other formats. Hosted GitHub rendering is not yet verified.
+- **Actual renderer editing and keyboard walkthrough:** native Chromium Tab moves from Client to Server; Enter asks once about the focused element; Space toggles playback; F2 edits a label and Delete removes a node and its bound arrow. Drag pinning, Ctrl+Z/Ctrl+Shift+Z, pen, text, arrow, sketch questions, own-image requests and SVG export pass through the renderer/preload/service fixture. The outline has one entry for every visible element. [Editor screenshot](performance/whiteboard/phase4/editor.png).
+- **Handout and visual exports:** [edited SVG](performance/whiteboard/phase4/edited-board.svg), [PNG](performance/whiteboard/phase4/edited-board.png) and [two-page PDF](performance/whiteboard/phase4/handout.pdf) are retained. Poppler rendering and PDF text extraction verify the board page and all three notes. Visual review found and fixed missing label pixels caused by embedded font subsets without Unicode ranges; the harness now checks real ink inside the exported Client label. Export filenames are created exclusively, preserving earlier exports. The shared clipboard helper restores text and image payloads in the native clipboard test; hosted Excalidraw keyboard import remains part of the online gate.
+
+Reproduce with `npm run eval:board:phase4`. The editor SDK and Mermaid are development-only validation dependencies. Keep `KITE_BOARD_PHASE4=1` opt-in until the hosted export checks and earlier rollout gates are satisfied.
 
 ## Start here
 
@@ -243,19 +253,20 @@ Phases 3 and 4 can run in either order once phase 2 lands. Sizes use the scale i
 
 **Goal:** you can point at the board, change it, find it again, and take it anywhere.
 
-- [ ] **S · The model sees the board.** Follow-ups get the board as structure, plus a PNG for vision models. It is Kite's own drawing, so no capture and no "Kite is looking" indicator.
-- [ ] **S · Point without the shortcut.** Clicking an element shows an "Ask about this" chip. Marks made while holding the shortcut keep working.
-- [ ] **L · Light editing.**
+- [x] **S · The model sees the board.** Follow-ups get the current edited structure, plus a revision-checked PNG for vision models. The PNG comes from Kite's SVG, uses no screen capture/indicator and is not retained in conversation history.
+- [x] **S · Point without the shortcut.** Clicking an element shows an "Ask about this" chip with a text question. Marks made while holding the shortcut keep working.
+- [x] **L · Light editing.**
   - Drag an element (it stays pinned), double-click to edit a label, and delete.
   - A toolbar with pen (perfect-freehand), arrow, text and eraser for the user's own sketch.
   - "Is this right?" sends that sketch as structure plus an image.
+  - Local edit overrides survive playback, follow-ups, archive reopening and Replay; a bounded undo/redo history is available during the session.
 - [x] **M · Boards in History.** Thumbnails, full-text search on titles/labels, and reopen with Replay. *Landed with phase 1 saved-board persistence on 8 Oct 2026. Conversational retrieval such as "the TCP diagram from yesterday" remains future planner work.*
-- [ ] **L · Exports.**
+- [x] **L · Exports.**
   - SVG.
   - Excalidraw: a `.excalidraw` file, and clipboard JSON through the element skeleton mapping. "Open in Excalidraw" pastes with the keyboard only and restores the clipboard.
   - Mermaid, for the flow and sequence families.
   - A PDF handout: the board plus the narration as notes.
-- [ ] **M · Accessibility.**
+- [x] **M · Accessibility.**
   - An ARIA outline of every element, its label and its connections (build on `describeScene`).
   - Keyboard use: Tab moves between elements, Enter asks about the focused one, Space pauses.
   - The captions setting follows the screen reader.
@@ -266,6 +277,8 @@ Phases 3 and 4 can run in either order once phase 2 lands. Sizes use the scale i
 - Mermaid exports render on GitHub.
 - A keyboard-only walkthrough of a board passes.
 - The outline lists every element.
+
+**Gate status (8 Oct): keyboard and complete-outline checks passed; SDK/parser compatibility passed; hosted checks pending.** The report validates all stored scenes and bindings in Excalidraw's SDK and locally renders applicable Mermaid diagrams. It does not establish all-golden hosted imports or actual GitHub rendering. Phase 4 remains opt-in.
 
 ## Phase 5 — Delight
 

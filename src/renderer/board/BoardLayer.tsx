@@ -10,6 +10,7 @@ import { elementStrokes } from './rough';
 import { BoardPlayer } from './player';
 import { boardRuntime } from './runtime';
 import { exportPng } from './export';
+import { useBoardEditor } from './BoardEditor';
 /** Written line by line; the player clips each line while it is being "handwritten". */
 function Lines({ block, color, clip, order, animated = true }: { block: TextBlock; color: string; clip: string; order: number; animated?: boolean }) {
   return <>{block.lines.map((line, i) => {
@@ -36,7 +37,7 @@ const Element = memo(function Element({ e, prefix, before, animated = true, dim 
       {e.formula.paths.map((p, i) => <path key={i} d={p.d} transform={p.transform} data-kind={animated ? 'stroke' : undefined} data-order={10 + i} fill="none" stroke={color.stroke} strokeWidth={35} strokeLinejoin="round" />)}
     </g>}
     {strokes.filter(s => s.role === 'fill').map((s, i) => <path key={`fill${i}`} d={s.d} data-kind={animated && !before ? 'fade' : undefined} data-fill="1" data-order={20}
-      fill={s.solidFill ? color.fill : 'none'} stroke={s.solidFill ? 'none' : color.stroke} strokeOpacity={0.5} strokeWidth={1.3} strokeLinecap="round" />)}
+      fill={s.ink ? color.stroke : s.solidFill ? color.fill : 'none'} stroke={s.solidFill ? 'none' : color.stroke} strokeOpacity={0.5} strokeWidth={1.3} strokeLinecap="round" />)}
     {strokes.filter(s => s.role !== 'fill').map((s, i) => {
       const second = s.role === 'outline' && outline++ > 0;
       return <path key={i} d={s.d} data-kind={!animated ? undefined : before?.kind === 'arrow' ? 'morph' : before ? undefined : s.dashed ? 'fade' : 'stroke'} data-from-path={oldStrokes.filter(p => p.role !== 'fill')[i]?.d} data-order={s.role === 'head' ? 30 + i : 10 + i} data-fast={second ? '1' : undefined}
@@ -83,7 +84,8 @@ export function BoardLayer() {
     const off = window.kite.onBoardEvent(next => {
       const before = current.current;
       // Snapshot while the old SVG still exists. The archive row is saved by main before its event is sent.
-      const capture = next?.status === 'done' && (before?.status !== 'done' || before?.id !== next.id) ? next
+      const capture = next?.editable && before?.id === next.id && before.revision !== next.revision && ['paused', 'done'].includes(next.status) ? next
+        : next?.status === 'done' && (before?.status !== 'done' || before?.id !== next.id) ? next
         : before && (!next || next.id !== before.id) ? before : null;
       if (capture?.savedId && svg.current) {
         // A done event may add the last elements: capture after React commits it; closing clones immediately.
@@ -116,10 +118,20 @@ export function BoardLayer() {
     return () => { off(); player.current.cancel(); boardRuntime.tick = null; boardRuntime.pen = null; boardRuntime.rest = null; boardRuntime.aim = null; boardRuntime.hit = null; boardRuntime.frame = null; window.kite.setBoardBounds(null); };
   }, []);
   const restPoint = () => { const f = boardRuntime.frame; return f ? { x: f.x + 60, y: f.y + panelChrome.header + 40 } : null; };
-  const viewport = frame ? panelViewport(frame) : { width: 1, height: 1 };
+  const paper = frame ? panelViewport(frame) : { width: 1, height: 1 };
+  const viewport = { ...paper, height: view?.editable ? Math.max(80, paper.height - 152) : paper.height };
   const elements = view?.elements ?? [];
   const fallback = useMemo(() => fitView(sceneBounds(elements), viewport, 40), [elements, viewport.width, viewport.height]);
   const cam = camera ?? shown ?? fallback;
+  const editor = useBoardEditor(view, svg, cam, () => setCamera({ ...cam }));
+  useEffect(() => window.kite.onBoardImageRequest?.(request => {
+    const snapshot = current.current; if (!snapshot?.editable || snapshot.id !== request.id || snapshot.revision !== request.revision) return;
+    void new Promise<void>(resolve => requestAnimationFrame(() => requestAnimationFrame(() => resolve()))).then(async () => {
+      if (current.current?.id !== request.id || current.current.revision !== request.revision || svg.current?.dataset.revision !== request.revision) return;
+      const png = await exportPng(svg.current, snapshot.elements, 1536); const next = current.current;
+      if (next?.id === request.id && next.revision === request.revision) window.kite.boardImage(request.request,request.id,request.revision,png);
+    }).catch((): void => undefined);
+  }), []);
   manual.current = camera !== null;
   /**
    * Move Kite's camera to `to`: an eased glide, or a cut (a new board, a resized panel, reduced motion, or while the
@@ -212,7 +224,8 @@ export function BoardLayer() {
     target.addEventListener('pointermove', move); target.addEventListener('pointerup', up); target.addEventListener('pointercancel', up);
   };
   const zoom = (e: React.WheelEvent<HTMLDivElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect(), px = e.clientX - rect.left, py = e.clientY - rect.top;
+    if ((e.target as Element).closest('details,form,button')) return;
+    const rect = svg.current?.getBoundingClientRect() ?? e.currentTarget.getBoundingClientRect(), px = e.clientX - rect.left, py = e.clientY - rect.top;
     const scale = Math.max(0.15, Math.min(4, cam.scale * Math.exp(-e.deltaY * 0.0015)));
     setCamera({ scale, x: cam.x + px / cam.scale - px / scale, y: cam.y + py / cam.scale - py / scale });
   };
@@ -224,7 +237,7 @@ export function BoardLayer() {
     } catch { setToast('Could not export the board.'); }
   };
   const prefix = `b${view.id}`, playing = view.status === 'playing';
-  return <section className={`board ${view.status}`} aria-label={`Whiteboard: ${view.title}`}
+  return <section className={`board ${view.status}${view.editable ? ' editable' : ''}`} aria-label={`Whiteboard: ${view.title}`} onKeyDown={editor.onKey}
     style={{ transform: `translate(${frame.x}px, ${frame.y}px)`, width: frame.width, height: frame.height }}>
     <header onPointerDown={drag('move')}>
       <SailMark size={18} /><strong className="board-title">{view.title}</strong>
@@ -243,12 +256,14 @@ export function BoardLayer() {
         <button className="board-close" aria-label="Close whiteboard" onClick={() => control('close')}>×</button>
       </div>
     </header>
-    <div className="board-canvas" onPointerDown={pan} onWheel={zoom}>
-      <svg ref={svg} className="board-svg" viewBox={`${cam.x} ${cam.y} ${viewport.width / cam.scale} ${viewport.height / cam.scale}`} width={viewport.width} height={viewport.height}
-        xmlns="http://www.w3.org/2000/svg" role="img" aria-label={`${view.title}: ${elements.length} drawn elements`}>
+    <div className="board-canvas" onPointerDown={e => { if (!editor.start(e)) pan(e); }} onWheel={zoom}>
+      <svg ref={svg} className="board-svg" data-revision={view.revision} viewBox={`${cam.x} ${cam.y} ${viewport.width / cam.scale} ${viewport.height / cam.scale}`} width={viewport.width} height={viewport.height}
+        xmlns="http://www.w3.org/2000/svg" role={view.editable ? 'group' : 'img'} aria-label={`${view.title}: ${elements.length} drawn elements`}>
         <rect className="board-sheet" x={-4000} y={-4000} width={canvas.width + 8000} height={canvas.height + 8000} fill="#ffffff" />
-        {elements.map(e => <Element key={`${e.id}:${JSON.stringify(e)}`} e={e} prefix={prefix} before={view.transition?.changed.includes(e.id) ? view.transition.before.find(old => old.id === e.id) : undefined}
-          dim={view.effects?.some(f => f.kind === 'dim' && !f.ids.includes(e.id))} pulse={!reduced() && view.effects?.some(f => f.kind === 'pulse' && f.ids.includes(e.id))} />)}
+        {editor.elements.map(e => <g key={e.id} data-focus={view.editable ? e.id : undefined} role={view.editable ? 'button' : undefined} tabIndex={view.editable ? 0 : undefined}
+          aria-label={view.editable ? editor.outline.find(n => n.id === e.id)?.label : undefined} onFocus={() => view.editable && editor.setSelected(e.id)} onDoubleClick={() => view.editable && editor.editLabel(e.id)}>
+          <Element key={JSON.stringify(e)} e={e} prefix={prefix} before={view.transition?.changed.includes(e.id) ? view.transition.before.find(old => old.id === e.id) : undefined}
+            dim={view.effects?.some(f => f.kind === 'dim' && !f.ids.includes(e.id))} pulse={!reduced() && view.effects?.some(f => f.kind === 'pulse' && f.ids.includes(e.id))} /></g>)}
         {view.transition?.before.filter(e => view.transition.erased.includes(e.id)).map(e => <g key={`erase-${e.id}`} data-el={e.id} data-kind="erase" data-order={0}><Element e={e} prefix={`${prefix}-erase`} animated={false} /></g>)}
         {(view.effects ?? []).flatMap((effect, i) => {
           const ids = effect.kind === 'badge' ? [effect.id] : effect.ids;
@@ -260,7 +275,9 @@ export function BoardLayer() {
           });
         })}
         {rings.map(r => <g key={`${view.drawing?.key ?? 0}:${r.id}`} className="board-ring">{r.paths.map((d, i) => <path key={i} d={d} pathLength={1} className={`pass-${i}`} />)}</g>)}
+        {editor.overlay}
       </svg>
+      {editor.ui}
     </div>
     <footer className="board-caption" role="status" aria-live="polite">
       {!!view.breadcrumbs?.length && <span className="board-breadcrumb">{[...view.breadcrumbs, view.title].join(' › ')}</span>}

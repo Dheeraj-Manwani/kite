@@ -89,6 +89,11 @@ const api: KiteAPI = {
   boardCue: (id, key, expectedMs, actualMs) => ipcRenderer.send('board:cue', id, key, expectedMs, actualMs),
   setBoardBounds: bounds => ipcRenderer.send('board:bounds', bounds),
   exportBoard: (action, png, title) => ipcRenderer.invoke('board:export', action, png, title),
+  editBoard: (id, action) => ipcRenderer.invoke('board:edit', id, action),
+  askBoard: (id, ids, question) => ipcRenderer.invoke('board:ask', id, ids, question),
+  onBoardImageRequest: callback => { const listener = (_event: IpcRendererEvent, request: { request: string; id: number; revision: string }) => callback(request); ipcRenderer.on('board:imageRequest', listener); return () => ipcRenderer.removeListener('board:imageRequest', listener); },
+  boardImage: (request, id, revision, png) => ipcRenderer.send('board:image', request, id, revision, png),
+  exportBoardFile: (format, id, revision, content) => ipcRenderer.invoke('board:exportFile', format, id, revision, content),
   demoBoard: () => ipcRenderer.invoke('dev:boardDemo'),
   onTaskEvent(callback) {
     const listener = (_event: IpcRendererEvent, view: import('../shared/agent').TaskView | null) => callback(view);

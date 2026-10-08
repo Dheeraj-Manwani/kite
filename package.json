@@ -12,7 +12,7 @@
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx .",
     "typecheck": "tsc --noEmit",
-    "test": "node --require ./tests/register.cjs --test tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs tests/vision.test.cjs tests/guide.test.cjs tests/board.test.cjs tests/board-script.test.cjs tests/board-teaching.test.cjs tests/board-metrics.test.cjs tests/agent.test.cjs tests/windows.test.cjs tests/shop.test.cjs tests/job.test.cjs tests/permissions.test.cjs tests/memory.test.cjs tests/checkout.test.cjs tests/repeat.test.cjs",
+    "test": "node --require ./tests/register.cjs --test --test-concurrency=1 tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs tests/vision.test.cjs tests/guide.test.cjs tests/board.test.cjs tests/board-script.test.cjs tests/board-teaching.test.cjs tests/board-owned.test.cjs tests/board-metrics.test.cjs tests/agent.test.cjs tests/windows.test.cjs tests/shop.test.cjs tests/job.test.cjs tests/permissions.test.cjs tests/memory.test.cjs tests/checkout.test.cjs tests/repeat.test.cjs",
     "test:capture": "electron tests/capture-native.cjs",
     "test:native": "electron tests/native-smoke.cjs",
     "test:clipboard": "electron tests/clipboard-native.cjs",
@@ -39,7 +39,8 @@
     "eval:board:phase2:replay": "node scripts/board-phase2-replay.cjs",
     "eval:board:phase3": "node scripts/board-phase3.cjs",
     "eval:board:phase3:providers": "node scripts/board-phase2.cjs --phase3 --formats json --out phase3-provider-probe.json",
-    "eval:board:phase3:live": "electron scripts/board-teaching-live.cjs"
+    "eval:board:phase3:live": "electron scripts/board-teaching-live.cjs",
+    "eval:board:phase4": "node scripts/board-phase4.cjs"
   },
   "keywords": [
     "electron",
@@ -64,6 +65,7 @@
     "@electron-forge/plugin-vite": "^7.11.2",
     "@electron-forge/publisher-github": "^7.11.2",
     "@electron/fuses": "^1.8.0",
+    "@excalidraw/excalidraw": "^0.18.1",
     "@tabler/icons": "^3.49.0",
     "@types/better-sqlite3": "^9.6.0",
     "@types/electron-squirrel-startup": "^1.0.2",
@@ -76,6 +78,7 @@
     "electron": "44.4.5",
     "eslint": "^8.57.1",
     "eslint-plugin-import": "^2.32.0",
+    "mermaid": "^12.1.0",
     "typescript": "~5.9.3",
     "vite": "^5.4.21",
     "vitest": "^3.2.7"

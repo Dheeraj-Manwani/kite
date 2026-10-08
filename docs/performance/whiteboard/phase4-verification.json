@@ -1,0 +1,39 @@
+{
+  "phase": 4,
+  "updated": "2026-10-08T08:43:24.460Z",
+  "excalidraw": {
+    "sdk": "0.18.1",
+    "boards": 314,
+    "arrows": 1340,
+    "bindings": 2160
+  },
+  "mermaid": {
+    "version": "12.1.0",
+    "boards": 82
+  },
+  "keyboard": {
+    "completeOutline": true,
+    "tabEnterSpace": true,
+    "delete": true
+  },
+  "editing": {
+    "label": true,
+    "dragPin": true,
+    "undoRedo": true,
+    "pen": true,
+    "text": true,
+    "arrow": true,
+    "eraser": true,
+    "exportedLabelInk": 851,
+    "ownImage": true,
+    "export": true
+  },
+  "externalGates": {
+    "excalidrawCom": "pending all-golden online import",
+    "github": "pending actual hosted rendering"
+  },
+  "pdf": {
+    "generated": true,
+    "notes": 3
+  }
+}
