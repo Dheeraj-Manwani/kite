@@ -1,4 +1,5 @@
 import type { ScreenBounds } from './types';
+import { excalifontFallbackWidth, excalifontWidths } from './boardFont';
 /**
  * Whiteboard model shared by main (layout, context for the model) and the overlay (drawing).
  * Coordinates are board units on a 1600 × 900 canvas; the overlay zooms the board to fit.
@@ -48,26 +49,38 @@ export interface LaidArrow extends Laid { kind: 'arrow'; points: Point[]; label:
 export interface LaidLine extends Laid { kind: 'line'; points: Point[]; dashed: boolean }
 export type LaidElement = LaidShape | LaidText | LaidArrow | LaidLine;
 
-// Text metrics for the handwriting stack (Ink Free, Segoe Print): generous so labels fit their shapes.
+// Text is set in Excalifont (bundled; see assets/fonts/excalifont), measured with the advance widths Chromium reports
+// for it (src/shared/boardFont.ts), so main's layout and the overlay's drawing agree on every label's width.
 export const fontSizes: Record<TextSize, number> = { small: 16, medium: 20, large: 28, title: 38 };
-export const charWidth = 0.56, lineHeight = 1.3;
+export const lineHeight = 1.3;
+export const boardFontFamily = `Excalifont, 'Ink Free', 'Segoe Print', 'Comic Sans MS', cursive`;
+const advance = new Map<number, number>();
+for (const run of excalifontWidths) run.widths.forEach((w, i) => advance.set(run.from + i, w / 1000));
+/** Width of a string in em (multiply by the font size for px). */
+export function textWidth(text: string) {
+  let em = 0;
+  for (const c of text) em += advance.get(c.codePointAt(0)) ?? excalifontFallbackWidth / 1000;
+  return em;
+}
 const clamp = (v: number, min: number, max: number) => Math.max(min, Math.min(max, v));
 const coord = (v: number | undefined, fallback = 0) => clamp(Number.isFinite(v) ? v : fallback, -2000, 6000);
 
-/** Greedy word wrap by estimated width. Explicit newlines are kept; long words are split. */
+/** Greedy word wrap by measured width. Explicit newlines are kept; a word wider than the line is split. */
 export function wrapText(text: string, maxWidth: number, size: number): string[] {
-  const max = Math.max(4, Math.floor(maxWidth / (size * charWidth)));
+  const max = Math.max(size * 2, maxWidth), fits = (s: string) => textWidth(s) * size <= max;
   const lines: string[] = [];
   for (const paragraph of text.replace(/\r/g, '').split('\n')) {
     let line = '';
     for (let word of paragraph.split(/\s+/).filter(Boolean)) {
-      while (word.length > max) {
+      while (!fits(word)) {
         if (line) { lines.push(line); line = ''; }
-        lines.push(word.slice(0, max)); word = word.slice(max);
+        let cut = 1; const chars = [...word];
+        while (cut < chars.length && fits(chars.slice(0, cut + 1).join(''))) cut++;
+        lines.push(chars.slice(0, cut).join('')); word = chars.slice(cut).join('');
       }
       if (!word) continue;
       if (!line) line = word;
-      else if (line.length + 1 + word.length <= max) line += ' ' + word;
+      else if (fits(line + ' ' + word)) line += ' ' + word;
       else { lines.push(line); line = word; }
     }
     lines.push(line);
@@ -76,7 +89,7 @@ export function wrapText(text: string, maxWidth: number, size: number): string[]
   return lines;
 }
 export function measure(lines: string[], size: number) {
-  return { width: Math.max(0, ...lines.map(l => l.length)) * size * charWidth, height: lines.length * size * lineHeight };
+  return { width: Math.max(0, ...lines.map(textWidth)) * size, height: lines.length * size * lineHeight };
 }
 /** FNV-1a: an element keeps its wobble while it is redrawn or moved. */
 export function seedOf(id: string) {
@@ -201,6 +214,76 @@ export function layoutScene(inputs: ElementInput[]): LaidElement[] {
   }
   return out;
 }
+/** A lesson as a model wrote it: any field may be missing or out of range (the tool schema only checks shapes of values). */
+export interface LooseLesson { title?: string; mode?: 'new' | 'add'; beats: { say?: string; draw?: Partial<ElementInput>[]; highlight?: string[]; erase?: string[] }[] }
+const idPattern = /^[A-Za-z0-9_-]{1,40}$/;
+const limit = (s: string | undefined, n: number) => { const t = s?.replace(/\s+/g, ' ').trim(); return t ? (t.length > n ? t.slice(0, n - 1).trimEnd() + '…' : t) : undefined; };
+/**
+ * Repair instead of reject: make a model's lesson playable and say what was changed. Elements that cannot be drawn
+ * (no type, no position, too few points) are dropped; duplicate ids in a beat are renamed; references to ids that are
+ * not on the board are dropped; numbers are clamped; a shape written with `text` gets it as its label.
+ * `existing`: ids already on the board (a follow-up may point at them).
+ */
+export function sanitizeLesson(input: LooseLesson, existing: Iterable<string> = []): { lesson: LessonInput; fixes: string[] } {
+  const fixes: string[] = [], note = (fix: string) => { if (!fixes.includes(fix)) fixes.push(fix); };
+  const known = new Set(existing);
+  const title = limit(input.title, 80) ?? 'Whiteboard';
+  if (title !== input.title?.trim()) note(input.title?.trim() ? 'shortened the title' : 'added a title');
+  if (input.beats.length > boardLimits.beats) note(`kept the first ${boardLimits.beats} beats`);
+  const beats: BeatInput[] = [];
+  let made = 0;
+  for (const raw of input.beats.slice(0, boardLimits.beats)) {
+    const say = limit(raw.say, 400) ?? '';
+    const elements = (raw.draw ?? []).slice(0, boardLimits.perBeat);
+    if ((raw.draw?.length ?? 0) > boardLimits.perBeat) note(`kept ${boardLimits.perBeat} elements in a beat`);
+    // Ids first, so arrows may point at anything drawn in the same beat.
+    const used = new Set<string>(), ids = elements.map(e => {
+      let id = typeof e.id === 'string' && idPattern.test(e.id.trim()) ? e.id.trim() : (typeof e.id === 'string' ? e.id.replace(/[^A-Za-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 36) : '');
+      if (!id) { do id = `el${++made}`; while (known.has(id) || used.has(id)); note('named elements that had no id'); } else if (id !== e.id) note('cleaned up ids');
+      if (used.has(id)) { let n = 2; while (used.has(`${id}-${n}`)) n++; id = `${id}-${n}`; note('renamed a duplicate id'); }
+      used.add(id); return id;
+    });
+    const here = new Set([...known, ...ids]);
+    const draw: ElementInput[] = [];
+    elements.forEach((e, i) => {
+      const type = e.type && (elementTypes as readonly string[]).includes(e.type) ? e.type : undefined;
+      if (!type) { note('dropped an element with no valid type'); return; }
+      // Fields the schema dropped arrive as undefined; leave them out.
+      const el = Object.fromEntries(Object.entries({ ...e, id: ids[i], type }).filter(([, v]) => v !== undefined)) as unknown as ElementInput;
+      for (const key of ['x', 'y'] as const) if (el[key] !== undefined) el[key] = coord(el[key]);
+      for (const key of ['width', 'height'] as const) if (el[key] !== undefined) el[key] = clamp(el[key] as number, 16, 3000);
+      if (el.points) { el.points = el.points.slice(0, 24).filter(p => Number.isFinite(p?.x) && Number.isFinite(p?.y)).map(p => ({ x: coord(p.x), y: coord(p.y) })); }
+      if (el.label !== undefined) el.label = limit(el.label, 120);
+      if (el.text !== undefined) el.text = limit(el.text, 300);
+      const placed = el.x !== undefined && el.y !== undefined;
+      if ((shapeKinds as readonly string[]).includes(type)) {
+        if (!placed) { note('dropped shapes with no position'); return; }
+        if (!el.label && el.text) { el.label = limit(el.text, 120); delete el.text; note('used text as a shape label'); }
+      } else if (type === 'text') {
+        if (!placed || !(el.text ?? el.label)) { note('dropped text with no position or words'); return; }
+      } else if (type === 'line') {
+        if ((el.points?.length ?? 0) < 2) { note('dropped lines with fewer than two points'); return; }
+      } else {
+        for (const end of ['from', 'to'] as const) if (el[end] !== undefined && !here.has(el[end])) { delete el[end]; note('dropped arrow ends that pointed at nothing'); }
+        if ((el.from ? 1 : 0) + (el.to ? 1 : 0) + (el.points?.length ?? 0) < 2) { note('dropped arrows with nothing to connect'); return; }
+      }
+      draw.push(el);
+    });
+    for (const e of draw) known.add(e.id);
+    const keep = (list: string[] | undefined, what: string, max: number) => {
+      const valid = (list ?? []).filter(id => known.has(id));
+      if (valid.length !== (list ?? []).length) note(`dropped ${what} of ids not on the board`);
+      return valid.length ? [...new Set(valid)].slice(0, max) : undefined;
+    };
+    // Erase first: an element erased in this beat is gone while it is spoken, so it cannot be circled.
+    const erase = keep(raw.erase, 'erases', boardLimits.perBeat);
+    for (const id of erase ?? []) known.delete(id);
+    const highlight = keep(raw.highlight, 'highlights', 10);
+    if (!say && !draw.length && !highlight && !erase) { note('dropped empty beats'); continue; }
+    beats.push({ say, ...(draw.length ? { draw } : {}), ...(highlight ? { highlight } : {}), ...(erase ? { erase } : {}) });
+  }
+  return { lesson: { title, mode: input.mode === 'add' ? 'add' : 'new', beats }, fixes };
+}
 /** Apply one beat: `draw` adds or replaces by id (keeping first-drawn order), then `erase` removes. */
 export function applyBeat(inputs: ElementInput[], beat: Pick<BeatInput, 'draw' | 'erase'>): ElementInput[] {
   const next = [...inputs];
@@ -227,9 +310,13 @@ export function sceneBounds(elements: LaidElement[]): ScreenBounds | null {
 }
 /** The board panel's chrome (header and caption footer) in screen px. */
 export const panelChrome = { header: 46, footer: 58 };
-/** Default panel size on a display: what a new lesson opens at. */
-export function panelSize(display: { width: number; height: number }) {
-  return { width: Math.round(Math.min(1180, display.width * 0.74)), height: Math.round(Math.min(760, display.height * 0.78)) };
+/**
+ * Default panel size on a display: what a new lesson opens at. About 1400 × 900 on 1080p, so the whole canvas shows
+ * with body text well above 14 px; at most 90% of a small display. `presenting`: "make it bigger".
+ */
+export function panelSize(display: { width: number; height: number }, presenting = false) {
+  if (presenting) return { width: Math.round(display.width * 0.96), height: Math.round(display.height * 0.94) };
+  return { width: Math.round(Math.min(1400, display.width * 0.9)), height: Math.round(Math.min(900, display.height * 0.9)) };
 }
 /** The drawing area inside a panel of this size. */
 export function panelViewport(panel: { width: number; height: number }) {
@@ -245,6 +332,42 @@ export function fitView(content: ScreenBounds | null, viewport: { width: number;
   const scale = Math.min(viewport.width / (x1 - x0), viewport.height / (y1 - y0));
   // Centre the region in the viewport.
   return { scale, x: x0 - (viewport.width / scale - (x1 - x0)) / 2, y: y0 - (viewport.height / scale - (y1 - y0)) / 2 };
+}
+/** Board text should land at least this big on screen while it is being explained. */
+export const readableTextPx = 14;
+export interface Camera { scale: number; x: number; y: number }
+/** Text blocks of an element: a text element's words, or a shape's or arrow's label. */
+export function textOf(e: LaidElement): TextBlock | null { return e.kind === 'text' ? e.text : e.kind === 'shape' || e.kind === 'arrow' ? e.label : null; }
+/** The elements a beat is about: its own, the arrows joining them, and whatever those arrows join. */
+export function focusBounds(elements: LaidElement[], focus: string[]): ScreenBounds | null {
+  const ids = new Set(focus);
+  for (const e of elements) if (e.kind === 'arrow' && (ids.has(e.id) || (e.from && ids.has(e.from)) || (e.to && ids.has(e.to)))) {
+    ids.add(e.id); if (e.from) ids.add(e.from); if (e.to) ids.add(e.to);
+  }
+  return sceneBounds(elements.filter(e => ids.has(e.id)));
+}
+/**
+ * The camera for a beat. The whole board (fitView) when its text is readable there; otherwise as close as the
+ * smallest text needs to reach 14 px, panned from `previous` just enough to keep the beat and what it connects to in
+ * view, so the board stays calm instead of zooming at every beat. No focus (a finished lesson): the whole board.
+ */
+export function planCamera(elements: LaidElement[], focus: string[], viewport: { width: number; height: number }, previous?: Camera | null, padding = 40): Camera {
+  const overview = fitView(sceneBounds(elements), viewport, padding);
+  const target = focus.length ? focusBounds(elements, focus) : null;
+  if (!target) return overview;
+  const ids = new Set(focus), sizes = elements.filter(e => ids.has(e.id)).map(textOf).filter(Boolean).map(t => t.size);
+  const scale = Math.max(overview.scale, readableTextPx / Math.min(fontSizes.medium, ...sizes));
+  if (scale <= overview.scale + 1e-9) return overview;
+  const w = viewport.width / scale, h = viewport.height / scale, margin = 30;
+  const center = { x: overview.x + viewport.width / overview.scale / 2, y: overview.y + viewport.height / overview.scale / 2 };
+  const fresh = !previous || Math.abs(previous.scale - scale) > 1e-6;
+  const axis = (start: number, size: number, from: number, to: number) => {
+    if (to - from + margin * 2 > size) return (from + to) / 2 - size / 2;
+    return Math.min(Math.max(start, to + margin - size), from - margin);
+  };
+  return { scale,
+    x: axis(fresh ? center.x - w / 2 : previous.x, w, target.x, target.x + target.width),
+    y: axis(fresh ? center.y - h / 2 : previous.y, h, target.y, target.y + target.height) };
 }
 const quote = (s: string) => `"${s.replace(/\s+/g, ' ').slice(0, 60)}"`;
 const round = (n: number) => Math.round(n);
@@ -290,6 +413,10 @@ export interface BoardView {
   note: string | null;
   /** Numbers about how this lesson was made (dev panel); never lesson content. */
   stats?: LessonStats;
+  /** Show the spoken line as a caption. When false it repeats what is being heard: it stays for screen readers only. */
+  captions?: boolean;
+  /** Presentation mode ("make it bigger"): the panel fills most of the screen. */
+  presenting?: boolean;
 }
 export interface LessonStats {
   /** From the model request to the first stroke on the board. */
@@ -298,10 +425,12 @@ export interface LessonStats {
   outputTokens?: number;
   /** Lesson calls rejected as invalid before this one. */
   repairs: number;
+  /** Kinds of problem sanitizeLesson repaired in this lesson. */
+  fixes: number;
   beats: number; elements: number;
   lint: { overlaps: number; overflow: number; through: number; crossings: number; textOnLines: number; minTextPx: number | null };
 }
-export const boardActions = ['pause', 'resume', 'next', 'repeat', 'replay', 'close'] as const;
+export const boardActions = ['pause', 'resume', 'next', 'repeat', 'replay', 'close', 'bigger', 'smaller'] as const;
 export type BoardAction = typeof boardActions[number];
 /** Deterministic: only short, exact phrases control a lesson; anything else goes to the model. */
 export function classifyBoardCommand(text: string): BoardAction | 'new-request' {
@@ -312,5 +441,7 @@ export function classifyBoardCommand(text: string): BoardAction | 'new-request' 
   if (/^(repeat|repeat that|say (that|it) again|again|come again|what was that)$/.test(s)) return 'repeat';
   if (/^(replay|start over|from the (top|start|beginning)|replay (it|the lesson)|draw it again|play it again)$/.test(s)) return 'replay';
   if (/^(close|close (it|the board|the whiteboard)|hide the (board|whiteboard)|stop|stop the lesson|that's enough|i'm done|never ?mind|done)$/.test(s)) return 'close';
+  if (/^((make (it|the (board|whiteboard)) )?(bigger|larger)|zoom in|full ?screen|presentation mode|i can't (see|read) (it|that))$/.test(s)) return 'bigger';
+  if (/^((make (it|the (board|whiteboard)) )?smaller|exit full ?screen|normal size)$/.test(s)) return 'smaller';
   return 'new-request';
 }

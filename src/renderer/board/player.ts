@@ -20,9 +20,10 @@ export class BoardPlayer {
   last: CursorPoint | null = null;
   get playing() { return this.index < this.steps.length; }
   /** `groups` are the element groups to draw, in order; each holds nodes marked with data-kind and data-order. */
-  play(key: number, svg: SVGSVGElement, groups: Element[], budgetMs: number, done: () => void, reduced = false) {
+  /** `delayMs`: the beat is hidden at once and the pen starts after this (while the camera moves to it). */
+  play(key: number, svg: SVGSVGElement, groups: Element[], budgetMs: number, done: () => void, reduced = false, delayMs = 0) {
     this.cancel();
-    this.key = key; this.svg = svg; this.done = done; this.index = 0; this.startedAt = 0; this.gapUntil = 0;
+    this.key = key; this.svg = svg; this.done = done; this.index = 0; this.startedAt = 0; this.gapUntil = delayMs ? performance.now() + delayMs : 0;
     this.steps = groups.flatMap((group, element) => [...group.querySelectorAll<SVGGraphicsElement>('[data-kind]')].map(node => {
       const kind = node.dataset.kind as Kind, order = Number(node.dataset.order ?? 0);
       // Text is written through a clip that grows over its real rendered extent.

@@ -1,4 +1,15 @@
 import { canvas, sceneBounds, type LaidElement } from '../../shared/board';
+// The page's Excalifont is invisible to an SVG drawn as an image, so the export carries its own copy.
+const faces = import.meta.glob('../../../assets/fonts/excalifont/*.woff2', { query: '?url', import: 'default', eager: true }) as Record<string, string>;
+let embedded: Promise<string> | undefined;
+function fontStyle() {
+  embedded ??= Promise.all(Object.values(faces).map(async url => {
+    const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
+    let binary = ''; for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+    return `@font-face{font-family:Excalifont;src:url(data:font/woff2;base64,${btoa(binary)}) format("woff2")}`;
+  })).then(rules => rules.join('')).catch(() => '');
+  return embedded;
+}
 /**
  * Render the board as a PNG: a clean copy of the live SVG (no animation state or highlight rings), cropped
  * to its content on white paper. Presentation attributes carry every style, so the copy needs no CSS.
@@ -17,6 +28,8 @@ export async function exportPng(svg: SVGSVGElement | null, elements: LaidElement
   copy.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
   copy.setAttribute('viewBox', `${box.x} ${box.y} ${box.width} ${box.height}`);
   copy.setAttribute('width', String(width)); copy.setAttribute('height', String(height));
+  const fonts = await fontStyle();
+  if (fonts) { const style = document.createElementNS('http://www.w3.org/2000/svg', 'style'); style.textContent = fonts; copy.prepend(style); }
   const image = new Image();
   image.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(copy));
   await image.decode();

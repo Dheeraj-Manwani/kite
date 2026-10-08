@@ -18,7 +18,7 @@ const { voiceOutputTokens } = require('../src/main/ai/agentLoop.ts');
 const { buildSystemPrompt } = require('../src/main/ai/systemPrompt.ts');
 const { routingHints } = require('../src/main/ai/routing.ts');
 const { BoardService } = require('../src/main/board/service.ts');
-const { applyBeat, panelSize } = require('../src/shared/board.ts');
+const { applyBeat, panelSize, sanitizeLesson } = require('../src/shared/board.ts');
 const { lessonMetrics, referenceDisplay } = require('../src/shared/boardMetrics.ts');
 const { lessonInput, toLesson } = require('../src/main/tools/impl/explain_on_whiteboard.ts');
 
@@ -138,10 +138,12 @@ async function runPrompt(model, key, prompt) {
         messages.push(...response);
         entry = { kind, text, ...record };
         if (lesson) {
-          const parsed = lessonInput.safeParse(lesson), value = parsed.success ? toLesson(parsed.data) : null;
-          if (value) {
-            const base = value.mode === 'add' && inputs.length ? inputs : [];
-            entry.lesson = value; entry.base = base.length ? 'previous' : 'empty';
+          const parsed = lessonInput.safeParse(lesson), written = parsed.success ? toLesson(parsed.data) : null;
+          if (written) {
+            // Repaired as the board service repairs it, against what is already on the board.
+            const base = written.mode === 'add' && inputs.length ? inputs : [];
+            const { lesson: value, fixes } = sanitizeLesson(written, base.map(e => e.id));
+            entry.lesson = value; entry.fixes = fixes; entry.base = base.length ? 'previous' : 'empty';
             entry.metrics = lessonMetrics(value.beats, base);
             inputs = value.beats.reduce(applyBeat, base);
           }
@@ -171,6 +173,8 @@ function summarize(runs) {
     // Parse success: lesson calls valid on the first try.
     validFirstTry: attempted.length ? Math.round(attempted.filter(t => !t.invalid && t.metrics).length / attempted.length * 1000) / 1000 : null,
     repairs: turns.reduce((n, t) => n + (t.invalid ?? 0), 0),
+    // Lessons the board had to repair (sanitizeLesson), and how many kinds of fix in all.
+    fixedLessons: lessons.filter(t => t.fixes?.length).length, fixes: lessons.reduce((n, t) => n + (t.fixes?.length ?? 0), 0),
     medianMs: {
       firstToken: median(lessons.map(t => t.firstTokenMs)), lessonStart: median(lessons.map(t => t.lessonStartMs)),
       firstBeat: median(lessons.map(t => t.firstBeatMs)), firstStroke: median(lessons.map(t => t.firstStrokeMs)), total: median(lessons.map(t => t.totalMs)),

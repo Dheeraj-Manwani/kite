@@ -41,6 +41,8 @@ interface Interaction {
   visualContent?: ChatMessage['content']; markTypes?: string;
   text: string; session?: string; userRow?: number; toolsStarted?: boolean; tools?: ToolSession; speechStarted?: boolean; approvalReply?: boolean; reminder?: boolean; model?: ModelEntry; row?: number; saved: boolean;
   llmDone: boolean; playbackDone: boolean; speaking: boolean; ttsStartedAt?: number; announcement?: boolean;
+  /** The reply's speech is complete although the model is still working (it went on to write a streamed lesson). */
+  voiceClosed?: boolean;
   /** Announcements only: lifecycle callbacks and how the line ended. */
   hooks?: AnnounceHooks; heard?: boolean; failed?: boolean; settled?: boolean;
 }
@@ -52,6 +54,12 @@ export class VoiceController {
   async shutdown() { this.closing = true; this.reminderQueue = []; const sessions = [this.active?.tools, this.suspended?.tools]; this.cancel(); await Promise.all(sessions.map(s => s?.settled())); }
   private active?: Interaction;
   private suspended?: Interaction;
+  /**
+   * A line spoken beside a model turn that is still running but has not said anything (a whiteboard lesson streaming
+   * in: its first beats are narrated while the model writes the rest). The turn stays `active`.
+   */
+  private aside?: Interaction;
+  private job(id: number) { return this.active?.id === id ? this.active : this.aside?.id === id ? this.aside : undefined; }
   private reminderQueue: Reminder[] = [];
   private pendingAnnouncement?: { text: string; hooks?: AnnounceHooks };
   reminder(reminder: Reminder) {
@@ -73,8 +81,16 @@ export class VoiceController {
     // A timed-out voice confirmation cannot authorize a different or later action.
     if (this.suspended && decision === 'timeout') this.cancel('voice:aborted');
   }
-  toolEvent(type: 'tool:executing' | 'tool:result', toolName: string, result?: { ok: boolean; message: string }) {
-    const job = this.active; if (job) this.emit(type, job, { toolName, text: result?.message, success: result?.ok });
+  toolEvent(type: 'tool:executing' | 'tool:result' | 'tool:streaming', toolName: string, result?: { ok: boolean; message: string }) {
+    const job = this.active; if (!job) return;
+    // A lesson starting to stream: what the model said before it is all it will say, so let that speech end now and
+    // the lesson's narration follow it, rather than waiting for the whole lesson to be written.
+    if (type === 'tool:streaming') { if (job.speaking && !job.voiceClosed) { job.voiceClosed = true; this.deps.tts.finish(job.id); } else job.voiceClosed = true; return; }
+    this.emit(type, job, { toolName, text: result?.message, success: result?.ok });
+  }
+  /** A model turn still running that will not speak (again): a lesson line may play beside it. */
+  private quiet(job: Interaction | undefined) {
+    return !!job && !job.announcement && job.phase === 'processing' && !this.suspended && (!job.speechStarted || (!!job.voiceClosed && job.playbackDone));
   }
   private now: () => number;
   constructor(private deps: Dependencies) { this.now = deps.now ?? (() => performance.now()); }
@@ -87,6 +103,7 @@ export class VoiceController {
     this.deps.vision?.leave();
     if (this.deps.vision) this.emit('vision:done', job);
     clearTimeout(job.timeout);
+    if (this.aside === job) this.aside = undefined;
     if (this.active === job) { this.active = undefined; this.deps.setEscape(false, () => undefined);
       if (!this.closing && (this.reminderQueue.length || this.pendingAnnouncement)) queueMicrotask(() => {
         if (this.active) return;
@@ -142,22 +159,23 @@ export class VoiceController {
     const parent = this.suspended; this.suspended = undefined;
     if (parent) { parent.controller.abort(); parent.tools?.close(); this.save(parent, true); clearTimeout(parent.timeout); }
     this.deps.approvals?.deny();
+    if (this.aside) this.drop(this.aside);
     const job = this.active; if (!job) return;
     job.controller.abort(); job.tools?.close(); this.deps.tts?.cancel(); this.save(job, true); this.emit(type, job); this.finish(job);
   }
   mute() {
-    const job = this.active; this.deps.tts?.cancel();
+    this.deps.tts?.cancel();
     // A muted lesson line carries on as a caption rather than pausing the lesson.
-    if (job) { if (job.announcement) job.failed = true; job.playbackDone = true; job.speaking = false; this.emit('voice:muted', job); this.complete(job); }
+    for (const job of [this.aside, this.active]) if (job) { if (job.announcement) job.failed = true; job.playbackDone = true; job.speaking = false; this.emit('voice:muted', job); this.complete(job); }
   }
   ttsEvent(event: VoiceEvent) {
-    const job = this.active; if (!job || event.id !== job.id) return;
+    const job = this.job(event.id); if (!job) return;
     if (event.type === 'tts:chunk' && job.timing.ttsFirstAudioMs === undefined) job.timing.ttsFirstAudioMs = this.now() - (job.ttsStartedAt ?? job.releasedAt);
     this.deps.emit(event);
     if (event.type === 'tts:error') { job.failed = true; job.speaking = false; job.playbackDone = true; this.complete(job); }
   }
   playback(id: number, type: 'started' | 'ended' | 'failed') {
-    const job = this.active; if (!job || job.id !== id || !job.speaking) return;
+    const job = this.job(id); if (!job || !job.speaking) return;
     if (job.announcement) {
       if (type === 'started') job.hooks?.started?.();
       else if (type === 'ended') job.heard = true; else job.failed = true;
@@ -168,7 +186,11 @@ export class VoiceController {
       job.timing.voiceAverageMs = this.deps.history.voiceAverage?.(); this.emit('voice:metrics', job);
     }
     if (type === 'failed') { this.deps.tts?.cancel(); this.emit('tts:error', job, { text: 'Audio playback is unavailable. Showing text.' }); }
-    if (type !== 'started') { job.playbackDone = true; this.complete(job); }
+    if (type !== 'started') {
+      job.playbackDone = true; this.complete(job);
+      // The reply's last words are out while a lesson is still being written: its waiting line plays now.
+      if (this.active === job && this.quiet(job) && this.pendingAnnouncement) { const next = this.pendingAnnouncement; this.pendingAnnouncement = undefined; this.announce(next.text, next.hooks); }
+    }
   }
   private beginSpeech(job: Interaction, settings?: AppSettings) {
     job.speechStarted = true;
@@ -195,16 +217,19 @@ export class VoiceController {
    * is no voice (the line is not spoken and no hook fires); the caller shows it as text instead.
    */
   announce(text: string | null, hooks?: AnnounceHooks): boolean {
-    if (text === null) { this.dropPending(); if (this.active?.announcement) this.drop(this.active); return false; }
+    if (text === null) { this.dropPending(); if (this.aside) this.drop(this.aside); if (this.active?.announcement) this.drop(this.active); return false; }
     const settings = this.deps.settings?.();
     if (this.closing || !settings?.ttsEnabled || !settings.voiceId || !this.deps.tts) return false;
-    if (this.active && !this.active.announcement) { this.dropPending(); this.pendingAnnouncement = { text, hooks }; return true; }
-    if (this.active) this.drop(this.active);
+    // A model turn that is working silently (writing a lesson that has started to stream) lets the line play beside it.
+    const silent = this.quiet(this.active);
+    if (this.active && !this.active.announcement && !silent) { this.dropPending(); this.pendingAnnouncement = { text, hooks }; return true; }
+    if (this.aside) this.drop(this.aside);
+    if (this.active && !silent) this.drop(this.active);
     this.dropPending();
     const job: Interaction = { id: ++this.sequence, phase: 'processing', controller: new AbortController(), releasedAt: this.now(),
       timing: { transcribeMs: 0, firstTokenMs: 0, totalMs: 0 }, text, saved: false, llmDone: true, playbackDone: true, speaking: false, announcement: true, hooks };
-    this.active = job;
-    job.timeout = setTimeout(() => { if (this.active === job) this.drop(job); }, 60000);
+    if (silent) this.aside = job; else this.active = job;
+    job.timeout = setTimeout(() => { if (this.active === job || this.aside === job) this.drop(job); }, 60000);
     this.emit('guide:announce', job);
     this.speak(job, text, settings);
     return true;
@@ -308,9 +333,10 @@ export class VoiceController {
         return this.deps.ask(this.deps.conversation.context(), key, job.controller.signal, delta => {
           if (!current() || !delta) return;
           if (!job.text) job.timing.firstTokenMs = this.now() - job.releasedAt;
-          if (!job.speechStarted) this.beginSpeech(job, settings);
+          // A lesson already narrating beside this turn keeps the voice; anything the model adds is shown, not spoken.
+          if (!job.speechStarted) { if (this.aside || job.voiceClosed) job.speechStarted = true; else this.beginSpeech(job, settings); }
           job.text += delta; this.emit('llm:delta', job, { text: delta });
-          if (job.speaking) this.deps.tts.push(job.id, delta);
+          if (job.speaking && !job.voiceClosed) this.deps.tts.push(job.id, delta);
         }, job.model, job.tools, this.deps.guide?.context());
       };
       const answer = await withFallback(run, run, () => !!job.text || !!job.toolsStarted, !!settings?.fallbackEnabled, job.controller.signal, () => {
@@ -318,7 +344,7 @@ export class VoiceController {
       });
       if (!current()) return;
       job.text = answer; job.llmDone = true; if (job.visualContent) this.deps.conversation.scrubImages(answer, job.markTypes, job.visualContent); this.save(job);
-      if (job.speaking) this.deps.tts.finish(job.id);
+      if (job.speaking && !job.voiceClosed) this.deps.tts.finish(job.id);
       this.emit('llm:done', job); this.complete(job);
     } catch (error) {
       if (current()) { if (job.approvalReply) { this.cancel('voice:aborted'); return; } this.deps.tts?.cancel(); this.save(job, !!job.text); this.emit('llm:error', job, friendlyError(error, provider)); this.finish(job); }

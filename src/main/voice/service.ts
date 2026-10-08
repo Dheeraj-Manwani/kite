@@ -137,6 +137,8 @@ export function startVoiceService() {
   };
   const board = new BoardService({
     log: logEvent, enabled: () => preferences.get().whiteboard, speed: () => preferences.get().speed,
+    // Spoken lines repeat as captions only when asked, or when they would not be heard (no voice, or a screen reader).
+    captions: () => { const s = preferences.get(); return s.boardCaptions || !s.ttsEnabled || !s.voiceId || app.isAccessibilitySupportEnabled(); },
     emit: view => { const win = getOverlayWindow(); if (win && !win.isDestroyed()) win.webContents.send('board:state', view); },
     speak: (text, hooks): boolean => controller.announce(text, hooks), silence: () => { controller.announce(null); },
     // One thing moves the kite at a time: a lesson replaces a guide.
@@ -198,7 +200,8 @@ export function startVoiceService() {
       imageToolResults: !!model && providerTraits[model.provider].imageToolResults,
       definitions: [...createTools(apps, history, preferences.get()),
         ...memoryTools({ store: memory, show: text => appEvent({ type: 'memory:show', text }), saved: savedNotice, source: () => `From what you said, ${today()}` }), ...(preferences.get().guideMode ? [showMeHow(plan => { board.close(); agent.stop(); return guide.start(plan); })] : []),
-        ...(preferences.get().whiteboard ? [explainOnWhiteboard(input => board.start(input, { requestedAt: lesson.requestedAt }))] : []),
+        ...(preferences.get().whiteboard ? [explainOnWhiteboard((input, callId) => board.start(input, { requestedAt: lesson.requestedAt, callId }), {
+          update: (callId, partial) => board.preview(callId, partial, { requestedAt: lesson.requestedAt }), end: (callId, end) => board.endStream(callId, end) })] : []),
         ...(preferences.get().computerUse && model?.supportsTools && taskModel().supportsTools ? [doTask((task, scope) => { const jobs = taskModel(); return agent.start(task, scope, jobs, secrets.getKey(jobs.provider), messageId); }, taskModel().supportsVision, () => preferences.get().permissions),
           reorder({ orders: () => taskMemory.orders(),
             handsOver: site => { const p = preferences.get().permissions; return (ruleFor(p, 'money', site)?.permission ?? permissionTable(p).money) === 'never'; },
@@ -292,10 +295,13 @@ export function startVoiceService() {
       return { ok: false, error: 'Too many boards with that name.' };
     } catch { return { ok: false, error: 'Could not save the board.' }; }
   });
+  // A screen reader turning on or off changes whether lesson captions show.
+  app.on('accessibility-support-changed', () => board.refresh());
   const unsubscribe = preferences.subscribe((snapshot, old) => {
     if (snapshot.settings.dryRun !== old.dryRun) { controller.cancel('voice:aborted'); reminders.refresh(); }
     if (old.guideMode && !snapshot.settings.guideMode) guide.stop();
     if (old.whiteboard && !snapshot.settings.whiteboard) board.close();
+    if (old.boardCaptions !== snapshot.settings.boardCaptions || old.ttsEnabled !== snapshot.settings.ttsEnabled || old.voiceId !== snapshot.settings.voiceId) board.refresh();
     if (old.computerUse && !snapshot.settings.computerUse) agent.stop();
     for (const win of BrowserWindow.getAllWindows()) win.webContents.send('settings:changed', snapshot);
     tray.update();

@@ -162,6 +162,8 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
           description="Ask “how do I…?” and Kite points at each control, step by step. It reads control names with Windows UI Automation and never clicks for you." />
         <SwitchRow label="Whiteboard" checked={s.whiteboard ?? true} change={v => update({ whiteboard: v })}
           description="Kite explains ideas with hand-drawn diagrams, one piece at a time, while it talks." />
+        <SwitchRow label="Whiteboard captions" checked={s.boardCaptions ?? false} change={v => update({ boardCaptions: v })} disabled={!(s.whiteboard ?? true)}
+          description="Show what Kite says under the board even while you hear it. They always show when Kite's voice is off or a screen reader is running." />
         <SwitchRow label="Do it for me" checked={s.computerUse ?? true} change={v => update({ computerUse: v })}
           description="After you approve a task, Kite clicks and types in one app or website. It never moves your pointer, asks when your Permissions say so, and stops after 15 steps (45 for errands)." />
       </Group>

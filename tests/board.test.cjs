@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { wrapText, layoutScene, applyBeat, boundaryPoint, sceneBounds, fitView, describeScene, elementsAt, classifyBoardCommand, speechMs, readingMs, canvas } = require('../src/shared/board.ts');
+const { sanitizeLesson, wrapText, layoutScene, applyBeat, boundaryPoint, sceneBounds, fitView, describeScene, elementsAt, classifyBoardCommand, speechMs, readingMs, canvas } = require('../src/shared/board.ts');
 const { elementStrokes, hachure, random } = require('../src/renderer/board/rough.ts');
 const { BoardSession } = require('../src/main/board/session.ts');
 const { BoardService, demoLesson } = require('../src/main/board/service.ts');
@@ -182,6 +182,42 @@ test('each beat draws when its speech starts and advances only when both speech 
   b.session.stop(); assert.equal(b.views.at(-1), null);
 });
 
+test('streaming: the newest beat waits for the next one, appended beats carry on, and sealing lets the lesson end', async () => {
+  const b = board(true, lesson.slice(0, 1)); b.session.stream(); b.session.start();
+  b.speech().started(); b.draw(); b.speech().done('spoken'); await flush();
+  assert.equal(b.said.length, 1, 'beat 1 done, beat 2 not written yet: wait'); assert.equal(b.view.status, 'playing');
+  b.session.append([lesson[1]]);
+  assert.equal(b.said.at(-1).text, 'Beat two.', 'a waiting lesson carries on at once'); assert.equal(b.view.total, 2);
+  b.session.append([lesson[2]]);
+  assert.equal(b.said.length, 2, 'a beat that arrives early waits its turn');
+  b.speech().started(); b.draw(); b.speech().done('spoken'); await flush();
+  b.speech().started(); b.draw(); b.speech().done('spoken'); await flush();
+  assert.equal(b.view.status, 'playing', 'still open: more may come');
+  b.session.seal(); await flush();
+  assert.equal(b.view.status, 'done'); assert.deepEqual(b.view.elements.map(e => e.id), ['a', 'b', 'ab', 'c']);
+  assert.deepEqual(b.said.map(x => x.text), ['Beat one.', 'Beat two.', 'Beat three.'], 'nothing played twice');
+  // "Next" on the newest beat while it is still being written shows it whole and waits.
+  const n = board(true, lesson.slice(0, 1)); n.session.stream(); n.session.start(); n.speech().started();
+  n.session.next();
+  assert.equal(n.view.status, 'playing'); assert.equal(n.view.drawing, null); assert.deepEqual(n.view.elements.map(e => e.id), ['a']);
+  n.session.append([lesson[1]]); assert.equal(n.said.at(-1).text, 'Beat two.');
+  n.session.stop(); b.session.stop();
+});
+
+test('streaming a follow-up: its beats go after the beat that is playing, before the rest of the lesson', async () => {
+  const b = board(); b.session.start(); b.speech().started(); b.draw(); b.speech().done('spoken'); await flush();
+  b.session.stream(); b.session.insert([{ say: 'Extra one.' }]);
+  assert.equal(b.said.at(-1).text, 'Extra one.');
+  b.session.append([{ say: 'Extra two.' }]);
+  b.speech().started(); b.speech().done('spoken'); await flush();
+  assert.equal(b.said.at(-1).text, 'Extra two.');
+  b.speech().started(); b.speech().done('spoken'); await flush();
+  assert.equal(b.view.status, 'playing', 'waits while the follow-up is still being written');
+  b.session.seal(); await flush();
+  assert.equal(b.view.status, 'paused', 'then pauses before the rest of the original lesson'); assert.equal(b.view.total, 5);
+  b.session.stop();
+});
+
 test('without voice, beats draw immediately and wait for the caption to be read', async () => {
   const b = board(false); b.session.start();
   assert.deepEqual(b.view.drawing.ids, ['a']);
@@ -291,24 +327,167 @@ test('the lesson log: time to first stroke from the model request, lint counts, 
   service.close();
 });
 
-test('explain_on_whiteboard validates elements, summarizes deterministically, never asks, and honors dry run', async () => {
+test('explain_on_whiteboard accepts loose lessons, summarizes deterministically, never asks, ends the turn, and honors dry run', async () => {
   let started;
   const tool = explainOnWhiteboard(l => { started = l; return { ok: true, message: 'open' }; });
-  assert.equal(needsApproval(tool), false);
+  assert.equal(needsApproval(tool), false); assert.equal(tool.endsTurn, true);
   const ok = { title: 'TCP', beats: [{ say: 'Two boxes.', draw: [{ id: 'c', type: 'rectangle', x: 0, y: 0, label: 'Client' }, { id: 's', type: 'rectangle', x: 400, y: 0 }, { id: 'cs', type: 'arrow', from: 'c', to: 's', label: 'SYN' }] }] };
   assert.equal(tool.summarize(ok), 'Draw "TCP" on the whiteboard: 1 beat, 3 elements.');
-  const beat = ok.beats[0];
-  for (const bad of [{ ...ok, beats: [] }, { ...ok, extra: 1 }, { ...ok, beats: [{ ...beat, draw: [{ id: 'x', type: 'rectangle', x: 0 }] }] },
-    { ...ok, beats: [{ ...beat, draw: [{ id: 'bad id!', type: 'text', x: 0, y: 0, text: 'x' }] }] },
-    { ...ok, beats: [{ ...beat, draw: [{ id: 'a', type: 'arrow', from: 'c' }] }] }, { ...ok, beats: [{ ...beat, draw: [{ id: 'l', type: 'line', points: [{ x: 0, y: 0 }] }] }] },
-    { ...ok, beats: [{ ...beat, draw: [{ id: 'c', type: 'rectangle', x: 0, y: 0 }, { id: 'c', type: 'ellipse', x: 1, y: 1 }] }] },
-    { ...ok, beats: [{ ...beat, draw: [{ id: 'c', type: 'rectangle', x: 0, y: 0, color: 'chartreuse' }] }] },
-    { ...ok, beats: [{ ...beat, draw: [{ id: 'c', type: 'rectangle', x: 1e9, y: 0 }] }] }])
+  // Only the shape of values is checked: wrong optional values are dropped, unknown keys stripped, the rest repaired later.
+  const parsed = lessonInput.safeParse({ ...ok, extra: 1, beats: [{ ...ok.beats[0], draw: [{ id: 'c', type: 'rectangle', x: 1e9, y: 0, color: 'chartreuse', size: 'huge', bogus: true }] }] });
+  assert.equal(parsed.success, true);
+  assert.deepEqual(JSON.parse(JSON.stringify(parsed.data.beats[0].draw[0])), { id: 'c', type: 'rectangle', x: 1e9, y: 0 });
+  for (const bad of [{ ...ok, beats: [] }, { beats: ok.beats }, { ...ok, beats: [{ draw: ok.beats[0].draw }] }])
     assert.equal(lessonInput.safeParse(bad).success, false, JSON.stringify(bad).slice(0, 120));
-  assert.equal(lessonInput.safeParse({ ...ok, beats: [beat, { say: 'Move it.', draw: [{ id: 'c', type: 'rectangle', x: 50, y: 0 }] }] }).success, true, 'later beats may redraw an id');
+  const odd = lessonInput.parse({ ...ok, beats: [{ ...ok.beats[0], draw: [...ok.beats[0].draw, { id: 'x', type: 'hexagon', x: 0, y: 0 }, 'junk'] }] });
+  assert.deepEqual(odd.beats[0].draw.map(e => e.id), ['c', 's', 'cs'], 'only the undrawable elements are left out');
+  // The JSON schema the model sees keeps types and enums, marks nothing optional as required, and adds no defaults.
+  const schema = JSON.stringify(require('zod').toJSONSchema(lessonInput, { target: 'draft-7', io: 'input' }));
+  assert.match(schema, /"enum":\["rectangle","ellipse","diamond","text","arrow","line"\]/); assert.doesNotMatch(schema, /"default"/);
   assert.equal((await tool.execute(ok, { dryRun: true, signal: new AbortController().signal })).dryRun, true); assert.equal(started, undefined);
   await tool.execute(ok, { dryRun: false, signal: new AbortController().signal });
   assert.equal(started.mode, 'new'); assert.equal(started.beats[0].draw[2].from, 'c');
+});
+
+test('sanitizeLesson repairs what it can, drops what cannot be drawn, and says what it changed', () => {
+  const { lesson, fixes } = sanitizeLesson({ title: '  ', beats: [
+    { say: 'One.', draw: [
+      { id: 'a', type: 'rectangle', x: 9e9, y: 10, width: 1, text: 'Client' },
+      { id: 'a', type: 'ellipse', x: 400, y: 10, label: 'Server' },
+      { id: 'bad id!', type: 'text', x: 10, y: 600, text: 'Note' },
+      { type: 'rectangle', x: 10, y: 300 },
+      { id: 'nopos', type: 'diamond', label: 'Where?' },
+      { id: 'ln', type: 'line', points: [{ x: 0, y: 0 }] },
+      { id: 'ar', type: 'arrow', from: 'a', to: 'ghost' },
+      { id: 'ok', type: 'arrow', from: 'a', to: 'a-2', label: 'SYN' },
+      { id: 'odd', type: 'hexagon', x: 1, y: 1 },
+    ], highlight: ['a', 'ghost'] },
+    { say: '', draw: [] },
+    { say: 'Two.', erase: ['ok', 'nothing'], highlight: ['ok'] },
+  ] });
+  assert.equal(lesson.title, 'Whiteboard'); assert.equal(lesson.mode, 'new');
+  assert.equal(lesson.beats.length, 2, 'the empty beat is gone');
+  const [one, two] = lesson.beats;
+  assert.deepEqual(one.draw.map(e => e.id), ['a', 'a-2', 'bad-id', 'el1', 'ok']);
+  assert.deepEqual(one.draw[0], { id: 'a', type: 'rectangle', x: 6000, y: 10, width: 16, label: 'Client' }, 'clamped, and text became the label');
+  assert.equal(one.draw[4].to, 'a-2'); assert.deepEqual(one.highlight, ['a']);
+  assert.deepEqual(two, { say: 'Two.', erase: ['ok'] }, 'an erased id cannot be highlighted in the same beat');
+  for (const fix of ['added a title', 'renamed a duplicate id', 'cleaned up ids', 'named elements that had no id', 'dropped shapes with no position',
+    'dropped lines with fewer than two points', 'dropped arrow ends that pointed at nothing', 'dropped arrows with nothing to connect',
+    'dropped an element with no valid type', 'used text as a shape label', 'dropped highlights of ids not on the board', 'dropped erases of ids not on the board', 'dropped empty beats'])
+    assert.ok(fixes.includes(fix), fix);
+  // A follow-up may point at what is already on the board; a clean lesson needs no fixes.
+  const follow = sanitizeLesson({ title: 'More', mode: 'add', beats: [{ say: 'Link.', draw: [{ id: 'n', type: 'text', x: 0, y: 0, text: 'x' }, { id: 'l', type: 'arrow', from: 'n', to: 'kite' }], highlight: ['kite'] }] }, ['kite']);
+  assert.deepEqual(follow.fixes, []); assert.equal(follow.lesson.beats[0].draw[1].to, 'kite');
+  assert.deepEqual(sanitizeLesson(demoLesson).fixes, []);
+  assert.equal(sanitizeLesson({ title: 'x', beats: Array.from({ length: 20 }, () => ({ say: 'x' })) }).lesson.beats.length, 16);
+});
+
+test('the service repairs lessons against the board, lists the fixes, and refuses one with nothing to draw', () => {
+  const views = []; let captions = false;
+  const service = new BoardService({ enabled: () => true, speed: () => 1, silence: () => {}, speak: () => false, emit: v => views.push(v), captions: () => captions });
+  const result = service.start({ title: 'T', beats: [{ say: 'Hi.', draw: [{ id: 'a', type: 'rectangle', x: 0, y: 0 }, { id: 'a', type: 'rectangle', x: 300, y: 0 }] }] });
+  assert.equal(result.ok, true); assert.match(result.message, /Fixed: renamed a duplicate id\./); assert.equal(result.transcript, '(Sketched on the whiteboard: T)');
+  assert.equal(views.at(-1).stats.fixes, 1);
+  assert.deepEqual(views.at(-1).elements.map(e => e.id), ['a', 'a-2']);
+  assert.equal(views.at(-1).captions, false, 'every view says whether captions show');
+  // Presentation mode, by voice: "make it bigger" and "smaller" are answered locally.
+  for (const said of ['make it bigger', 'Bigger.', 'full screen', "I can't read it", 'presentation mode']) assert.equal(classifyBoardCommand(said), 'bigger', said);
+  for (const said of ['make it smaller', 'exit fullscreen', 'normal size']) assert.equal(classifyBoardCommand(said), 'smaller', said);
+  assert.equal(classifyBoardCommand('make it bigger and add the server'), 'new-request');
+  assert.equal(service.command('make it bigger'), ''); assert.equal(views.at(-1).presenting, true);
+  assert.equal(service.command('smaller'), ''); assert.equal(views.at(-1).presenting, false);
+  captions = true; service.refresh(); assert.equal(views.at(-1).captions, true);
+  const empty = service.start({ title: 'T', beats: [{ say: '', draw: [{ id: 'x', type: 'line', points: [] }] }] });
+  assert.equal(empty.ok, false); assert.match(empty.message, /Nothing in that lesson could be drawn/);
+  service.close();
+});
+
+test('the service streams a lesson: the first complete beats open the board, the final call adds the rest once', async () => {
+  const said = [], views = [];
+  const service = new BoardService({ enabled: () => true, speed: () => 1, silence: () => {}, emit: v => views.push(v), speak: (text, hooks) => { said.push({ text, hooks }); return true; } });
+  const full = { title: 'TCP', mode: 'new', beats: lesson };
+  service.preview('call1', { title: 'TCP', beats: lesson.slice(0, 1) }, { requestedAt: 0 });
+  assert.equal(views.at(-1).title, 'TCP'); assert.equal(said.at(-1).text, 'Beat one.', 'drawing starts from the first complete beat');
+  service.preview('call1', { title: 'TCP', beats: lesson.slice(0, 2) });
+  assert.equal(views.at(-1).total, 2);
+  const result = service.start(full, { callId: 'call1' });
+  assert.equal(result.ok, true); assert.equal(result.transcript, '(Sketched on the whiteboard: TCP)');
+  assert.equal(views.at(-1).total, 3, 'the final call adds only what had not arrived');
+  for (let i = 0; i < 3; i++) { said.at(-1).hooks.started(); service.drawn(views.at(-1).id, views.at(-1).drawing.key); said.at(-1).hooks.done('spoken'); await new Promise(r => setTimeout(r, 520)); }
+  assert.deepEqual(said.map(x => x.text), ['Beat one.', 'Beat two.', 'Beat three.']); assert.equal(views.at(-1).status, 'done');
+  // A title that arrives late is settled by the final call.
+  service.preview('call2', { title: '', mode: 'new', beats: lesson.slice(0, 1) });
+  assert.equal(views.at(-1).title, 'Whiteboard');
+  service.start({ title: 'Late title', beats: lesson.slice(0, 1) }, { callId: 'call2' });
+  assert.equal(views.at(-1).title, 'Late title');
+  // With a board open, nothing streams until the model says whether it adds to it.
+  const before = views.length;
+  service.preview('call3', { title: 'More', beats: lesson.slice(0, 1) });
+  assert.equal(views.length, before, 'mode unknown: wait');
+  service.preview('call3', { title: 'More', mode: 'add', beats: [{ say: 'Extra.' }] });
+  assert.equal(said.at(-1).text, 'Extra.');
+  // Cut off: what arrived plays and the turn ends on it. Rejected: a new board is put away.
+  assert.deepEqual(service.endStream('call3', 'truncated'), { ok: true, message: 'The lesson was cut off; Kite is playing the beats that arrived.', transcript: '(Sketched on the whiteboard: Late title)' });
+  service.preview('call4', { title: 'New topic', mode: 'new', beats: lesson.slice(0, 1) });
+  assert.equal(views.at(-1).title, 'New topic');
+  assert.equal(service.endStream('call4', 'rejected'), undefined); assert.equal(views.at(-1), null, 'put away cleanly');
+  assert.equal(service.endStream('nope', 'aborted'), undefined);
+  service.close();
+});
+
+test('a lesson line plays beside a model turn that is still writing silently; the user talking cuts it', async () => {
+  let finishAsk;
+  const events = [], tts = [], log = [];
+  const settings = { ttsEnabled: true, voiceId: 'v', model: { provider: 'openai', id: 'x' } };
+  const controller = new VoiceController({
+    emit: e => events.push(e), getKey: () => 'key', transcribe: async () => 'Explain TCP', ask: () => new Promise(r => { finishAsk = r; }),
+    history: { createConversation: () => {}, addMessage: () => 1 }, conversation: new Conversation(() => 'c'), setEscape: () => {},
+    settings: () => settings, describe: m => ({ ...m, label: 'X', supportsVision: false, supportsTools: false, tier: 'fast' }),
+    tts: { start: id => tts.push(['start', id]), push: (id, t) => tts.push(['push', id, t]), finish: id => tts.push(['finish', id]), cancel: () => tts.push(['cancel']) },
+  });
+  const id = controller.start(); controller.stop(); const turn = controller.submit(id, new ArrayBuffer(8)); await flush();
+  assert.equal(typeof finishAsk, 'function', 'the model turn is running');
+  controller.announce('Beat one.', { started: () => log.push('started'), done: end => log.push(end) });
+  const line = events.filter(e => e.type === 'guide:announce').at(-1).id;
+  assert.notEqual(line, id); assert.deepEqual(tts.slice(-3), [['start', line], ['push', line, 'Beat one.'], ['finish', line]], 'spoken now, not after the turn');
+  controller.playback(line, 'started'); assert.deepEqual(log, ['started']);
+  finishAsk('(Sketched on the whiteboard: TCP)'); await turn;
+  assert.deepEqual(log, ['started'], 'the turn ending does not cut the line');
+  controller.playback(line, 'ended'); assert.deepEqual(log, ['started', 'spoken']);
+  // Again, but the user starts talking: the line is cut.
+  const next = controller.start(); controller.stop(); const turn2 = controller.submit(next, new ArrayBuffer(8)); await flush();
+  controller.announce('Beat two.', { done: end => log.push(end) });
+  controller.start(); assert.equal(log.at(-1), 'cut');
+  finishAsk('x'); await turn2; controller.cancel(); await controller.shutdown();
+});
+
+test('a reply said before a streamed lesson ends there; the lesson line follows its last words, not the whole turn', async () => {
+  let finishAsk, say;
+  const events = [], tts = [], log = [];
+  const settings = { ttsEnabled: true, voiceId: 'v', model: { provider: 'openai', id: 'x' } };
+  const controller = new VoiceController({
+    emit: e => events.push(e), getKey: () => 'key', transcribe: async () => 'Explain TCP',
+    ask: (m, k, s, onDelta) => { say = onDelta; onDelta('Let me sketch it.'); return new Promise(r => { finishAsk = r; }); },
+    history: { createConversation: () => {}, addMessage: () => 1 }, conversation: new Conversation(() => 'c'), setEscape: () => {},
+    settings: () => settings, describe: m => ({ ...m, label: 'X', supportsVision: false, supportsTools: false, tier: 'fast' }),
+    tts: { start: id => tts.push(['start', id]), push: (id, t) => tts.push(['push', id, t]), finish: id => tts.push(['finish', id]), cancel: () => tts.push(['cancel']) },
+  });
+  const id = controller.start(); controller.stop(); const turn = controller.submit(id, new ArrayBuffer(8)); await flush();
+  controller.toolEvent('tool:streaming', 'explain_on_whiteboard');
+  assert.deepEqual(tts.slice(-1), [['finish', id]], 'the reply speech is closed when the lesson starts streaming');
+  controller.announce('Beat one.', { started: () => log.push('started'), done: end => log.push(end) });
+  assert.ok(!events.some(e => e.type === 'guide:announce'), 'waits for the reply to finish playing');
+  controller.playback(id, 'started'); controller.playback(id, 'ended');
+  const line = events.filter(e => e.type === 'guide:announce').at(-1)?.id;
+  assert.ok(line, 'plays as soon as the reply has been heard, while the lesson is still being written');
+  say(' More words.');
+  assert.ok(!tts.some(([kind, , text]) => kind === 'push' && text === ' More words.'), 'later text is shown, not spoken');
+  controller.playback(line, 'started'); assert.deepEqual(log, ['started']);
+  finishAsk('Let me sketch it. More words.'); await turn;
+  assert.equal(tts.filter(([kind, jid]) => kind === 'finish' && jid === id).length, 1, 'closed once');
+  controller.playback(line, 'ended'); assert.deepEqual(log, ['started', 'spoken']);
+  await controller.shutdown();
 });
 
 function voice() {

@@ -1,5 +1,5 @@
-import { tool, type ToolSet } from 'ai';
-import type { ToolDefinition, ToolContext, ToolResult, AuditStore } from './types';
+import { parsePartialJson, tool, type ToolSet } from 'ai';
+import type { ToolDefinition, ToolContext, ToolResult, AuditStore, StreamEnd } from './types';
 import { needsApproval, ApprovalBroker } from './approval';
 import type { ToolDecision } from '../../shared/types';
 export type { ToolDefinition, ToolResult, ToolContext } from './types';
@@ -10,7 +10,7 @@ interface Call { row: number; tool: string; input: unknown; summary: string; dec
 export interface ToolSessionOptions {
   imageToolResults?: boolean;
   definitions: ToolDefinition[]; broker: ApprovalBroker; audit: AuditStore; messageId: number | null; context: ToolContext;
-  activity(): void; changed(): void; event(type: 'tool:executing' | 'tool:result', toolName: string, result?: ToolResult): void;
+  activity(): void; changed(): void; event(type: 'tool:executing' | 'tool:result' | 'tool:streaming', toolName: string, result?: ToolResult): void;
   /** After each model call: the tools it called, those whose input was invalid, and its output tokens. */
   step?(step: ModelStep): void;
 }
@@ -41,6 +41,39 @@ export class ToolSession {
     this.options.audit.finishTool(call.row, call.decision, result ? { ...result, image: undefined } : null, error, performance.now() - call.started); this.options.changed();
   }
   stepDone(step: ModelStep) { this.options.step?.(step); }
+  /** Tool inputs being streamed: their text so far, and the parses delivered in order. */
+  private streams = new Map<string, { def: ToolDefinition; text: string; parsing: Promise<void>; done: boolean }>();
+  inputStart(id: string, name: string) {
+    const def = this.options.definitions.find(d => d.name === name);
+    if (def?.stream && !this.options.context.dryRun) { this.streams.set(id, { def, text: '', parsing: Promise.resolve(), done: false }); this.options.event('tool:streaming', name); }
+  }
+  inputDelta(id: string, delta: string) {
+    const stream = this.streams.get(id); if (!stream || stream.done) return;
+    stream.text += delta;
+    // Something can only complete where an object or array closes.
+    if (!/[}\]]/.test(delta)) return;
+    const text = stream.text;
+    stream.parsing = stream.parsing.then(async () => {
+      if (stream.done) return;
+      const { value } = await parsePartialJson(text);
+      if (!stream.done && value && typeof value === 'object') stream.def.stream?.(id, value);
+    }).catch((): void => undefined);
+  }
+  /** The model finished this input: execution (or a validation error) takes it from here. */
+  inputDone(id: string) { const stream = this.streams.get(id); if (stream) stream.done = true; }
+  /** A streamed input that will never run. Returns a result when what was streamed is playing anyway. */
+  inputEnded(id: string, end: StreamEnd): ToolResult | undefined {
+    const stream = this.streams.get(id); if (!stream) return undefined;
+    this.streams.delete(id); stream.done = true;
+    return stream.def.streamEnd?.(id, end);
+  }
+  /** Inputs that started but never completed (the stream was cut off or interrupted). */
+  openInputs() { return [...this.streams.entries()].filter(([, s]) => !s.done).map(([id]) => id); }
+  /** Whether this result ends the turn (see ToolDefinition.endsTurn). */
+  endsTurn(name: string, result: unknown) {
+    const r = result as ToolResult | undefined;
+    return !!this.options.definitions.find(d => d.name === name)?.endsTurn && r?.ok === true && !r.dryRun;
+  }
   invalid(id: string, name: string, input: unknown) { const call = this.observe(id, name, input); if (!call.finished) this.finish(call, null, 'Invalid tool name or arguments; nothing ran.'); }
   async approve(id: string, name: string, input: unknown, budgetAvailable: boolean) {
     const call = this.observe(id, name, input); const def = this.options.definitions.find(d => d.name === name);
@@ -85,7 +118,8 @@ export class ToolSession {
           call.granted = false; // Single-use permission, never reusable by another call.
           this.options.event('tool:executing', def.name);
           try {
-            const result = await def.execute(parsed.data, call.scope ? { ...this.options.context, scope: call.scope } : this.options.context);
+            this.streams.delete(toolCallId);
+            const result = await def.execute(parsed.data, { ...this.options.context, callId: toolCallId, ...(call.scope ? { scope: call.scope } : {}) });
             if (result.image && !this.options.imageToolResults) this.images.push(result.image);
             this.finish(call, result, result.ok ? null : result.message); this.options.event('tool:result', def.name, result); return result;
           } catch (error) {
@@ -102,6 +136,7 @@ export class ToolSession {
   async settled() { await this.queue; }
   close() {
     this.images = [];
+    for (const id of [...this.streams.keys()]) this.inputEnded(id, 'aborted');
     if (this.pendingApproval && this.options.broker.current?.approvalId === this.pendingApproval) this.options.broker.deny();
     for (const call of this.calls.values()) if (!call.finished && !call.executing) { call.granted = false; call.decision = 'denied'; this.finish(call, null, 'Interaction ended before execution.'); }
   }

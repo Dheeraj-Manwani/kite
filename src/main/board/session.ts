@@ -37,14 +37,27 @@ export class BoardSession {
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private idle?: ReturnType<typeof setTimeout>;
   private finished = false;
+  /**
+   * While the model is still writing the lesson (streaming), more beats may arrive: reaching the last one that has
+   * arrived waits for the next instead of finishing. `tail` is where they go: after the last streamed beat (for a
+   * follow-up, before the rest of the original lesson).
+   */
+  private open = false;
+  private waiting = false;
+  private tail: number;
   constructor(readonly id: number, private title: string, beats: BeatInput[], private deps: BoardSessionDeps, private base: ElementInput[] = [], private timing: BoardTiming = boardTiming) {
     this.beats = beats.slice(0, boardLimits.beats);
+    this.tail = this.beats.length;
   }
   get ended() { return this.finished; }
   get state() { return this.status; }
   get beat() { return this.index; }
   get count() { return this.beats.length; }
   get name() { return this.title; }
+  /** Still being written: see `open`. */
+  get streaming() { return this.open; }
+  stream() { this.open = true; }
+  rename(title: string) { if (title && title !== this.title) { this.title = title; this.emit(); } }
   private applied(through: number) { return this.beats.slice(0, through).reduce(applyBeat, this.base); }
   /** Everything on the board right now. */
   scene(): LaidElement[] { return layoutScene(this.applied(this.through)); }
@@ -67,7 +80,7 @@ export class BoardSession {
   private touch() { clearTimeout(this.idle); this.idle = setTimeout(() => this.stop(), this.timing.idleMs); }
   start() { this.begin(0); }
   private begin(index: number) {
-    this.cancelWork(); this.touch();
+    this.cancelWork(); this.touch(); this.waiting = false;
     const generation = this.generation, stale = () => generation !== this.generation || this.finished;
     this.index = index; this.through = index; this.status = 'playing'; this.note = null;
     this.started = false; this.spoken = false; this.drawn = false;
@@ -106,15 +119,33 @@ export class BoardSession {
   private advance() {
     if (!this.spoken || !this.drawn || this.status !== 'playing') return;
     const generation = this.generation;
-    this.later(() => {
-      if (generation !== this.generation || this.finished) return;
-      if (this.index === this.pauseAfter && this.index < this.beats.length - 1) {
-        // Follow-up answered: wait before the rest of the original lesson.
-        this.pauseAfter = -1; this.cancelWork();
-        this.index++; this.status = 'paused'; this.note = 'Say “continue” to pick up where we left off.'; this.emit(); return;
-      }
-      if (this.index < this.beats.length - 1) this.begin(this.index + 1); else this.finish();
-    }, this.timing.gapMs);
+    this.later(() => { if (generation === this.generation && !this.finished) this.proceed(); }, this.timing.gapMs);
+  }
+  /** After a beat: the next one, a pause before the rest of the original lesson, the end, or (streaming) a wait. */
+  private proceed() {
+    if (this.open && this.index >= this.tail - 1) { this.waiting = true; return; }
+    if (this.index === this.pauseAfter && this.index < this.beats.length - 1) {
+      // Follow-up answered: wait before the rest of the original lesson.
+      this.pauseAfter = -1; this.cancelWork();
+      this.index++; this.status = 'paused'; this.note = 'Say “continue” to pick up where we left off.'; this.emit(); return;
+    }
+    if (this.index < this.beats.length - 1) this.begin(this.index + 1); else this.finish();
+  }
+  /** Streamed beats, placed after the last ones that arrived. A lesson waiting for them carries on at once. */
+  append(beats: BeatInput[]) {
+    if (this.finished || !beats.length) return;
+    const added = beats.slice(0, Math.max(0, boardLimits.beats * 2 - this.beats.length));
+    if (!added.length) return;
+    this.beats.splice(this.tail, 0, ...added);
+    if (this.pauseAfter >= 0) this.pauseAfter = this.tail + added.length - 1;
+    this.tail += added.length;
+    if (this.waiting && this.status === 'playing') { this.waiting = false; this.begin(this.index + 1); } else this.emit();
+  }
+  /** The lesson is complete: no more beats will arrive. */
+  seal() {
+    if (!this.open) return;
+    this.open = false;
+    if (this.waiting && this.status === 'playing') { this.waiting = false; this.proceed(); }
   }
   private finish() {
     this.cancelWork(); this.touch();
@@ -138,6 +169,10 @@ export class BoardSession {
   next() {
     if (this.finished || this.status === 'done') return '';
     this.deps.silence();
+    // The newest beat while more are being written: show it whole and wait for the next.
+    if (this.open && this.index >= this.tail - 1 && this.status === 'playing') {
+      this.cancelWork(); this.started = true; this.spoken = true; this.drawn = true; this.through = this.index + 1; this.waiting = true; this.emit(); return '';
+    }
     // Paused before an undrawn beat: "next" means that beat.
     if (this.status === 'paused' && this.through === this.index) { this.begin(this.index); return ''; }
     if (this.index >= this.beats.length - 1) { this.finish(); return 'That’s the end of the lesson.'; }
@@ -157,6 +192,7 @@ export class BoardSession {
     const remaining = this.beats.length - at;
     this.beats.splice(at, 0, ...added);
     this.pauseAfter = remaining > 0 ? at + added.length - 1 : -1;
+    this.tail = at + added.length;
     this.deps.silence(); this.begin(at);
   }
   /** Overlay reloads or a display change: resend the frame without restarting anything. */

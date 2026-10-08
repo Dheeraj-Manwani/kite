@@ -12,8 +12,8 @@ import type { LessonStats } from '../../shared/board';
 /** One line per whiteboard lesson: how fast and how tidy it was. Numbers only, never lesson content. */
 export function lessonLine(s: LessonStats | null) {
   if (!s) return 'No whiteboard lesson yet';
-  const l = s.lint, n = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
-  return `Lesson: first stroke ${s.firstStrokeMs === undefined ? '—' : (s.firstStrokeMs / 1000).toFixed(1) + ' s'} · ${s.outputTokens === undefined ? '—' : s.outputTokens.toLocaleString('en-US')} tokens · ${n(s.repairs, 'repair')} · ${n(s.beats, 'beat')}, ${n(s.elements, 'element')}`
+  const l = s.lint, n = (count: number, word: string, plural = word + 's') => `${count} ${count === 1 ? word : plural}`;
+  return `Lesson: first stroke ${s.firstStrokeMs === undefined ? '—' : (s.firstStrokeMs / 1000).toFixed(1) + ' s'} · ${s.outputTokens === undefined ? '—' : s.outputTokens.toLocaleString('en-US')} tokens · ${n(s.repairs, 'repair')}, ${n(s.fixes, 'fix', 'fixes')} · ${n(s.beats, 'beat')}, ${n(s.elements, 'element')}`
     + ` · lint: ${n(l.overlaps, 'overlap')}, ${l.overflow} overflow, ${l.through} through, ${n(l.crossings, 'crossing')}, ${l.textOnLines} on lines · smallest text ${l.minTextPx === null ? '—' : l.minTextPx + ' px'}`;
 }
 const sliders = [

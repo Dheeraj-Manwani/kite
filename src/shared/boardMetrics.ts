@@ -1,4 +1,4 @@
-import { applyBeat, boardColors, fitView, layoutScene, panelSize, panelViewport, sceneBounds, words, type BeatInput, type ElementInput, type LaidElement, type LaidShape, type Point, type TextBlock } from './board';
+import { applyBeat, boardColors, fitView, layoutScene, panelSize, panelViewport, planCamera, readableTextPx, sceneBounds, textOf, words, type Camera, type BeatInput, type ElementInput, type LaidElement, type LaidShape, type Point, type TextBlock } from './board';
 import type { ScreenBounds } from './types';
 /**
  * How readable and tidy a board is, as numbers: the whiteboard harness (scripts/board-eval.cjs) scores every
@@ -20,10 +20,15 @@ export interface SceneMetrics {
   textOnLines: number;
   /** Text blocks: text elements and the labels of shapes and arrows. */
   textBlocks: number;
-  /** Smallest text on screen, in px, with the default panel on a 1080p display (null when there is no text). */
+  /**
+   * Smallest text on screen, in px, with the default panel on a 1080p display (null when there is no text). For a
+   * scene, at the camera that shows all of it; for a lesson, at each beat's camera while that beat is explained.
+   */
   minTextPx: number | null;
   /** Text blocks under 14 px on that screen. */
   smallText: number;
+  /** Smallest text when the finished board is shown whole. */
+  overviewTextPx: number | null;
   /** Distinct colors used. */
   colors: number;
   labelWords: { max: number; mean: number };
@@ -37,7 +42,7 @@ export interface LessonMetrics extends SceneMetrics {
 }
 /** The screen the harness measures for: 1080p, the default panel, today's camera. */
 export const referenceDisplay = { width: 1920, height: 1080 };
-export const readableTextPx = 14;
+export { readableTextPx };
 /** Overlaps smaller than this in either direction are rounding, not collisions. */
 const touch = 3;
 
@@ -143,12 +148,12 @@ export function sceneMetrics(elements: LaidElement[], display = referenceDisplay
     elements: elements.length, overlaps, overlapArea: Math.round(overlapArea), overflow: overflowing.length,
     through, crossings, textOnLines,
     textBlocks: texts.length,
-    minTextPx: onScreen.length ? Math.round(Math.min(...onScreen) * 10) / 10 : null,
-    smallText: onScreen.filter(px => px < readableTextPx).length,
+    minTextPx: smallest(onScreen), smallText: onScreen.filter(px => px < readableTextPx).length, overviewTextPx: smallest(onScreen),
     colors: new Set(elements.map(e => e.color).filter(c => c in boardColors)).size,
     labelWords: summary(labelWords), issues,
   };
 }
+const smallest = (px: number[]) => px.length ? Math.round(Math.min(...px) * 10) / 10 : null;
 function summary(values: number[]) {
   return { max: values.length ? Math.max(...values) : 0, mean: values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 10) / 10 : 0 };
 }
@@ -157,5 +162,15 @@ export function lessonMetrics(beats: BeatInput[], base: ElementInput[] = [], dis
   const seen = new Set(base.map(e => e.id));
   const fresh = beats.map(beat => (beat.draw ?? []).filter(e => !seen.has(e.id) && (seen.add(e.id), true)).length);
   const inputs = beats.reduce(applyBeat, base);
-  return { ...sceneMetrics(layoutScene(inputs), display, inputs), beats: beats.length, newPerBeat: summary(fresh) };
+  // Each beat's words, at the camera Kite uses while saying them (planCamera, following on from the beat before).
+  const viewport = panelViewport(panelSize(display)), px: number[] = [];
+  let board = base, camera: Camera | null = null;
+  for (const beat of beats) {
+    board = applyBeat(board, beat);
+    const scene = layoutScene(board), ids = new Set((beat.draw ?? []).map(e => e.id)), present = scene.filter(e => ids.has(e.id));
+    camera = planCamera(scene, present.map(e => e.id), viewport, camera);
+    for (const e of present) { const t = textOf(e); if (t?.lines.some(Boolean)) px.push(t.size * camera.scale); }
+  }
+  const scene = sceneMetrics(layoutScene(inputs), display, inputs);
+  return { ...scene, minTextPx: smallest(px), smallText: px.filter(v => v < readableTextPx).length, beats: beats.length, newPerBeat: summary(fresh) };
 }

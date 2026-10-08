@@ -22,6 +22,17 @@ Ask "explain how a TCP handshake works" or "sketch how React renders" and Kite o
 
 The model plans the whole lesson in one `explain_on_whiteboard` call: a title and up to 16 beats, each with a spoken line and the elements it adds on a 1600 × 900 canvas (rectangles, ellipses, diamonds, text, arrows between elements, and lines, in eight colors with optional hatching). Kite's code sizes shapes to their labels, binds arrows edge to edge, keeps a request and its reply apart, and puts arrow labels beside the line. Drawing starts when a beat's audio starts; the next beat waits for both. [ADR 013](adr/013-whiteboard.md).
 
+The lesson starts before the model has finished writing it. Its input streams in, and each beat is handed to the board once it is complete. Beat 1 is drawn and narrated while the model writes the rest; reaching the newest beat waits for the next. The final call adds whatever has not arrived. A lesson cut off mid-stream plays the beats that did arrive. The lesson is the whole answer: the voice turn ends on it, with no filler line. Whatever the model said before the call ends as soon as the lesson starts streaming, and narration follows it.
+
+Lessons are repaired rather than rejected (`sanitizeLesson` in `src/shared/board.ts`):
+- Elements that can't be drawn are dropped.
+- Duplicate ids are renamed.
+- References to ids that aren't on the board are dropped.
+- Numbers are clamped.
+- A shape written with `text` gets it as its label.
+
+The model is told what was fixed.
+
 ## Privacy
 
 The lesson text goes only to your configured model, as part of the conversation. The board is excluded from Kite's own screen captures. Nothing is saved unless you press Save.
@@ -35,6 +46,7 @@ The lesson text goes only to your configured model, as part of the conversation.
 
 ## Verification
 
+- `npm test` (`tests/tools.test.cjs`): a tool that ends the turn, and a lesson streamed through the real agent loop (beats reach the board before the call completes, cut-off and rejected inputs).
 - `npm test` (`tests/board-metrics.test.cjs`): each metric on small boards, nesting and containers, the 1080p text size, and per-beat counts for follow-ups.
-- `npm test` (`tests/board.test.cjs`): layout, text wrapping, arrow binding and label placement at every angle, parallel arrows, beats that add, replace, and erase, deterministic rough strokes and hatching, commands, the lesson state machine (speech and drawing sync, no voice, cut and failed speech, next/repeat/replay, follow-up insertion), the service's model context and marks, tool validation, and announcement hooks.
+- `npm test` (`tests/board.test.cjs`): layout, text wrapping, arrow binding and label placement at every angle, parallel arrows, beats that add, replace, and erase, deterministic rough strokes and hatching, commands, the lesson state machine (speech and drawing sync, no voice, cut and failed speech, next/repeat/replay, follow-up insertion), the service's model context and marks, lenient tool input and `sanitizeLesson` repairs, streaming (appended beats, waiting at the newest beat, sealing, a streamed follow-up, the final call adding only the rest, cut-off and rejected streams), the lesson log, and announcement hooks, including lesson lines that play beside a model turn still writing.
 - `npm run test:renderer` (after a build): drawing stroke by stroke, the kite flying to the pen, highlight rings, nothing left half drawn, PNG export, and the board controls.

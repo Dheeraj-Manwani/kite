@@ -103,6 +103,55 @@ test('AI SDK loop reports each model call: tools called, invalid inputs, output 
   await run(h,[[call('1','get_datetime',{}),call('2','write_clipboard',{wrong:true})],textParts('Okay.')]);
   assert.deepEqual(steps,[{tools:['get_datetime','write_clipboard'],invalid:['write_clipboard'],outputTokens:1},{tools:[],invalid:[],outputTokens:1}]);
 });
+test('a tool that ends the turn: no filler call, no fallback line, its transcript is the reply; dry runs and failures carry on',async()=>{
+  const { z } = require('zod'); const { defineTool } = require('../src/main/tools/define.ts');
+  const lesson=(ok=true)=>defineTool({name:'lesson',description:'d',inputSchema:z.object({}),kind:'info',endsTurn:true,summarize:()=>'Draw',execute:async()=>({ok,message:ok?'open':'off',transcript:'(Sketched)'})});
+  const h=harness('approved',false,[lesson()]);const spoken=[];
+  let index=0;const steps=[[call('1','lesson',{})],textParts('Let me sketch it out.')];
+  const model=new MockLanguageModelV3({doStream:async()=>stream(steps[index++])});
+  const result=await runAgentLoop({model,system:'test',messages:[{role:'user',content:'explain'}],signal:h.abort.signal,onDelta:d=>spoken.push(d),session:h.session});
+  assert.equal(model.doStreamCalls.length,1,'no second model call for a filler line');
+  assert.equal(result,'(Sketched)');assert.deepEqual(spoken,[],'nothing is spoken before the lesson');
+  for(const [h2,why] of [[harness('approved',true,[lesson()]),'dry run'],[harness('approved',false,[lesson(false)]),'failed']]){
+    const r=await run(h2,[[call('1','lesson',{})],textParts('It was only a preview.')]);
+    assert.equal(r.calls.length,2,why);assert.equal(r.result,'It was only a preview.',why);
+  }
+});
+test('streamed lesson input: complete beats reach the board before the call completes; cut off plays what arrived; rejected stops', async () => {
+  const lessonJson = JSON.stringify({ title: 'TCP', mode: 'new', beats: [
+    { say: 'One.', draw: [{ id: 'a', type: 'rectangle', x: 0, y: 0, label: 'A' }] },
+    { say: 'Two.', draw: [{ id: 'b', type: 'rectangle', x: 400, y: 0, label: 'B' }] },
+    { say: 'Three.' } ] });
+  const pieces = (text, size = 7) => Array.from({ length: Math.ceil(text.length / size) }, (_, i) => text.slice(i * size, i * size + size));
+  const streamed = (text, { call = true, input = text } = {}) => ({ stream: simulateReadableStream({ initialDelayInMs: null, chunkDelayInMs: 1, chunks: [
+    { type: 'stream-start', warnings: [] }, { type: 'tool-input-start', id: 'L1', toolName: 'explain_on_whiteboard' },
+    ...pieces(text).map(delta => ({ type: 'tool-input-delta', id: 'L1', delta })), { type: 'tool-input-end', id: 'L1' },
+    ...(call ? [{ type: 'tool-call', toolCallId: 'L1', toolName: 'explain_on_whiteboard', input }] : []),
+    { type: 'finish', finishReason: { unified: call ? 'tool-calls' : 'length', raw: undefined }, usage: { inputTokens: { total: 1 }, outputTokens: { total: 1 } } }] }) });
+  const make = () => {
+    const log = [];
+    const tool = impl('explain_on_whiteboard').explainOnWhiteboard((lesson, callId) => { log.push(['start', callId, lesson.beats.length]); return { ok: true, message: 'open', transcript: '(Sketched)' }; },
+      { update: (callId, lesson) => log.push(['update', callId, lesson.beats.length]), end: (callId, end) => { log.push(['end', callId, end]); return end === 'truncated' ? { ok: true, message: 'cut', transcript: '(Cut)' } : undefined; } });
+    return { log, h: harness('approved', false, [tool]) };
+  };
+  const loop = async (h, steps) => {
+    let index = 0; const model = new MockLanguageModelV3({ doStream: async () => steps[index++] });
+    const result = await runAgentLoop({ model, system: 'test', messages: [{ role: 'user', content: 'explain' }], signal: h.abort.signal, onDelta: () => {}, session: h.session });
+    return { result, calls: model.doStreamCalls.length };
+  };
+  // Complete: beats 1 and 2 are handed over as they complete, then the call starts the lesson with its id.
+  const ok = make(); const done = await loop(ok.h, [streamed(lessonJson)]);
+  assert.deepEqual(ok.log.filter(([kind]) => kind === 'update').map(([, , n]) => n), [1, 2], 'only complete beats, each once');
+  assert.deepEqual(ok.log.at(-1), ['start', 'L1', 3]); assert.ok(ok.log.findIndex(([k]) => k === 'update') < ok.log.findIndex(([k]) => k === 'start'));
+  assert.equal(done.result, '(Sketched)'); assert.equal(done.calls, 1);
+  // Cut off before the call: the beats that arrived play, and the turn ends on them without a filler line.
+  const cut = make(); const truncated = await loop(cut.h, [streamed(lessonJson.slice(0, lessonJson.indexOf('Three')), { call: false })]);
+  assert.deepEqual(cut.log.at(-1), ['end', 'L1', 'truncated']); assert.equal(truncated.result, '(Cut)'); assert.equal(truncated.calls, 1);
+  // Rejected (no title): the stream is told, and the model goes on to say something.
+  const bad = make(); const rejected = await loop(bad.h, [streamed(lessonJson, { input: JSON.stringify({ beats: [] }) }), stream(textParts('Sorry, let me explain instead.'))]);
+  assert.ok(bad.log.some(([kind, , end]) => kind === 'end' && end === 'rejected')); assert.equal(rejected.result, 'Sorry, let me explain instead.');
+  assert.ok(!bad.log.some(([kind]) => kind === 'start'));
+});
 test('AI SDK action budget is global for parallel and subsequent calls',async()=>{
   const h=harness();const r=await run(h,[[call('1'),call('2'),call('3'),call('4')],textParts('Done.')]);
   assert.equal(h.effects,3);assert.equal(h.cards.length,3);assert.equal(h.rows[3].decision,'denied');assert.match(r.result,/action limit/);

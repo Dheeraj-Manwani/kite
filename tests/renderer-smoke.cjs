@@ -10,7 +10,7 @@ const { catalog } = require('../src/main/ai/catalog.ts');
 const { defaultPermissions } = require('../src/shared/permissions.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,deepseek:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose',permissions:structuredClone(defaultPermissions),jobsModel:null,memory:true});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,boardCaptions:false,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose',permissions:structuredClone(defaultPermissions),jobsModel:null,memory:true});
 const memoryFacts=[{id:1,kind:'profile',key:'profile.phone',label:'Phone number',value:'9876543210',source:'From what you said, 1 Oct',created:1,updated:1,used:null},
   {id:2,kind:'address',key:'home.pincode',label:'Home pincode',value:'411045',source:'From the shop.example.in task, 1 Oct',created:1,updated:1,used:Date.now()},
   {id:3,kind:'address',key:'home.city',label:'Home city',value:'Pune',source:'From the shop.example.in task, 1 Oct',created:1,updated:1,used:null},
@@ -469,6 +469,10 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('board:state',boardView);await delay(200);
     assert.equal(await js("document.querySelectorAll('.board-ring path').length"),2,'highlighted element is circled');
     assert.match(await js("document.querySelector('.board-caption').textContent"),/Wind blows/);
+    // While the line is being heard, the caption can stay for screen readers only.
+    overlay.webContents.send('board:state',{...boardView,captions:false});await delay(80);
+    assert.equal(await js("document.querySelector('.board-caption > .sr-only')?.textContent"),boardView.caption,'heard lines are hidden but still announced');
+    overlay.webContents.send('board:state',boardView);await delay(80);
     for(let i=0;i<120&&!drawnAcks.some(a=>a[1]===1);i++)await delay(50);
     assert.ok(drawnAcks.some(a=>a[0]===3&&a[1]===1));
     // The final frame, fully drawn, with the text written out and nothing left mid-animation.
@@ -484,6 +488,15 @@ app.whenReady().then(async()=>{
     assert.deepEqual([...exported[0].png.subarray(0,4)],[0x89,0x50,0x4e,0x47],'exports a PNG');
     fs.writeFileSync(path.join(temporary,'board-export.png'),exported[0].png);
     assert.ok(nativeImage.createFromBuffer(exported[0].png).getSize().width>600,'export is cropped to the content at 2x');
+    // Presentation mode: the button asks main, and a presenting view fills most of the screen, then returns.
+    await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Bigger').click()");
+    const smallFrame=await js("JSON.parse(JSON.stringify(document.querySelector('.board').getBoundingClientRect()))");
+    overlay.webContents.send('board:state',{...boardView,status:'done',beat:5,caption:'',note:'x',elements:lesson(beats.length),drawing:null,highlight:[],presenting:true});await delay(150);
+    const bigFrame=await js("JSON.parse(JSON.stringify(document.querySelector('.board').getBoundingClientRect()))");
+    assert.ok(bigFrame.width>smallFrame.width&&bigFrame.height>=smallFrame.height,'presenting is bigger: '+JSON.stringify([smallFrame,bigFrame]));
+    overlay.webContents.send('board:state',{...boardView,status:'done',beat:5,caption:'',note:'x',elements:lesson(beats.length),drawing:null,highlight:[],presenting:false});await delay(150);
+    assert.equal(await js("document.querySelector('.board').getBoundingClientRect().width"),smallFrame.width,'and goes back');
+    boardActions.splice(boardActions.indexOf('bigger'),1);
     await js("[...document.querySelectorAll('.board-tools button')].find(b=>b.textContent==='Replay').click()");
     await js("document.querySelector('.board-close').click()");await delay(50);
     overlay.webContents.send('board:state',{...boardView,status:'paused',note:'Paused. Say “continue” when you’re ready.',drawing:null});await delay(100);

@@ -1,6 +1,6 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { layoutScene, panelSize, panelViewport } = require('../src/shared/board.ts');
+const { layoutScene, panelSize, panelViewport, planCamera, fitView, sceneBounds } = require('../src/shared/board.ts');
 const { sceneMetrics, lessonMetrics } = require('../src/shared/boardMetrics.ts');
 const { demoLesson } = require('../src/main/board/service.ts');
 
@@ -63,15 +63,44 @@ test('free text lying on an arrow is flagged', () => {
 
 test('on-screen text size follows the default panel on a 1080p display', () => {
   const panel = panelSize({ width: 1920, height: 1080 });
-  assert.deepEqual(panel, { width: 1180, height: 760 });
-  assert.deepEqual(panelViewport(panel), { width: 1180, height: 656 });
-  // The camera always shows the whole 1600 × 900 canvas (plus padding): medium text (20) lands near 13 px.
+  assert.deepEqual(panel, { width: 1400, height: 900 });
+  assert.deepEqual(panelViewport(panel), { width: 1400, height: 796 });
+  assert.deepEqual(panelSize({ width: 1366, height: 768 }), { width: 1229, height: 691 }, 'at most 90% of a small display');
+  assert.deepEqual(panelSize({ width: 1920, height: 1080 }, true), { width: 1843, height: 1015 }, 'presenting fills the screen');
+  // The whole 1600 × 900 canvas (plus padding) shows: medium text (20) lands near 16 px, small (16) near 13.
   const m = metrics([{ id: 't', type: 'text', x: 100, y: 100, text: 'Body text' }, { id: 's', type: 'text', x: 100, y: 200, text: 'note', size: 'small' }]);
-  assert.equal(m.minTextPx, 10.7);
-  assert.equal(m.smallText, 2);
+  assert.equal(m.minTextPx, 13); assert.equal(m.smallText, 1); assert.equal(m.overviewTextPx, 13);
   // Drawing far outside the canvas zooms out and shrinks everything.
   assert.ok(metrics([{ id: 't', type: 'text', x: 100, y: 100, text: 'Body' }, box('far', 3600, 100)]).minTextPx < 8);
   assert.equal(metrics([box('a', 100, 100)]).minTextPx, null);
+});
+
+test('planCamera: the whole board when readable, else close enough for 14 px text, panning only as far as the beat needs', () => {
+  const viewport = panelViewport(panelSize({ width: 1920, height: 1080 }));
+  const scene = layoutScene([box('a', 100, 100, { label: 'A' }), box('b', 1300, 700, { label: 'B' }), { id: 'ab', type: 'arrow', from: 'a', to: 'b' },
+    { id: 'n', type: 'text', x: 1300, y: 820, text: 'small note', size: 'small' }]);
+  const overview = fitView(sceneBounds(scene), viewport);
+  assert.deepEqual(planCamera(scene, ['a'], viewport), overview, 'medium text is readable on the whole board');
+  assert.deepEqual(planCamera(scene, [], viewport), overview, 'no focus: the whole board');
+  const close = planCamera(scene, ['n'], viewport);
+  assert.equal(close.scale, 14 / 16, 'small text needs a closer camera');
+  const shown = { x: close.x, y: close.y, width: viewport.width / close.scale, height: viewport.height / close.scale };
+  const note = scene.find(e => e.id === 'n').box;
+  assert.ok(note.x >= shown.x && note.x + note.width <= shown.x + shown.width && note.y + note.height <= shown.y + shown.height, 'the beat is in view');
+  // Following on from the last camera: no move when the beat is already in view, a small pan when it is not.
+  assert.deepEqual(planCamera(scene, ['n'], viewport, close), close);
+  const left = planCamera(layoutScene([{ id: 'm', type: 'text', x: 20, y: 400, text: 'left note', size: 'small' }, ...[box('a', 100, 100), box('b', 1300, 700)].map(b => b)]), ['m'], viewport, close);
+  assert.equal(left.scale, close.scale); assert.ok(left.x < close.x, 'pans left'); assert.equal(left.y, close.y, 'and only sideways');
+  // A beat bigger than the view is centred.
+  const wide = layoutScene([{ id: 'w', type: 'text', x: -2000, y: 100, text: 'tiny', size: 'small' }, { id: 'w2', type: 'text', x: 3500, y: 100, text: 'tiny', size: 'small' }]);
+  const c = planCamera(wide, ['w', 'w2'], viewport);
+  assert.ok(Math.abs(c.x + viewport.width / c.scale / 2 - sceneBounds(wide).x - sceneBounds(wide).width / 2) < 1);
+});
+
+test('lesson text is measured at each beat camera, so a small note reaches 14 px while it is explained', () => {
+  const m = lessonMetrics([{ say: 'Boxes.', draw: [box('a', 100, 100, { label: 'A' }), box('b', 1300, 700, { label: 'B' })] },
+    { say: 'A note.', draw: [{ id: 'n', type: 'text', x: 1300, y: 820, text: 'small note', size: 'small' }] }]);
+  assert.equal(m.minTextPx, 14); assert.equal(m.smallText, 0); assert.equal(m.overviewTextPx, 13, 'smaller when the finished board is shown whole');
 });
 
 test('lesson metrics count new elements per beat and words per label', () => {
