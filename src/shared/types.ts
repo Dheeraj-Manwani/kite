@@ -45,7 +45,7 @@ export interface KiteAPI {
   controlBackgroundRun(input: import('./background').RunControl): Promise<import('./background').BackgroundResult>;
   answerBackgroundRun(input: import('./background').RunAnswer): Promise<import('./background').BackgroundResult>;
   chooseBackgroundFiles(): Promise<import('./background').BackgroundResult & { files: import('./background').BackgroundFile[] }>;
-  backgroundArtifact(input: { runId: string; artifactId: string; action: 'open' | 'reveal' | 'save' }): Promise<import('./background').BackgroundResult>;
+  backgroundArtifact(input: { runId: string; artifactId: string; action: 'preview' | 'open' | 'reveal' | 'save' }): Promise<import('./background').BackgroundResult>;
   onBackgroundChanged(callback: () => void): () => void;
   setHotkeyRecording(active: boolean): void;
   onViewChange(callback: (view: View) => void): () => void;

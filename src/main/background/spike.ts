@@ -56,7 +56,7 @@ export async function runBackgroundSpike(directory: string) {
       startupMs, idleWorkingSetKiB, afterConversionKiB, browserWorkingSetKiB, browserStartupMs,
       eventLoop: { targetIntervalMs: 20, samples: gaps.length, maxGapMs: gaps.length ? Math.round(Math.max(...gaps)) : null },
       conversions: samples, browser: { isolatedPersistentProfile: true, persistedSyntheticLogin: persistedLogin, defaultProfileUntouched, privilegedBridgeAbsent, realAccountSignIn: 'not tested' },
-      dependencies: { addedRuntimePackages: 0, bundledConverter: 'Existing Electron Chromium', officeAdapter: 'deferred; detection only', packagedAsarBytes: asarBytes, incrementalInstallerBytes: 'not measured against an identical baseline build' },
+      dependencies: { textConverterAddedRuntimePackages: 0, documentWorkflows: 'See phase 2 probe for the additional pdf-lib dependency tree', bundledConverter: 'Existing Electron Chromium', officeAdapter: 'deferred; detection only', packagedAsarBytes: asarBytes, incrementalInstallerBytes: 'not measured against an identical baseline build' },
       modelUsage: { calls: 0, tokens: 0, reason: 'Deterministic workflow has no model planner' },
     };
     await writeFile(path.join(directory, 'phase0.json'), JSON.stringify(report, null, 2) + '\n');

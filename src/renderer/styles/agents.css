@@ -34,10 +34,15 @@
 .agents-status[data-status='failed'] { color: var(--danger); }
 .agents-empty { padding: 28px 8px; color: var(--text-muted); }
 .agents-empty p { margin: 12px 0; }
-.agents-artifact { display: flex; gap: 8px; align-items: center; margin: 10px 0; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.agents-artifact { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0; padding: 12px 0; border-bottom: 1px solid var(--border); }
 .agents-artifact > div { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .agents-artifact strong, .agents-artifact small { display: block; }
 .agents-artifact small { margin-top: 4px; }
+.agents-artifact > div { flex-basis: 100%; }
+.agents-size-report { font-size: var(--fs-caption); margin: 8px 0; }
+.agents-chosen-files { list-style: none; padding: 0; }
+.agents-chosen-files li { display: flex; gap: 10px; align-items: center; margin: 6px 0; }
+.agents-chosen-files span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .agents-activity ol { list-style: none; margin: 0; padding: 0; }
 .agents-activity li { display: flex; gap: 12px; padding: 7px 0; }
 .agents-activity time { flex: none; width: 72px; color: var(--text-muted); font-size: var(--fs-caption); }

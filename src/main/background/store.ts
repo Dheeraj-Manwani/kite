@@ -1,17 +1,18 @@
 import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type { SecretCipher } from '../settings/secretsCore';
-import type { BackgroundAgent, BackgroundArtifact, BackgroundEvent, BackgroundRun, BackgroundRequest, PdfStyle, RunStatus } from '../../shared/background';
+import type { BackgroundAgent, BackgroundArtifact, BackgroundEvent, BackgroundRun, BackgroundRequest, DocumentKind, DocumentWorkflow, OptimizationReport, PdfStyle, RunStatus } from '../../shared/background';
 
-export interface RunInput { name: string; text: string }
+export interface RunInput { name: string; text?: string; kind?: DocumentKind; sourceId?: string; hash?: string; bytes?: number }
+export interface FrozenSource { id: string; bytes: Uint8Array }
 export interface RunRecord {
   id: string; requestId: string; inputHash: string; agent: BackgroundAgent; title: string; inputs: RunInput[];
   status: RunStatus; revision: number; generation: number; createdAt: number; updatedAt: number;
   message: string; completed: number; attempts: number; recoveryCount?: number; request: BackgroundRequest | null;
   approvedBinding: string | null; artifacts: BackgroundArtifact[]; parentId: string | null;
 }
-export interface OperationRecord { id: string; runId: string; generation: number; index: number; inputHash: string; style: PdfStyle; state: 'intent' | 'prepared' | 'committed'; hash?: string; bytes?: number; pages?: number }
-export const publicRun = (r: RunRecord): BackgroundRun => ({ id: r.id, agentId: r.agent.id === 'builtin' ? null : r.agent.id, agentName: r.agent.name, agentRevision: r.agent.revision, title: r.title, status: r.status, revision: r.revision, generation: r.generation, createdAt: r.createdAt, updatedAt: r.updatedAt, message: r.message, inputs: r.inputs.map(i => i.name), completed: r.completed, total: r.inputs.length, attempts: r.attempts, request: r.request, artifacts: r.artifacts, modelCalls: 0, parentId: r.parentId });
+export interface OperationRecord { id: string; runId: string; generation: number; index: number; inputHash: string; style: PdfStyle; state: 'intent' | 'prepared' | 'committed'; hash?: string; bytes?: number; pages?: number; optimization?: OptimizationReport }
+export const publicRun = (r: RunRecord): BackgroundRun => ({ id: r.id, agentId: r.agent.id === 'builtin' ? null : r.agent.id, agentName: r.agent.name, agentRevision: r.agent.revision, workflow: r.agent.workflow, targetBytes: r.agent.targetBytes, title: r.title, status: r.status, revision: r.revision, generation: r.generation, createdAt: r.createdAt, updatedAt: r.updatedAt, message: r.message, inputs: r.inputs.map(i => i.name), completed: r.completed, total: r.inputs.length, attempts: r.attempts, request: r.request, artifacts: r.artifacts, modelCalls: 0, parentId: r.parentId });
 
 /** Separate from voice history: deleting a conversation cannot delete an active run. Payloads use OS encryption. */
 export class BackgroundStore {
@@ -21,7 +22,7 @@ export class BackgroundStore {
     this.db = new Database(filename);
     this.db.pragma('journal_mode = WAL'); this.db.pragma('foreign_keys = ON'); this.db.pragma('secure_delete = ON'); this.db.pragma('busy_timeout = 5000');
     const version = this.db.pragma('user_version', { simple: true }) as number;
-    if (version > 1) { this.db.close(); throw new Error('Background database needs a newer Kite version.'); }
+    if (version > 2) { this.db.close(); throw new Error('Background database needs a newer Kite version.'); }
     if (version === 0) this.db.transaction(() => {
       this.db.exec(`CREATE TABLE agent_definitions (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, archived INTEGER NOT NULL, payload BLOB NOT NULL);
         CREATE TABLE agent_revisions (id TEXT NOT NULL, revision INTEGER NOT NULL, payload BLOB NOT NULL, PRIMARY KEY(id,revision));
@@ -30,6 +31,10 @@ export class BackgroundStore {
         CREATE TABLE agent_operations (id TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES agent_runs(id) ON DELETE CASCADE, payload BLOB NOT NULL);
         CREATE INDEX runs_status ON agent_runs(status,created_at);`);
       this.db.pragma('user_version = 1');
+    })();
+    if (version < 2) this.db.transaction(() => {
+      this.db.exec('CREATE TABLE agent_sources (id TEXT PRIMARY KEY, payload BLOB NOT NULL)');
+      this.db.pragma('user_version = 2');
     })();
   }
   private encode(value: unknown) { return this.cipher.encryptString(JSON.stringify(value)); }
@@ -49,14 +54,18 @@ export class BackgroundStore {
   byRequest(id: string) { return this.decode<RunRecord>(this.db.prepare('SELECT payload FROM agent_runs WHERE request_id=?').get(id)); }
   runs() { return this.db.prepare("SELECT payload FROM agent_runs ORDER BY CASE WHEN status IN ('queued','running','verifying','waiting_user','paused') THEN 0 ELSE 1 END, created_at DESC LIMIT 200").all().map(r => this.decode<RunRecord>(r)); }
   active() { return this.db.prepare("SELECT payload FROM agent_runs WHERE status IN ('queued','running','verifying','waiting_user','paused') ORDER BY created_at").all().map(r => this.decode<RunRecord>(r)); }
-  insert(run: RunRecord, message: string) {
+  private saveSources(sources: FrozenSource[]) { for (const source of sources) this.db.prepare('INSERT OR IGNORE INTO agent_sources VALUES(?,?)').run(source.id, this.encode(Buffer.from(source.bytes).toString('base64'))); }
+  source(id: string): Uint8Array | null { const encoded = this.decode<string>(this.db.prepare('SELECT payload FROM agent_sources WHERE id=?').get(id)); return encoded === null ? null : Buffer.from(encoded, 'base64'); }
+  insert(run: RunRecord, message: string, sources: FrozenSource[] = []) {
     this.db.transaction(() => {
+      this.saveSources(sources);
       this.db.prepare('INSERT INTO agent_runs VALUES(?,?,?,?,?,?)').run(run.id, run.requestId, run.status, run.revision, run.createdAt, this.encode(run));
       this.event(run.id, 'created', message);
     })();
   }
-  save(run: RunRecord, previousRevision: number, type: string, message: string) {
+  save(run: RunRecord, previousRevision: number, type: string, message: string, sources: FrozenSource[] = []) {
     this.db.transaction(() => {
+      this.saveSources(sources);
       if (!this.db.prepare('UPDATE agent_runs SET status=?,revision=?,payload=? WHERE id=? AND revision=?').run(run.status, run.revision, this.encode(run), run.id, previousRevision).changes) throw new Error('This run changed. Refresh it before continuing.');
       this.event(run.id, type, message);
     })();
@@ -73,5 +82,5 @@ export class BackgroundStore {
   }
   close() { this.db.pragma('wal_checkpoint(TRUNCATE)'); this.db.close(); }
 }
-export const defaultPdfAgent = (): BackgroundAgent => ({ id: 'builtin', revision: 1, name: 'Document Helper', instructions: 'Turn supplied text or Markdown source into a readable PDF.', workflow: 'text_pdf', style: 'readable', archived: false, createdAt: 0, updatedAt: 0 });
+export const defaultPdfAgent = (workflow: DocumentWorkflow = 'document_pdf', targetBytes?: number): BackgroundAgent => ({ id: 'builtin', revision: 1, name: workflow === 'pdf_optimize' ? 'PDF Optimizer' : 'Document Helper', instructions: workflow === 'pdf_optimize' ? 'Optimize ordinary PDFs without downsampling images or changing text.' : 'Turn supplied text, Markdown source, or PNG/JPEG images into PDFs.', workflow, style: 'readable', ...(targetBytes ? { targetBytes } : {}), archived: false, createdAt: 0, updatedAt: 0 });
 export const newRunId = () => randomUUID();

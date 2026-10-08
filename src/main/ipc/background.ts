@@ -6,8 +6,10 @@ import { BackgroundRunService } from '../background/service';
 import { backgroundHealth } from '../background/health';
 import { trusted } from './trust';
 import { getSettingsWindow } from '../window/settings';
+import type { DocumentPreview } from '../background/preview';
+import { DocumentFailure } from '../background/executors/documentTypes';
 
-export function registerBackgroundIPC(service: BackgroundRunService) {
+export function registerBackgroundIPC(service: BackgroundRunService, preview?: DocumentPreview) {
   let available = true;
   const allowed: typeof trusted = (event, kind) => available && trusted(event, kind);
   const denied = () => ({ ok: false, error: 'Invalid or untrusted request.' });
@@ -21,18 +23,23 @@ export function registerBackgroundIPC(service: BackgroundRunService) {
   ipcMain.handle('background:answer', (e, input) => allowed(e, 'settings') ? service.answer(input) : denied());
   ipcMain.handle('background:chooseFiles', async e => {
     const owner = getSettingsWindow(); if (!allowed(e, 'settings') || !owner) return { ok: false, files: [] };
-    const result = await dialog.showOpenDialog(owner, { title: 'Choose text files for your agent', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Text and Markdown', extensions: ['txt', 'md'] }] });
+    const result = await dialog.showOpenDialog(owner, { title: 'Choose documents for your agent', properties: ['openFile', 'multiSelections'], filters: [{ name: 'Supported documents', extensions: ['txt', 'md', 'pdf', 'png', 'jpg', 'jpeg'] }, { name: 'PDF', extensions: ['pdf'] }, { name: 'Text and images', extensions: ['txt', 'md', 'png', 'jpg', 'jpeg'] }] });
     if (result.canceled) return { ok: true, files: [] };
-    if (!allowed(e, 'settings')) return denied();
+    if (!allowed(e, 'settings')) return { ...denied(), files: [] };
     try { return { ok: true, files: await service.attachFiles(result.filePaths) }; }
-    catch { return { ok: false, error: 'Choose up to eight nonempty UTF-8 .txt or .md files, each at most 100,000 characters and 2 MB.', files: [] }; }
+    catch (error) { return { ok: false, error: error instanceof DocumentFailure ? error.message : error instanceof Error && /^(Choose|The file|This release|Start your)/.test(error.message) ? error.message : 'Choose valid UTF-8 text files up to 2 MB, or plain PDFs and PNG/JPEG images up to 5 MB; up to eight files and 16 MB total.', files: [] }; }
   });
-  const artifactRequest = z.object({ runId: backgroundIdSchema, artifactId: z.string().max(80), action: z.enum(['open', 'reveal', 'save']) }).strict();
+  const artifactRequest = z.object({ runId: backgroundIdSchema, artifactId: z.string().max(80), action: z.enum(['preview', 'open', 'reveal', 'save']) }).strict();
   ipcMain.handle('background:artifact', async (e, value) => {
     const parsed = artifactRequest.safeParse(value); if (!allowed(e, 'settings') || !parsed.success) return denied();
     const { runId, artifactId, action } = parsed.data;
     const filename = await service.artifactPath(runId, artifactId); if (!filename) return { ok: false, error: 'The saved PDF is missing or changed. Retry the run to recreate it.' };
     if (!allowed(e, 'settings')) return denied();
+    if (action === 'preview') {
+      const bytes = await service.artifactBytes(runId, artifactId); if (!bytes || !preview || !allowed(e, 'settings')) return denied();
+      try { await preview.open(bytes, service.detail(runId).run.artifacts.find(a => a.id === artifactId).name); return { ok: true }; }
+      catch { return { ok: false, error: 'The PDF preview could not open. Try Open or Save a copy.' }; }
+    }
     if (action === 'reveal') { shell.showItemInFolder(filename); return { ok: true }; }
     if (action === 'open') { const error = await shell.openPath(filename); return { ok: !error, ...(error ? { error: 'Windows could not open the PDF.' } : {}) }; }
     const owner = getSettingsWindow(); if (!owner) return denied();

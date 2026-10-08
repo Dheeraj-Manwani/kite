@@ -41,6 +41,7 @@ const config: ForgeConfig = {
           config: 'vite.main.config.ts',
           target: 'main',
         },
+        { entry: 'src/main/background/executors/documentWorker.ts', config: 'vite.main.config.ts', target: 'main' },
         {
           entry: 'src/preload.ts',
           config: 'vite.preload.config.ts',

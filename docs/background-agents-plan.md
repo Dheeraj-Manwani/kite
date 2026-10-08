@@ -476,6 +476,8 @@ The packaged phase 0 spike measures this converter and an Electron isolated pers
 
 Runtime acceptance is exercised with real SQLite/Chromium and controlled callbacks: concurrent runs, foreground cancellation independence after handoff, durable requests after restart, cancellation fencing, publication recovery without duplicate output, and failure isolation. The bundled panel test verifies close/reopen, answering a restored question, completion with the panel closed, export, and saved helpers. This does not establish live provider/desktop interaction performance.
 
+Phase 2 now extends the runtime with text/image conversion, lossless structural optimization of plain PDFs, per-file targets and no-growth reporting, batch inputs, in-app preview/reveal, binary dependency health and versioned reusable helpers. Uploaded binary snapshots are encrypted separately in schema v2. Packaged worker tests and independent parse/render comparisons cover the supported synthetic corpus, source preservation and recovery. Office conversion, image downsampling and broad PDF compatibility remain gated. See [ADR 023](adr/023-document-workers.md), [phase 2 results](performance/background/phase2.json) and [fidelity results](performance/background/phase2-fidelity.json). The earlier status and phase 0 results describe the phase 1 baseline; phase 2 adds runtime dependencies.
+
 ### Phase 0 — capability and packaging spikes (M)
 
 Confirm converter engine/distribution, supported input fixtures, browser footprint, model-call usage reporting, and workflow recovery contracts. Write the ADR for local execution and side-effect recovery.
@@ -547,8 +549,8 @@ None blocks drafting the runtime/panel contracts. Dependency packaging blocks th
 
 ### Immediate next implementation task
 
-Build **one end-to-end PDF conversion run through the durable runtime and Agents panel**, including crash recovery and verified artifact output. Then let users save that workflow as a custom Document Helper. This proves the execution model and the panel with a useful task before adding broader tools.
+Phases 1–2 provide end-to-end document runs and reusable helpers. The next implementation is **phase 3: a read-only mail connector and Inbox Briefing**, beginning with account-aware OAuth, encrypted tokens, bounded access and revocation. Keep drafts/sending gated until approval and uncertain-mutation recovery are implemented.
 
 ### Research and validation limits
 
-Competitor behavior comes from the linked primary documentation checked on 8 October 2026; it is not a hands-on reliability benchmark. Architecture and roadmap choices are this proposal's engineering judgments. The repository baseline was inspected directly; no current graphify output was present. No paid accounts, mailboxes, job sites, or live submissions were accessed. No runtime code or dependencies were changed for this plan.
+Competitor behavior comes from the linked primary documentation checked on 8 October 2026; it is not a hands-on reliability benchmark. Architecture and roadmap choices are this proposal's engineering judgments. The repository baseline was inspected directly; no current graphify output was present. No paid accounts, mailboxes, job sites, or live submissions were accessed. The original research produced a plan only; subsequent phase 1–2 implementation and validation are recorded above.

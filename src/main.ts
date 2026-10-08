@@ -19,15 +19,15 @@ let stopVoice: (() => Promise<void>) | undefined;
 let stopBackground: (() => Promise<void>) | undefined;
 
 const smoke = process.argv.includes('--smoke-test');
-const backgroundSpike = process.argv.indexOf('--background-spike');
+const documentSpike = process.argv.indexOf('--background-documents-spike');
+const backgroundSpike = documentSpike >= 0 ? documentSpike : process.argv.indexOf('--background-spike');
 if (backgroundSpike >= 0) {
   const output = process.argv[backgroundSpike + 1];
   app.setPath('userData', fs.mkdtempSync(path.join(os.tmpdir(), 'kite-background-spike-')));
   app.whenReady().then(async () => {
     try {
       if (!output || output.startsWith('--')) throw new Error('Supply an output directory');
-      const { runBackgroundSpike } = await import('./main/background/spike');
-      const report = await runBackgroundSpike(path.resolve(output));
+      const report = documentSpike >= 0 ? await (await import('./main/background/documentSpike')).runDocumentSpike(path.resolve(output)) : await (await import('./main/background/spike')).runBackgroundSpike(path.resolve(output));
       process.stdout.write(JSON.stringify(report) + '\n'); app.exit(0);
     } catch { process.stderr.write('Background spike failed\n'); app.exit(1); }
   });

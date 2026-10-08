@@ -1,0 +1,133 @@
+{
+  "at": "2026-10-08T20:40:20.692Z",
+  "platform": "win32",
+  "architecture": "x64",
+  "packaged": true,
+  "engines": {
+    "pdf": {
+      "available": true,
+      "engine": "Chromium PDF",
+      "version": "152.0.7977.130",
+      "formats": [
+        "txt",
+        "md"
+      ]
+    },
+    "documents": {
+      "available": true,
+      "engine": "pdf-lib",
+      "version": "1.17.1",
+      "formats": [
+        "png",
+        "jpg",
+        "jpeg",
+        "pdf"
+      ],
+      "message": "Images to PDF and lossless optimization of plain PDFs. No image downsampling; size targets may not be met."
+    },
+    "office": {
+      "available": false,
+      "engine": "LibreOffice",
+      "message": "Office converter not installed. Office files are not supported by this release."
+    },
+    "browser": {
+      "engine": "Isolated Chromium profile (spike)",
+      "version": "152.0.7977.130",
+      "automation": false
+    }
+  },
+  "electron": "44.4.5",
+  "dependencyVersions": {
+    "pako": "1.0.11"
+  },
+  "archiveBytes": 158167661,
+  "samples": [
+    {
+      "name": "optimized.pdf",
+      "ms": 194,
+      "bytes": 9160,
+      "hash": "f73949b4831ecd29c93d138b9ba1b631b004cbcb83c942e7abf1b3daf6d4b838",
+      "pages": 15,
+      "optimization": {
+        "inputBytes": 12490,
+        "candidateBytes": 9160,
+        "outputBytes": 9160,
+        "savedBytes": 3330,
+        "changed": true,
+        "targetBytes": 1024,
+        "targetMet": false
+      },
+      "originalUnchanged": true
+    },
+    {
+      "name": "no-growth",
+      "inputBytes": 9160,
+      "candidateBytes": 9160,
+      "outputBytes": 9160,
+      "savedBytes": 0,
+      "changed": false
+    },
+    {
+      "name": "rgb.png.pdf",
+      "ms": 192,
+      "bytes": 1163,
+      "hash": "712a40c3be57099467a3f91e257d6430df3d132ed384383d7813fd60fb2547c2",
+      "pages": 1,
+      "originalUnchanged": true
+    },
+    {
+      "name": "rgba.png.pdf",
+      "ms": 184,
+      "bytes": 1411,
+      "hash": "d9d4104ebf5dfe9b2ba6c43d9c69e099a299aaccdd8b07ce7c8bfeba9a3dd8cc",
+      "pages": 1,
+      "originalUnchanged": true
+    },
+    {
+      "name": "rgb.jpg.pdf",
+      "ms": 188,
+      "bytes": 4627,
+      "hash": "b87b481eb26b6880eaff1a4757c165bcdbfecd8e139d3084ea02e5ba96ba6f0f",
+      "pages": 1,
+      "originalUnchanged": true
+    },
+    {
+      "name": "text.txt.pdf",
+      "bytes": 21125,
+      "hash": "72214156e530a990be4dbf2fa2ea11f508e883b9bc22ec056c693f682ee02595",
+      "pages": 3
+    },
+    {
+      "name": "source.md.pdf",
+      "bytes": 20640,
+      "hash": "7cfa75449c030da22de1c94a6f4fc036c1d2fb812d04825a1a34535ad7707c4c",
+      "pages": 1
+    }
+  ],
+  "failures": [
+    {
+      "name": "encrypted.pdf",
+      "code": "protected"
+    },
+    {
+      "name": "cmyk.jpg",
+      "code": "image"
+    },
+    {
+      "name": "signature.pdf",
+      "code": "signed"
+    },
+    {
+      "name": "script.pdf",
+      "code": "interactive"
+    }
+  ],
+  "preview": {
+    "visible": true,
+    "offline": true,
+    "unprivileged": true
+  },
+  "sampledPeakWorkingSetKiB": 660460,
+  "maximumMainTimerGapMs": 64,
+  "modelCalls": 0
+}

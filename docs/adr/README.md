@@ -22,3 +22,4 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [The whiteboard model writes structure; code places it](018-structured-whiteboard.md)
 - [Whiteboard teaching follows the audio clock and explicit changes](019-whiteboard-teaching.md)
 - [App-owned background runs with deterministic executors](022-background-agents.md)
+- [Bounded document workflows in isolated workers](023-document-workers.md)

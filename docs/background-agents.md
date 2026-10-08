@@ -1,56 +1,75 @@
-# Background agents: phases 0 and 1
+# Background agents: document release
 
-Implemented on 9 October 2026. The first workflow turns supplied text into PDFs while Kite remains available for other work. Open **Agents** from the tray or the settings sidebar. No model key or extra converter installation is needed for this workflow.
+Phases 0–2 implemented on 9 October 2026. Open **Agents** from the tray or settings sidebar. Document workflows run on this PC without a model key, while Kite remains available for other work.
 
 ## Using the panel
 
-1. Select **New run**, name the document, and paste text or choose UTF-8 `.txt` / `.md` files. The native picker grants access to those selected files only.
-2. Select **Start run**. A run without input waits in **Needs you**; supply text or files when ready. If **Add or save** is configured to Ask, approve the specific inputs and PDF layout there.
-3. Close the panel and keep working. Reopen it to see progress and activity. **Completed** includes finished, failed, and cancelled runs.
-4. Open a checked PDF or use **Save a copy**. Choose a new filename: export does not overwrite existing files.
-5. In **My agents**, save a named helper, brief, and Readable (12 pt) or Compact (10 pt) layout. Editing a helper creates a new revision. Existing runs keep their starting revision and input snapshot.
+1. Select **New run**, name it, and choose **Convert text or images to PDF** or **Optimize PDF (lossless)**. Paste text for conversion or use **Choose files**. Each selected input produces a separate PDF; files are not merged.
+2. For optimization, optionally enter a target size per PDF in MB (1 MB = 1,048,576 bytes). Targets are goals, not guarantees. Start without input to create a durable question in **Needs you**.
+3. Select **Start run**. If **Add or save** is configured to Ask, approve the frozen inputs and settings there. Close the panel and keep working; reopen it to see activity and progress.
+4. In **Completed**, use **Preview**, **Open**, **Show in folder**, or **Save a copy**. Preview is inside Kite. Open uses the Windows default app. Save a copy requires a new filename and never overwrites an existing file.
+5. In **My agents**, save a named Document Helper or PDF Optimizer with its workflow, brief, text layout, and optional target. Editing creates a revision. Existing runs retain the revision and input snapshot with which they started.
 
-The brief currently describes the helper's purpose. It does not drive a model or execute arbitrary instructions. Markdown is printed as source text, including its notation. Compact changes typography; it is not a document compression capability.
+Optimization reports original/output size, bytes saved, and whether the target was met. If no smaller rewrite is available, Kite saves an unchanged copy and says so. An unmet target still produces a usable checked output and a visible **Target not met** result.
 
-Voice can request a background PDF run through `start_background`. Starting requires the existing action approval. If the user refers to a file, the tool creates a persisted input question rather than guessing its contents or passing a filesystem path. The acknowledgement returns a run ID and does not claim completion. New voice interactions and Escape do not cancel work already handed off.
+The brief describes the helper's purpose; it does not execute arbitrary instructions or drive a model. Markdown is printed as source text, including its notation. Compact changes text typography rather than compressing an existing document.
+
+Voice can delegate conversion or PDF optimization through `start_background`. Existing action approval still applies. References to files create a persisted native-selection question rather than passing paths or guessing contents. The acknowledgement returns a run ID and does not claim completion. New voice interactions and Escape do not cancel accepted background work.
+
+## Supported inputs and fidelity
+
+- **Text:** nonempty UTF-8 `.txt` / `.md`, printed by Chromium with Readable (12 pt) or Compact (10 pt) layout. Markdown is literal source, not a rich Markdown renderer. Installed fonts determine script/glyph coverage; Latin UTF-8 fixtures are verified.
+- **Images:** `.png` with 8-bit RGB/RGBA, noninterlaced pixels; `.jpg` / `.jpeg` with supported 8-bit grayscale/RGB frames. Each image is centered on A4 with an 18 pt margin. Pixels are embedded without downsampling; the display scales to fit. PNG alpha is preserved and JPEG compressed bytes are preserved.
+- **PDF optimization:** plain, unencrypted PDFs with static page content. The worker rewrites structural overhead using object streams. It preserves page boxes/rotation and raw content/font/image streams, reparses the candidate, compares those invariants, and selects it only when smaller. It does not promise removal of every redundant object, metadata preservation byte for byte, archival conformance, or a particular percentage reduction.
+
+Password-protected or signed PDFs, nonempty annotations (including links), forms/XFA, actions/scripts, attachments, optional-content layers, malformed inputs, and out-of-limit documents are rejected. Images with CMYK, custom ICC profiles, rotated EXIF, APNG, unsupported PNG bit depths/color types/interlacing or other unsupported color metadata are rejected rather than silently altered. Export those inputs to a supported static format first. Office formats and image downsampling are not enabled.
+
+[Packaged fixture report](performance/background/phase2.json) and [independent fidelity report](performance/background/phase2-fidelity.json) establish the bounded synthetic corpus: strict parsing and rendering for every positive output; identical Poppler pixels at 100 DPI on all 15 optimization pages; identical page boxes/text; PNG pixels/alpha and JPEG stream bytes preserved. They are not a general PDF, font, or Office compatibility certification.
 
 ## Lifecycle and limits
 
-Closing the Agents window keeps work running. Per-run Pause preserves its checkpoint; Resume continues it. Cancel revokes the execution generation so late callbacks cannot commit outputs. **Run again** creates a new run with the original frozen input and agent revision, and asks again if permission requires it.
+Closing the Agents window keeps work running. Pause preserves a checkpoint; Resume continues. Cancel revokes the generation and terminates its current worker so late callbacks cannot publish. **Run again** creates a new run with the original frozen input and helper revision and asks again where permission requires it.
 
-Pause Kite blocks dispatch and parks active work. Suspend and graceful quit also checkpoint it. On next launch, interrupted work is recovered; only this deterministic local conversion is safe to replay. Work cannot continue while Kite is quit or the PC is asleep. Repeated unexpected interruptions stop recovery after the third interruption. User pauses do not consume that budget.
+Pause Kite parks work. Suspend and graceful quit also checkpoint it. On launch, interrupted deterministic work recovers through its operation journal, including a file published before the run checkpoint, without duplicate outputs. Unexpected recovery stops after three interruptions. Work cannot continue while Kite is quit or the PC sleeps.
 
-There are two active run slots and one PDF print worker. A run accepts at most eight inputs; each is at most 100,000 characters and selected files at most 2 MB. PDF output is capped at 20 MB each and 1,000 pages. Execution has a two-minute limit per active attempt. At most 50 unfinished runs may exist; the panel lists up to 200 runs, including every unfinished run followed by recent finished runs. File-selection handles expire after 30 minutes; accepted runs already hold their snapshots.
+There are two active run slots, one Chromium print worker and one binary document worker at a time. Up to eight inputs and 16 MB are accepted per run. Text files are capped at 2 MB/100,000 characters; PDF/image files at 5 MB; uploaded PDFs at 200 pages; images at 12 million pixels and 12,000 pixels per dimension. The binary worker also bounds embedded PDF image dimensions, object count and nesting. PDF output is capped at 20 MB. Text output retains the legacy 1,000-page structural cap. Execution has a two-minute limit per active attempt; binary jobs have a 30-second deadline. At most 50 unfinished runs exist; the panel lists every unfinished run plus recent completed work, up to 200 runs.
 
-## Storage and access
+Native selection grants expire after 30 minutes, with a 32 MB in-memory grant budget. Accepted runs already hold encrypted snapshots, so editing or moving the original after selection does not change their work. At most three PDF preview windows can remain open. Missing binary dependencies appear under **Capabilities and access**; text printing remains available.
 
-Agent definitions, revisions, frozen inputs, requests, events, and operation journals live in `userData/background.db`. Their payloads use OS encryption through Electron `safeStorage`, with no plaintext fallback. IDs, status, revisions, and timestamps used for indexing remain visible. Deleting voice history does not delete agent work.
+## Storage and isolation
 
-Generated PDFs in `userData/agent-artifacts/` and user-exported copies are ordinary **unencrypted files** containing the supplied text. They remain until manually removed; this phase has no retention or delete UI. Inputs and PDF rendering stay local. The converter does not fetch resources, run document scripts, launch shell commands, or read mail. Source files are never overwritten. Run notifications can show the helper name and generic status; keep names nonsensitive if desktop notifications are shared.
+Definitions, revisions, text snapshots, requests, events and operation journals live in `userData/background.db`. Schema v2 adds separately encrypted binary snapshots, referenced from runs so progress updates do not repeatedly copy binary payloads. Existing v1 runs, helper revisions and pending approval bindings migrate intact. Payloads use Electron `safeStorage` OS encryption with no plaintext fallback; indexed IDs/status/revisions/timestamps remain visible. Deleting voice history does not delete agent work.
 
-PDF checking verifies the complete Chromium output, page objects, size, and SHA-256 hash. Opening/exporting rechecks the stored file. This verifier is deliberately restricted to Kite-generated PDFs; it is not a parser for uploaded third-party PDFs.
+Generated PDFs in `userData/agent-artifacts/` and exported copies are ordinary **unencrypted files**. They remain until manually removed; this phase has no retention/delete UI. No model, document upload, mail access, shell command or external resource fetch is part of these workflows. Original files are never overwritten. Notifications show helper names and generic status.
 
-## Phase 0 evidence and remaining gates
+Binary admission and execution run in a fresh Electron utility process with no user paths or credentials in its job and a small environment. It is terminated after each job, cancellation, timeout or shutdown; a 256 MB JavaScript heap setting and sampled 512 MB working-set threshold bound routine usage. This is process isolation, not an OS filesystem/network sandbox or an instantaneous hard memory limit. The parser is trusted application code and never evaluates embedded document instructions.
 
-The [packaged probe](performance/background/phase0.json) records engine versions, fixture timings, process working sets, event-loop responsiveness, browser profile isolation, and zero model usage. The isolated browser retains a synthetic login after its window is reopened and exposes neither the Kite preload nor Node. It is a test probe, with no browser capability exposed to agents.
+Preview receives verified immutable bytes in an independent, sandboxed Chromium session with no Kite preload or Node integration. A private HTTPS handler serves only that buffer; the URL never reaches DNS/network. Only the buffer and Chromium's own PDF viewer resources are allowed; external requests, navigation, popups, permissions and downloads are denied. The native viewer needs its own JavaScript; admission rejects active PDF features before publication. Opening in another Windows app is outside this preview session's isolation.
 
-LibreOffice detection is included, but no Office adapter is installed or enabled. Office fidelity fixtures, real account sign-in, browser automation, and an installer-size comparison against an identical baseline remain gates. The synthetic probe does not establish production browser compatibility, overlay animation responsiveness, or live voice latency under load. Read [ADR 022](adr/022-background-agents.md) before adding side-effecting executors.
+Every artifact has checked size/page count and SHA-256. Publication is journaled and generation-fenced; preview/export recheck stored bytes against the recorded hash. See [ADR 023](adr/023-document-workers.md) for implementation and dependency decisions and [ADR 022](adr/022-background-agents.md) before adding side-effecting workflows.
 
-Mail, job applications, document compression, schedules, and model-planned custom capabilities are later phases. This implementation establishes the durable runtime and usable panel with one bounded workflow.
+## Validation and remaining gates
 
-## Validation commands
+Run the following after changes:
 
 ```sh
 npm run test:unit
-npm run test:background
-npm run package
-npm run test:background:panel
-npm run test:startup
-npm run test:packaged
-npm run eval:background:phase0
-npm test
 npm run typecheck
 npm run lint
+npm run package
+npm run test:background
+npm run test:background:documents
+npm run test:background:preview
+npm run test:background:panel
+npm run test:startup
+npm run test:native
+npm run test:packaged
+npx electron tests/packaged-runtime.cjs
+npm run eval:background:phase2
+python scripts/background-document-fidelity.py --pdftoppm /path/to/pdftoppm
+npm test
 ```
 
-The native test uses real encrypted SQLite and a real Chromium PDF, plus controlled worker callbacks for cancellation/recovery races. The panel test uses the bundled main, preload, React UI, trusted IPC, and native export dialog stub in an isolated profile. Neither test uses provider credentials or a live microphone.
+Build before tests that use `.vite/build`; do not run those tests concurrently with Forge, which replaces that directory. Native fixtures cover cancellation, encrypted binary snapshots, originals, target/no-growth reporting, restart, v1 migration and publication recovery. The real bundled panel test covers restored input, completion after closing the panel, visible preview, reveal, exclusive export and saved helpers. The packaged probe checks actual worker/library paths and versions. No provider credentials, mailbox or live microphone are used.
+
+The historical [phase 0 report](performance/background/phase0.json) measured the initial text workflow and synthetic isolated-browser login. Its zero-added-package finding belongs to that earlier baseline. Phase 2 adds pdf-lib and its dependencies. Office converter distribution/fidelity, broader production document corpora, identical-baseline installer impact, real browser sign-in/automation, repeated-run memory, and live overlay/voice latency remain release gates. These local implementations and fixture passes do not publish a release. Mail, job applications, schedules and model-planned custom capabilities are later phases.

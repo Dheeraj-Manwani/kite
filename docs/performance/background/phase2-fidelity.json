@@ -1,0 +1,128 @@
+{
+  "renderer": "Poppler pdftoppm at 100 DPI for optimization comparisons, 72 DPI for conversion render checks",
+  "parser": "pypdf strict",
+  "parsed": [
+    {
+      "name": "optimized.pdf",
+      "pages": 15
+    },
+    {
+      "name": "rgb.jpg.pdf",
+      "pages": 1
+    },
+    {
+      "name": "rgb.png.pdf",
+      "pages": 1
+    },
+    {
+      "name": "rgba.png.pdf",
+      "pages": 1
+    },
+    {
+      "name": "source.md.pdf",
+      "pages": 1
+    },
+    {
+      "name": "source.pdf",
+      "pages": 15
+    },
+    {
+      "name": "text.txt.pdf",
+      "pages": 3
+    }
+  ],
+  "optimization": {
+    "pageCount": 15,
+    "pageBoxesAndTextIdentical": true,
+    "renderDifferences": [
+      {
+        "page": 1,
+        "changedPixels": 0
+      },
+      {
+        "page": 2,
+        "changedPixels": 0
+      },
+      {
+        "page": 3,
+        "changedPixels": 0
+      },
+      {
+        "page": 4,
+        "changedPixels": 0
+      },
+      {
+        "page": 5,
+        "changedPixels": 0
+      },
+      {
+        "page": 6,
+        "changedPixels": 0
+      },
+      {
+        "page": 7,
+        "changedPixels": 0
+      },
+      {
+        "page": 8,
+        "changedPixels": 0
+      },
+      {
+        "page": 9,
+        "changedPixels": 0
+      },
+      {
+        "page": 10,
+        "changedPixels": 0
+      },
+      {
+        "page": 11,
+        "changedPixels": 0
+      },
+      {
+        "page": 12,
+        "changedPixels": 0
+      },
+      {
+        "page": 13,
+        "changedPixels": 0
+      },
+      {
+        "page": 14,
+        "changedPixels": 0
+      },
+      {
+        "page": 15,
+        "changedPixels": 0
+      }
+    ]
+  },
+  "images": [
+    {
+      "name": "rgb.png",
+      "decodedPixelsAndAlphaIdentical": true,
+      "jpegStreamBytesIdentical": false,
+      "width": 180,
+      "height": 120
+    },
+    {
+      "name": "rgba.png",
+      "decodedPixelsAndAlphaIdentical": true,
+      "jpegStreamBytesIdentical": false,
+      "width": 180,
+      "height": 120
+    },
+    {
+      "name": "rgb.jpg",
+      "decodedPixelsAndAlphaIdentical": true,
+      "jpegStreamBytesIdentical": true,
+      "width": 180,
+      "height": 120
+    }
+  ],
+  "text": {
+    "latinUtf8Preserved": true,
+    "markdownScriptLiteral": true
+  },
+  "scope": "Synthetic supported fixtures only; no Office or general PDF compatibility claim."
+}

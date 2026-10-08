@@ -1,11 +1,14 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { createRequire } from 'node:module';
 /** Vite externals and the packaging dependency roots share this source of truth. */
-export const runtimeModules = ['better-sqlite3', 'uiohook-napi', 'ws', 'electron-log', 'update-electron-app', 'elkjs', '@mathjax/src'];
+export const runtimeModules = ['better-sqlite3', 'uiohook-napi', 'ws', 'electron-log', 'update-electron-app', 'elkjs', '@mathjax/src', 'pdf-lib'];
 async function packageRoot(name: string, from: string) {
-  try { return path.dirname(require.resolve(`${name}/package.json`, { paths: [from] })); }
+  // Resolve from the actual dependent package. Forge's config loader can override require.resolve and its paths option.
+  const resolve = createRequire(path.join(from, 'package.json')).resolve;
+  try { return path.dirname(resolve(`${name}/package.json`)); }
   catch {
-    let folder = path.dirname(require.resolve(name, { paths: [from] }));
+    let folder = path.dirname(resolve(name));
     while (folder) {
       try { const pkg = JSON.parse(await fs.readFile(path.join(folder, 'package.json'), 'utf8')); if (pkg.name === name) return folder; } catch { /* Walk up through exports-only packages. */ }
       const parent = path.dirname(folder); if (parent === folder) throw new Error(`Package root not found: ${name}`); folder = parent;

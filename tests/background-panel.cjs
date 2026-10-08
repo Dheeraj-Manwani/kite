@@ -1,5 +1,5 @@
 // The real bundled main/preload/React panel; isolated profile, no provider traffic.
-const { app, BrowserWindow, dialog, session } = require('electron');
+const { app, BrowserWindow, dialog, session, shell } = require('electron');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
@@ -57,6 +57,21 @@ app.whenReady().then(async () => {
     await until(() => evaluate(panel, "!!document.querySelector('.agents-run-item')"), Boolean, 'completed run');
     await evaluate(panel, "document.querySelector('.agents-run-item').click()");
     await until(() => evaluate(panel, "document.querySelectorAll('.agents-artifact').length"), n => n === 1, 'verified artifact in UI');
+    await click(panel, 'Preview');
+    const preview = await until(() => BrowserWindow.getAllWindows().find(w => w.webContents.getURL().startsWith('https://kite-preview.invalid/')), Boolean, 'in-app PDF preview');
+    await wait(1500);
+    const previewPreferences = preview.webContents.getLastWebPreferences();
+    assert.equal(!!previewPreferences.preload, false, 'preview has no privileged preload');
+    assert.equal(previewPreferences.nodeIntegration, false);
+    assert.equal(await evaluate(preview, "typeof window.kite === 'undefined' && typeof require === 'undefined'"), true);
+    assert.equal(await evaluate(preview, "fetch('https://example.com').then(()=>false,()=>true)"), true, 'preview session rejects external network');
+    const page = await preview.webContents.capturePage(), pixels = page.toBitmap(); let white = 0; for (let i = 0; i < pixels.length; i += 4) if (pixels[i] > 245 && pixels[i + 1] > 245 && pixels[i + 2] > 245) white++; assert.ok(white > pixels.length / 4 * .2, 'preview renders the PDF page');
+    fs.mkdirSync('out', { recursive: true }); fs.writeFileSync('out/background-preview.png', page.toPNG());
+    preview.close();
+    let revealed;
+    shell.showItemInFolder = filename => { revealed = filename; };
+    await click(panel, 'Show in folder'); await until(() => revealed, Boolean, 'verified artifact reveal');
+    assert.ok(revealed.endsWith('.pdf'));
     const saveDir = fs.mkdtempSync(path.join(os.tmpdir(), 'kite-export-test-'));
     const saved = path.join(saveDir, 'copy.pdf');
     dialog.showSaveDialog = async () => ({ canceled: false, filePath: saved });
@@ -65,6 +80,19 @@ app.whenReady().then(async () => {
     assert.equal(fs.readFileSync(saved).subarray(0, 5).toString(), '%PDF-');
     await click(panel, 'Save a copy');
     await until(() => evaluate(panel, "document.querySelector('[role=alert]')?.textContent || ''"), s => s.includes('does not overwrite'), 'exclusive save rejects overwrite');
+    // Exercise the new optimizer through React, trusted native selection and the real binary worker.
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [saved] });
+    await click(panel, 'New run');
+    await evaluate(panel, "(() => { const s = document.querySelector('[aria-label=\"Document task\"]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(s, 'pdf_optimize'); s.dispatchEvent(new Event('change', { bubbles: true })); })()");
+    await until(() => evaluate(panel, "!!document.querySelector('input[type=number]')"), Boolean, 'optimizer target');
+    await evaluate(panel, "(() => { const t = document.querySelector('input[type=number]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(t, '0.001'); t.dispatchEvent(new Event('input', { bubbles: true })); })()");
+    await click(panel, 'Choose files');
+    await until(() => evaluate(panel, "document.querySelectorAll('.agents-chosen-files li').length"), n => n === 1, 'chosen PDF admitted');
+    await click(panel, 'Start run');
+    const optimized = await until(() => evaluate(overlay, 'window.kite.backgroundSnapshot()'), s => s.runs.some(r => r.workflow === 'pdf_optimize' && r.status === 'succeeded'), 'optimizer completes');
+    const optimizedRun = optimized.runs.find(r => r.workflow === 'pdf_optimize'); assert.equal(optimizedRun.artifacts[0].optimization.targetMet, false);
+    await until(() => evaluate(panel, "document.querySelector('.agents-size-report')?.textContent || ''"), text => text.includes('Target not met'), 'measured target result in UI');
+    assert.equal(fs.readFileSync(saved).length, completed.runs[0].artifacts[0].bytes, 'selected original untouched');
     await click(panel, 'My agents');
     await click(panel, 'Create agent');
     await evaluate(panel, `(() => { const t = document.querySelector('.agents-composer input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(t, 'My PDF helper'); t.dispatchEvent(new Event('input', { bubbles: true })); })()`);

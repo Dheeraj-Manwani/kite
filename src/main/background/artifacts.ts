@@ -4,22 +4,22 @@ import path from 'node:path';
 import { backgroundLimits } from '../../shared/background';
 
 export const hashOf = (value: string | Uint8Array) => createHash('sha256').update(value).digest('hex');
-/** Verifier for PDFs produced by our Chromium engine, not a general untrusted-PDF parser. */
-export function inspectPdf(bytes: Uint8Array) {
+/** Header/size/hash fence. New binary workflows additionally parse in a utility process before publication. */
+export function inspectPdf(bytes: Uint8Array, verifiedPages?: number) {
   if (bytes.length > backgroundLimits.outputBytes || bytes.length < 100) throw new Error('The PDF output size is invalid.');
   const buffer = Buffer.from(bytes);
   if (!buffer.subarray(0, 5).equals(Buffer.from('%PDF-')) || !buffer.subarray(-1024).includes(Buffer.from('%%EOF'))) throw new Error('The converter did not produce a complete PDF.');
-  const pages = (buffer.toString('latin1').match(/\/Type\s*\/Page\b/g) ?? []).length;
-  if (!pages || pages > 1000) throw new Error('The PDF has no readable page structure.');
+  const pages = verifiedPages ?? (buffer.toString('latin1').match(/\/Type\s*\/Page\b/g) ?? []).length;
+  if (!Number.isSafeInteger(pages) || pages < 1 || pages > 1000) throw new Error('The PDF has no readable page structure.');
   return { bytes: buffer.length, hash: hashOf(buffer), pages };
 }
-export async function safeArtifact(root: string, runId: string, index: number) {
+export async function safeArtifact(root: string, runId: string, index: number, verifiedPages?: number) {
   const filename = path.join(root, runId, `output-${index + 1}.pdf`);
   try {
     const stat = await lstat(filename); if (!stat.isFile() || stat.isSymbolicLink() || stat.size > backgroundLimits.outputBytes) return null;
     const canonical = await realpath(filename), canonicalRoot = await realpath(root);
     const relative = path.relative(canonicalRoot, canonical); if (relative.startsWith('..') || path.isAbsolute(relative)) return null;
-    return { filename: canonical, ...inspectPdf(await readFile(canonical)) };
+    return { filename: canonical, ...inspectPdf(await readFile(canonical), verifiedPages) };
   } catch { return null; }
 }
 export async function publishPdf(root: string, runId: string, index: number, generation: number, bytes: Uint8Array, current: () => boolean) {

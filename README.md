@@ -48,7 +48,7 @@ Ask “write a shopping list in Notepad and save it as list.txt” and approve t
 
 ### Background agents
 
-Open **Agents** from the tray or sidebar to save PDF helpers and start background runs. Paste text or select `.txt` / `.md` files; Kite creates checked PDFs while you keep working. The panel restores progress, questions, approvals, and outputs after reopening. Markdown is preserved as source text. Runs persist locally and pause when Kite quits or sleeps. Mail, compression, browser automation, and job applications are later capabilities. [Background agent details](docs/background-agents.md).
+Open **Agents** from the tray or sidebar to save document helpers and start background runs. Convert text/Markdown source and supported PNG/JPEG images to PDF, or losslessly optimize plain PDFs. Batch inputs, preview, reveal, export, and before/after size reports are available. Size targets can remain unmet; originals are never overwritten. Runs restore progress and requests after reopening and pause when Kite quits or sleeps. Office, mail, browser automation and job applications are later capabilities. [Background agent details](docs/background-agents.md).
 
 ### Circle to ask
 
