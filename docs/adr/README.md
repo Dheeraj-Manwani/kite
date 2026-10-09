@@ -23,3 +23,7 @@ Short records of the constraints, alternatives, decisions, and costs behind Kite
 - [Whiteboard teaching follows the audio clock and explicit changes](019-whiteboard-teaching.md)
 - [App-owned background runs with deterministic executors](022-background-agents.md)
 - [Bounded document workflows in isolated workers](023-document-workers.md)
+- [Account-bound, read-only Gmail background runs](024-read-only-gmail.md)
+- [Public job discovery and isolated application preparation](025-career-preparation.md)
+
+- [026 — Local schedules with frozen consent and typed child reads](026-schedules-and-delegation.md)

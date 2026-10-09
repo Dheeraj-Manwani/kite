@@ -16,6 +16,9 @@ export function registerBackgroundIPC(service: BackgroundRunService, preview?: D
   ipcMain.handle('background:snapshot', e => allowed(e, 'either') ? service.snapshot() : null);
   ipcMain.handle('background:health', e => allowed(e, 'settings') ? backgroundHealth() : null);
   ipcMain.handle('background:detail', (e, id, after = 0) => allowed(e, 'settings') && backgroundIdSchema.safeParse(id).success && Number.isSafeInteger(after) && after >= 0 ? service.detail(id, after) : null);
+  ipcMain.handle('background:saveSchedule', (e, input) => allowed(e, 'settings') ? service.saveSchedule(input) : denied());
+  ipcMain.handle('background:controlSchedule', (e, input) => allowed(e, 'settings') ? service.controlSchedule(input) : denied());
+  ipcMain.handle('background:scheduleHistory', (e, input) => allowed(e, 'settings') ? service.scheduleHistory(input) : null);
   ipcMain.handle('background:saveAgent', (e, input) => allowed(e, 'settings') ? service.saveAgent(input) : denied());
   ipcMain.handle('background:archiveAgent', (e, id, revision) => allowed(e, 'settings') && backgroundIdSchema.safeParse(id).success && Number.isSafeInteger(revision) && revision > 0 ? service.archiveAgent(id, revision) : denied());
   ipcMain.handle('background:start', (e, input) => allowed(e, 'either') ? service.enqueue(input) : denied());
@@ -33,8 +36,11 @@ export function registerBackgroundIPC(service: BackgroundRunService, preview?: D
   ipcMain.handle('background:artifact', async (e, value) => {
     const parsed = artifactRequest.safeParse(value); if (!allowed(e, 'settings') || !parsed.success) return denied();
     const { runId, artifactId, action } = parsed.data;
-    const filename = await service.artifactPath(runId, artifactId); if (!filename) return { ok: false, error: 'The saved PDF is missing or changed. Retry the run to recreate it.' };
+    const filename = await service.artifactPath(runId, artifactId); if (!filename) return { ok: false, error: 'The saved file is missing or changed. Retry the run to recreate it.' };
     if (!allowed(e, 'settings')) return denied();
+    const recorded = service.detail(runId)?.run.artifacts.find(a => a.id === artifactId);
+    if (!recorded) return denied();
+    if (recorded.mediaType !== 'application/pdf' && (action === 'preview' || action === 'open')) return { ok: false, error: 'Mail attachments are untrusted downloads. Save a copy to inspect them in an appropriate application.' };
     if (action === 'preview') {
       const bytes = await service.artifactBytes(runId, artifactId); if (!bytes || !preview || !allowed(e, 'settings')) return denied();
       try { await preview.open(bytes, service.detail(runId).run.artifacts.find(a => a.id === artifactId).name); return { ok: true }; }
@@ -44,7 +50,7 @@ export function registerBackgroundIPC(service: BackgroundRunService, preview?: D
     if (action === 'open') { const error = await shell.openPath(filename); return { ok: !error, ...(error ? { error: 'Windows could not open the PDF.' } : {}) }; }
     const owner = getSettingsWindow(); if (!owner) return denied();
     const artifact = service.detail(runId)?.run.artifacts.find(a => a.id === artifactId);
-    const chosen = await dialog.showSaveDialog(owner, { title: 'Save a copy of your PDF', defaultPath: artifact?.name, filters: [{ name: 'PDF', extensions: ['pdf'] }] });
+    const chosen = await dialog.showSaveDialog(owner, { title: 'Save a copy of your file', defaultPath: artifact?.name, ...(artifact?.mediaType === 'application/pdf' ? { filters: [{ name: 'PDF', extensions: ['pdf'] }] } : {}) });
     if (chosen.canceled || !chosen.filePath) return { ok: true };
     if (!allowed(e, 'settings')) return denied();
     const bytes = await service.artifactBytes(runId, artifactId); if (!bytes) return denied();

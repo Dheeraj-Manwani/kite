@@ -36,7 +36,19 @@ export interface Reminder { id: number; at: number; label: string; status: 'pend
 export interface OperationResult { ok: boolean; error?: string }
 export type View = 'settings' | 'history' | 'memory' | 'onboarding' | 'agents';
 export interface KiteAPI {
+  saveAgentSchedule(input: import('./schedules').ScheduleDraft): Promise<import('./background').BackgroundResult>;
+  controlAgentSchedule(input: import('./schedules').ScheduleControl): Promise<import('./background').BackgroundResult>;
+  agentScheduleHistory(input: { id: string; before?: number }): Promise<import('./schedules').ScheduleHistory | null>;
   backgroundSnapshot(): Promise<import('./background').BackgroundSnapshot | null>;
+  mailState(): Promise<import('./mail').MailConnectionState | null>;
+  prepareCareerJob(input: { runId: string; revision: number; jobKey: string }): Promise<import('./background').BackgroundResult>;
+  scoutMailBriefing(input: { runId: string; revision: number }): Promise<import('./background').BackgroundResult>;
+  applicationBrowser(input: { runId: string; revision: number; action: 'open' | 'check' }): Promise<import('./background').BackgroundResult>;
+  configureMail(): Promise<import('./background').BackgroundResult>;
+  connectMail(input?: { id: string; revision: number }): Promise<import('./background').BackgroundResult>;
+  cancelMailConnect(): Promise<import('./background').BackgroundResult>;
+  disconnectMail(input: { id: string; revision: number }): Promise<import('./background').BackgroundResult>;
+  openMailSource(input: { runId: string; messageId: string }): Promise<import('./background').BackgroundResult>;
   backgroundHealth(): Promise<import('./background').BackgroundHealth | null>;
   backgroundDetail(id: string, after?: number): Promise<import('./background').BackgroundDetail | null>;
   saveBackgroundAgent(input: import('./background').AgentDraft): Promise<import('./background').BackgroundResult>;

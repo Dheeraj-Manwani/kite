@@ -59,3 +59,24 @@
 .agents-access p { margin: 12px 0; font-size: var(--fs-caption); }
 @media (max-width: 700px) { .agents-layout, .agents-form-row { grid-template-columns: 1fr; } .agents-view { padding: 20px 16px 40px; } .agents-heading { align-items: flex-start; } .agents-artifact, .agents-saved { flex-wrap: wrap; } }
 @media (forced-colors: active) { .agents-run-item.selected, .agents-tabs button[aria-pressed='true'] { outline: 2px solid Highlight; } }
+
+.agents-mail-options { display: grid; gap: 12px; border: 1px solid var(--border); border-radius: 12px; padding: 14px; min-width: 0; }
+.agents-mail-check { display: flex !important; flex-direction: row !important; align-items: flex-start; gap: 8px; }
+.agents-mail-check input { width: auto !important; }
+.agents-mail-accounts { margin-top: 20px; padding: 14px; border: 1px solid var(--border); border-radius: 12px; }
+.agents-mail-accounts summary { cursor: pointer; font-weight: 600; }
+.agents-mail-account { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin: 12px 0; }
+.agents-mail-account div { flex: 1; min-width: 180px; }
+.agents-mail-account small { display: block; }
+.agents-mail-message { border-top: 1px solid var(--border); padding: 12px 0; overflow-wrap: anywhere; }
+.agents-mail-message h4 { margin: 0; overflow-wrap: anywhere; }
+.agents-mail-message pre { white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: 13px; line-height: 1.5; }
+.agents-mail-message small { display: block; margin-bottom: 8px; }
+.agents-application { overflow-wrap: anywhere; }
+
+.agents-schedules { display: grid; gap: 16px; }
+.agents-schedule { border: 1px solid var(--border, #ddd); border-radius: 12px; padding: 18px; overflow-wrap: anywhere; }
+.agents-schedule h3 small { font-weight: normal; }
+.agents-schedule-history { display: grid; gap: 8px; }
+.agents-schedule-history button { text-align: left; }
+.agents-child-tasks { border-top: 1px solid var(--border, #ddd); padding-top: 12px; }

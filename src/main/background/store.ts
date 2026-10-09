@@ -1,6 +1,9 @@
 import Database from 'better-sqlite3';
 import { randomUUID } from 'node:crypto';
 import type { SecretCipher } from '../settings/secretsCore';
+import type { BoundMailOptions, InboxBriefing } from '../../shared/mail';
+import type { CareerShortlist, JobApplication } from '../../shared/career';
+import type { AgentSchedule, ScheduledOccurrence, DelegationBudget, ScheduleHistory } from '../../shared/schedules';
 import type { BackgroundAgent, BackgroundArtifact, BackgroundEvent, BackgroundRun, BackgroundRequest, DocumentKind, DocumentWorkflow, OptimizationReport, PdfStyle, RunStatus } from '../../shared/background';
 
 export interface RunInput { name: string; text?: string; kind?: DocumentKind; sourceId?: string; hash?: string; bytes?: number }
@@ -10,9 +13,14 @@ export interface RunRecord {
   status: RunStatus; revision: number; generation: number; createdAt: number; updatedAt: number;
   message: string; completed: number; attempts: number; recoveryCount?: number; request: BackgroundRequest | null;
   approvedBinding: string | null; artifacts: BackgroundArtifact[]; parentId: string | null;
+  mail?: BoundMailOptions; briefing?: InboxBriefing;
+  shortlist?: CareerShortlist; application?: JobApplication;
+  schedule?: ScheduledOccurrence; fingerprint?: string; unchanged?: boolean; delegation?: DelegationBudget;
 }
-export interface OperationRecord { id: string; runId: string; generation: number; index: number; inputHash: string; style: PdfStyle; state: 'intent' | 'prepared' | 'committed'; hash?: string; bytes?: number; pages?: number; optimization?: OptimizationReport }
-export const publicRun = (r: RunRecord): BackgroundRun => ({ id: r.id, agentId: r.agent.id === 'builtin' ? null : r.agent.id, agentName: r.agent.name, agentRevision: r.agent.revision, workflow: r.agent.workflow, targetBytes: r.agent.targetBytes, title: r.title, status: r.status, revision: r.revision, generation: r.generation, createdAt: r.createdAt, updatedAt: r.updatedAt, message: r.message, inputs: r.inputs.map(i => i.name), completed: r.completed, total: r.inputs.length, attempts: r.attempts, request: r.request, artifacts: r.artifacts, modelCalls: 0, parentId: r.parentId });
+export interface ScheduleRecord extends AgentSchedule { agent: BackgroundAgent; mail?: BoundMailOptions; consentId: string; policyHash: string; draftHash: string; lastFingerprint?: string }
+export const publicSchedule = (s: ScheduleRecord): AgentSchedule => ({ id: s.id, revision: s.revision, agentId: s.agentId, agentName: s.agentName, agentRevision: s.agentRevision, recurrence: s.recurrence, state: s.state, nextAt: s.nextAt, createdAt: s.createdAt, lastRunId: s.lastRunId, message: s.message, ...(s.mail ? { mail: s.mail } : {}), ...(s.agent.career ? { career: s.agent.career } : {}) });
+export interface OperationRecord { id: string; runId: string; generation: number; index: number; inputHash: string; style: PdfStyle; state: 'intent' | 'prepared' | 'committed'; hash?: string; bytes?: number; pages?: number; optimization?: OptimizationReport; mediaType?: BackgroundArtifact['mediaType'] }
+export const publicRun = (r: RunRecord): BackgroundRun => ({ id: r.id, agentId: r.agent.id === 'builtin' ? null : r.agent.id, agentName: r.agent.name, agentRevision: r.agent.revision, workflow: r.agent.workflow, targetBytes: r.agent.targetBytes, ...(r.mail ? { mail: r.mail } : {}), title: r.title, status: r.status, revision: r.revision, generation: r.generation, createdAt: r.createdAt, updatedAt: r.updatedAt, message: r.message, inputs: r.inputs.map(i => i.name), completed: r.completed, total: ['career_scout','job_application'].includes(r.agent.workflow) ? 1 : r.agent.workflow === 'inbox_briefing' ? 1 + (r.briefing?.selectedAttachments.length ?? 0) : r.inputs.length, attempts: r.attempts, request: r.request, artifacts: r.artifacts, modelCalls: 0, parentId: r.parentId, ...(r.schedule ? { schedule: r.schedule } : {}), ...(r.unchanged ? { unchanged: true } : {}), ...(r.delegation ? { delegation: r.delegation } : {}) });
 
 /** Separate from voice history: deleting a conversation cannot delete an active run. Payloads use OS encryption. */
 export class BackgroundStore {
@@ -22,7 +30,7 @@ export class BackgroundStore {
     this.db = new Database(filename);
     this.db.pragma('journal_mode = WAL'); this.db.pragma('foreign_keys = ON'); this.db.pragma('secure_delete = ON'); this.db.pragma('busy_timeout = 5000');
     const version = this.db.pragma('user_version', { simple: true }) as number;
-    if (version > 2) { this.db.close(); throw new Error('Background database needs a newer Kite version.'); }
+    if (version > 3) { this.db.close(); throw new Error('Background database needs a newer Kite version.'); }
     if (version === 0) this.db.transaction(() => {
       this.db.exec(`CREATE TABLE agent_definitions (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, archived INTEGER NOT NULL, payload BLOB NOT NULL);
         CREATE TABLE agent_revisions (id TEXT NOT NULL, revision INTEGER NOT NULL, payload BLOB NOT NULL, PRIMARY KEY(id,revision));
@@ -35,6 +43,12 @@ export class BackgroundStore {
     if (version < 2) this.db.transaction(() => {
       this.db.exec('CREATE TABLE agent_sources (id TEXT PRIMARY KEY, payload BLOB NOT NULL)');
       this.db.pragma('user_version = 2');
+    })();
+    if (version < 3) this.db.transaction(() => {
+      this.db.exec(`CREATE TABLE agent_schedules (id TEXT PRIMARY KEY, revision INTEGER NOT NULL, payload BLOB NOT NULL);
+        CREATE TABLE agent_dispatches (schedule_id TEXT NOT NULL REFERENCES agent_schedules(id), occurrence INTEGER NOT NULL, run_id TEXT NOT NULL UNIQUE REFERENCES agent_runs(id), PRIMARY KEY(schedule_id,occurrence));
+        CREATE INDEX dispatch_history ON agent_dispatches(schedule_id,run_id);`);
+      this.db.pragma('user_version = 3');
     })();
   }
   private encode(value: unknown) { return this.cipher.encryptString(JSON.stringify(value)); }
@@ -79,6 +93,26 @@ export class BackgroundStore {
   saveOperation(op: OperationRecord) { this.db.prepare('INSERT INTO agent_operations VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET payload=excluded.payload').run(op.id, op.runId, this.encode(op)); }
   commitOutput(run: RunRecord, revision: number, op: OperationRecord) {
     this.db.transaction(() => { this.saveOperation({ ...op, state: 'committed' }); this.save(run, revision, 'artifact', 'PDF checked and saved.'); })();
+  }
+  schedules() { return this.db.prepare('SELECT payload FROM agent_schedules ORDER BY rowid').all().map(r => this.decode<ScheduleRecord>(r)); }
+  schedule(id: string) { return this.decode<ScheduleRecord>(this.db.prepare('SELECT payload FROM agent_schedules WHERE id=?').get(id)); }
+  saveSchedule(s: ScheduleRecord, expected?: number) {
+    if (expected === undefined) this.db.prepare('INSERT INTO agent_schedules VALUES(?,?,?)').run(s.id, s.revision, this.encode(s));
+    else if (!this.db.prepare('UPDATE agent_schedules SET revision=?,payload=? WHERE id=? AND revision=?').run(s.revision, this.encode(s), s.id, expected).changes) throw new Error('This schedule changed. Refresh before continuing.');
+  }
+  dispatch(s: ScheduleRecord, previous: number, run: RunRecord) {
+    this.db.transaction(() => {
+      this.insert(run, run.message);
+      this.db.prepare('INSERT INTO agent_dispatches VALUES(?,?,?)').run(s.id, run.schedule.at, run.id);
+      this.saveSchedule(s, previous);
+    })();
+  }
+  saveWithSchedule(run: RunRecord, revision: number, type: string, message: string, schedule?: ScheduleRecord, expected?: number, sources: FrozenSource[] = []) {
+    this.db.transaction(() => { this.save(run, revision, type, message, sources); if (schedule) this.saveSchedule(schedule, expected); })();
+  }
+  scheduleHistory(id: string, before = Number.MAX_SAFE_INTEGER): ScheduleHistory {
+    const rows = this.db.prepare('SELECT r.rowid AS cursor,r.payload FROM agent_runs r JOIN agent_dispatches d ON d.run_id=r.id WHERE d.schedule_id=? AND r.rowid<? ORDER BY r.rowid DESC LIMIT 51').all(id, before) as { cursor: number; payload: Buffer }[];
+    return { runs: rows.slice(0,50).map(row => publicRun(this.decode<RunRecord>(row))), nextCursor: rows.length > 50 ? rows[49].cursor : null };
   }
   close() { this.db.pragma('wal_checkpoint(TRUNCATE)'); this.db.close(); }
 }

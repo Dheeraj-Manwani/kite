@@ -2,7 +2,19 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from 'electron';
 import type { CursorPoint, CursorGeometry, KiteAPI, VoiceEvent, VoiceEventType } from '../shared/types';
 
 const api: KiteAPI = {
+  saveAgentSchedule: input => ipcRenderer.invoke('background:saveSchedule', input),
+  controlAgentSchedule: input => ipcRenderer.invoke('background:controlSchedule', input),
+  agentScheduleHistory: input => ipcRenderer.invoke('background:scheduleHistory', input),
   backgroundSnapshot: () => ipcRenderer.invoke('background:snapshot'),
+  mailState: () => ipcRenderer.invoke('mail:state'),
+  prepareCareerJob: input => ipcRenderer.invoke('career:prepare', input),
+  scoutMailBriefing: input => ipcRenderer.invoke('career:alerts', input),
+  applicationBrowser: input => ipcRenderer.invoke('career:browser', input),
+  configureMail: () => ipcRenderer.invoke('mail:configure'),
+  connectMail: input => ipcRenderer.invoke('mail:connect', input),
+  cancelMailConnect: () => ipcRenderer.invoke('mail:cancelConnect'),
+  disconnectMail: input => ipcRenderer.invoke('mail:disconnect', input),
+  openMailSource: input => ipcRenderer.invoke('mail:source', input),
   backgroundHealth: () => ipcRenderer.invoke('background:health'),
   backgroundDetail: (id, after) => ipcRenderer.invoke('background:detail', id, after),
   saveBackgroundAgent: input => ipcRenderer.invoke('background:saveAgent', input),

@@ -1,6 +1,6 @@
-# Background agents: document release
+# Background agents: documents and Gmail
 
-Phases 0–2 implemented on 9 October 2026. Open **Agents** from the tray or settings sidebar. Document workflows run on this PC without a model key, while Kite remains available for other work.
+Phases 0–5 development implementations on 9 October 2026. Open **Agents** from the tray or settings sidebar. Document workflows run on this PC without a model key, while Kite remains available for other work. Phase 3 adds account-aware, read-only Gmail Inbox Briefings with local excerpts, PDF output and optional attachment downloads. Set up your own Desktop OAuth client using the [Gmail guide](mail-agents.md); real sign-in and public verification remain release gates. Phase 4 adds [Career Scout and isolated application preparation](career-agents.md), with public Greenhouse/Lever discovery, approved frozen resume/contact fields, manual submission handoff and no replay of uncertain outcomes. Live ATS compatibility remains a gate.
 
 ## Using the panel
 
@@ -72,4 +72,8 @@ npm test
 
 Build before tests that use `.vite/build`; do not run those tests concurrently with Forge, which replaces that directory. Native fixtures cover cancellation, encrypted binary snapshots, originals, target/no-growth reporting, restart, v1 migration and publication recovery. The real bundled panel test covers restored input, completion after closing the panel, visible preview, reveal, exclusive export and saved helpers. The packaged probe checks actual worker/library paths and versions. No provider credentials, mailbox or live microphone are used.
 
-The historical [phase 0 report](performance/background/phase0.json) measured the initial text workflow and synthetic isolated-browser login. Its zero-added-package finding belongs to that earlier baseline. Phase 2 adds pdf-lib and its dependencies. Office converter distribution/fidelity, broader production document corpora, identical-baseline installer impact, real browser sign-in/automation, repeated-run memory, and live overlay/voice latency remain release gates. These local implementations and fixture passes do not publish a release. Mail, job applications, schedules and model-planned custom capabilities are later phases.
+The historical [phase 0 report](performance/background/phase0.json) measured the initial text workflow and synthetic isolated-browser login. Its zero-added-package finding belongs to that earlier baseline. Phase 2 adds pdf-lib and its dependencies; phases 3–5 add no runtime dependency. Office converter distribution/fidelity, broader production document corpora, identical-baseline installer impact, real browser sign-in/ATS compatibility, repeated-run memory, and live overlay/voice latency remain release gates. These local implementations and fixture passes do not publish a release. Gmail and Career Scout gates are recorded in their linked guides. Automatic submission, always-on hosting and model-planned custom capabilities remain future work.
+
+## Schedules and bounded child work
+
+Open **Schedules** to approve recurring reads for a saved Inbox Briefing or Career Scout helper. Daily timezone-aware checks or intervals (15 minutes minimum) run while Kite is awake; missed checks coalesce and unchanged results stay quiet. Existing schedules freeze helper revisions and require renewed consent when permissions or Gmail access change. Career board reads use up to two typed child tasks within one shared byte/attempt/deadline budget. [Setup, recovery and limits](scheduled-agents.md).
