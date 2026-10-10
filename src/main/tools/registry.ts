@@ -83,7 +83,7 @@ export class ToolSession {
       if (!call.finished) this.finish(call, null, budgetAvailable ? 'Action denied.' : 'Model-call budget exhausted.'); return false;
     }
     try {
-      if (def.review) call.summary = await def.review(valid.data, { ...this.options.context, callId: id });
+      if (def.review) { call.summary = await def.review(valid.data, { ...this.options.context, callId: id }); this.options.audit.updateToolSummary?.(call.row, call.summary); }
       if (this.options.context.signal.aborted || call.finished) return false;
     } catch { this.finish(call, { ok: false, message: 'Couldn’t identify the destination. Nothing ran. Try again with the destination app focused.' }, null); return false; }
     const pending = this.options.broker.request(name, call.summary, valid.data, this.options.context.dryRun, this.options.context.signal);

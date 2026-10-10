@@ -22,7 +22,7 @@ const inputs=[{}, {name:'Spotify'}, {url:'https://youtube.com/watch?v=abc'}, {qu
 const invalid=[{extra:true},{name:''},{url:'file:///C:/'},{query:''},{text:'x'.repeat(5001)},{extra:1},{text:''},{minutes:-1,label:'x'},{at:'2000-01-01T00:00:00Z',label:'x'},{extra:true},{id:0},{title:'',content:'x'}];
 test('every tool validates before execution, has deterministic summary, and dry run has no effects',async()=>{
   let effects=0; const defs=definitions(()=>effects++);const ctx={signal:new AbortController().signal,dryRun:true};
-  const summaries=['Check the current local date and time.','Open "Spotify"?','Open youtube.com?','Search the web for "lo-fi & beats" (google)?','Paste "meeting at 5" into the currently focused app?','Let me read your clipboard?','Copy "hello" to your clipboard?','Set a 1-minute timer: "stretch"?',`Remind you at ${future}: "stretch"?`,'List your scheduled reminders.','Cancel reminder #1?','Create and open "draft.md" in Documents/Kite Notes?'];
+  const summaries=['Check the current local date and time.','Open "Spotify"?','Open youtube.com?','Search the web for "lo-fi & beats" (google)?','Paste "meeting at 5" into the destination app?','Let me read your clipboard?','Copy "hello" to your clipboard?','Set a 1-minute timer: "stretch"?',`Remind you at ${future}: "stretch"?`,'List your scheduled reminders.','Cancel reminder #1?','Create and open "draft.md" in Documents/Kite Notes?'];
   for(let i=0;i<defs.length;i++) {
     const d=defs[i];assert.ok(d.inputSchema.safeParse(inputs[i]).success,d.name);
     assert.equal(d.inputSchema.safeParse(invalid[i]).success,false,d.name);
@@ -65,6 +65,24 @@ test('clipboard restores all formats, empty clipboard and abort after write',asy
     await assert.rejects(()=>pasteText(c,'x',abort.signal,()=>assert.fail('must not paste')));
     assert.equal(events.at(-1),saved.length?'restore':'clear');
   }
+});
+test('paste approval names and binds the destination; execution rechecks after writing and restores clipboard on rejection',async()=>{
+  const target={hwnd:12,pid:34,title:'Draft — editor',process:'Test editor'},events=[];
+  const clipboard={read:async()=>[{data:'saved'}],writeText:async text=>events.push(['write',text]),write:async()=>events.push(['restore']),clear:()=>assert.fail('snapshot exists')};
+  let changed=true;
+  const tool=impl('type_text').typeText(clipboard,{capture:async()=>target,paste:async reviewed=>{assert.equal(reviewed,target);events.push(['check']);return !changed;}});
+  const h=harness('approved',false,[tool]);h.session.options.audit.updateToolSummary=(id,summary)=>h.rows[id-1].summary=summary;
+  assert.equal(await h.session.approve('paste','type_text',{text:'Hello'},true),true);
+  assert.match(h.cards[0].summary,/Test editor.*Draft — editor/);assert.equal(h.rows[0].summary,h.cards[0].summary);
+  const result=await h.session.tools().type_text.execute({text:'Hello'},{toolCallId:'paste'});
+  assert.equal(result.ok,false);assert.deepEqual(events,[['write','Hello'],['check'],['restore']]);
+  changed=false;
+  const direct=await tool.execute({text:'Unreviewed'},{dryRun:false,signal:new AbortController().signal,callId:'unreviewed'});
+  assert.equal(direct.ok,false);assert.equal(events.length,3,'unreviewed paste never touches the clipboard');
+});
+test('a paste without a known destination never asks for generic approval or runs',async()=>{
+  const tool=impl('type_text').typeText({read:()=>assert.fail(),writeText:()=>assert.fail(),write:()=>assert.fail(),clear:()=>assert.fail()},{capture:async()=>null,paste:async()=>assert.fail()});
+  const h=harness('approved',false,[tool]);assert.equal(await h.session.approve('missing','type_text',{text:'Hello'},true),false);assert.equal(h.cards.length,0);assert.equal(h.rows[0].result.ok,false);
 });
 test('note names stay inside folder and never overwrite; clipboard truncates and searches encode query',async()=>{
   const dir=await fs.mkdtemp(path.join(os.tmpdir(),'kite-tools-'));const opened=[];

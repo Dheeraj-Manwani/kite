@@ -26,7 +26,7 @@ listenerCounts:()=>Object.fromEntries(ipcRenderer.eventNames().map(n=>[n,ipcRend
 listMemory:()=>ipcRenderer.invoke('test:memoryList'),editMemory:(id,patch)=>ipcRenderer.invoke('test:memoryEdit',id,patch),deleteMemory:id=>ipcRenderer.invoke('test:memoryDelete',id),exportMemory:async()=>({ok:true}),
 undoMemory:token=>ipcRenderer.invoke('test:memoryUndo',token),onMemoryChanged:cb=>subscribe('memory:changed',cb),letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
-onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
+onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},markScreen:id=>ipcRenderer.send('test:markScreen',id),screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
 onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),stopSpeech:id=>ipcRenderer.send('test:stopSpeech',id),
 onConversationOpen:cb=>subscribe('conversation:open',cb),submitText:text=>ipcRenderer.invoke('test:submitText',text),newConversation:()=>ipcRenderer.invoke('test:newConversation'),continueConversation:id=>ipcRenderer.invoke('test:continueConversation',id),
 approveTool:(id,approved,scope)=>ipcRenderer.invoke('test:approve',scope?{id,approved,scope}:{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
@@ -35,7 +35,7 @@ onBoardEvent:cb=>subscribe('board:state',cb),boardControl:action=>ipcRenderer.se
 onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),taskChoose:(index,remember)=>ipcRenderer.send('test:taskChoose',index,remember),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
-  const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[], memoryCalls=[], speechStops=[];let lastScript='';
+  const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[], memoryCalls=[], speechStops=[], screenMarks=[];let lastScript='';
   const typedSends=[], continued=[];let typedId=600, conversationNumber=0, testConversation='live-test', rejectTyped=false;
   ipcMain.handle('test:submitText',(event,text)=>{
     if(rejectTyped)return {ok:false,error:'Couldn’t send. Try again.'};
@@ -48,6 +48,7 @@ app.whenReady().then(async()=>{
   ipcMain.handle('test:continueConversation',(_event,id)=>{continued.push(id);testConversation=id;const overlay=windows.find(win=>!win.isDestroyed()&&win.webContents.getURL().endsWith('#overlay'));
     overlay?.webContents.send('conversation:open',{id,reason:'resume',messages:[{id:901,role:'user',content:'Explain this saved error.'},{id:902,role:'assistant',content:'The saved explanation.'}]});return {ok:true};});
   ipcMain.on('test:stopSpeech',(_event,id)=>speechStops.push(id));
+  ipcMain.on('test:markScreen',(_event,id)=>screenMarks.push(id));
   ipcMain.handle('test:memoryList',()=>memoryFacts);
   ipcMain.handle('test:memoryEdit',(_e,id,patch)=>{memoryCalls.push(['edit',id,patch]);return {ok:true};});
   ipcMain.handle('test:memoryDelete',(_e,id)=>{memoryCalls.push(['delete',id]);return {ok:true};});
@@ -291,8 +292,8 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('app:event',{type:'onboarding:done',from:{x:120,y:700,scale:2.8}});await delay(60);
     const takeoff=await kiteFrame();
     assert.ok(Math.hypot(takeoff.x-120,takeoff.y-700)<40&&takeoff.scale>2.4,'takes off from the window: '+JSON.stringify(takeoff));
-    let turned=0,previous=takeoff.rotation;
-    for(let i=0;i<40;i++){await delay(30);const {rotation}=await kiteFrame();turned+=((rotation-previous)%360+540)%360-180;previous=rotation;}
+    // Sample inside the renderer: IPC scheduling must not skip half a loop under load.
+    const turned=await overlay.webContents.executeJavaScript(`new Promise(resolve=>{let turned=0,previous=${takeoff.rotation},start=performance.now();const sample=()=>{const m=document.querySelector('.kite-canvas > g').getAttribute('transform').match(/translate\\(([-\\d.e]+) ([-\\d.e]+)\\) rotate\\(([-\\d.e]+)\\) scale\\([-\\d.e]+ [-\\d.e]+\\) rotate\\(([-\\d.e]+)\\) scale\\(([-\\d.e]+)\\)/),rotation=+m[3]+ +m[4];turned+=((rotation-previous)%360+540)%360-180;previous=rotation;if(performance.now()-start>1500)resolve(turned);else requestAnimationFrame(sample);};requestAnimationFrame(sample);})`);
     await delay(1000);
     const landed=await kiteFrame();
     assert.ok(Math.abs(turned)>300,'loops once on the way: '+turned);
@@ -323,7 +324,8 @@ app.whenReady().then(async()=>{
     // The kite's accessible name follows its state (design.md K-16).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas').getAttribute('aria-label')"),'Kite, listening');
     // Listening is a compact pill with a level meter and the release/cancel hint, not a full card (UX-12).
-    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-status').textContent"),'Release to send · Esc to cancel');
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-status').textContent"),'Listening · release to send · Esc to cancel');
+    assert.equal(screenMarks.length,0,'listening alone does not request a capture');
     overlay.webContents.send('test:voice',{id:50,type:'ptt:tooShort'});await delay(80);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble.compact .bubble-reply').textContent"),'Hold a bit longer while you speak.');
     assert.equal(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.speech-bubble button')].some(b=>/Keyboard controls/.test(b.textContent))"),false);
@@ -343,7 +345,7 @@ app.whenReady().then(async()=>{
     overlay.webContents.send('test:voice',{id:2,type:'tts:stop'});
     overlay.webContents.send('test:voice',{id:2,type:'llm:done'});await delay(100);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').getAttribute('aria-hidden')"),'false');
-    const card={approvalId:'test-approval',toolName:'type_text',summary:'Paste "meeting at 5" into the currently focused app?',input:{text:'meeting at 5'},expiresAt:Date.now()+30000,dryRun:false};
+    const card={approvalId:'test-approval',toolName:'type_text',summary:'Paste "meeting at 5" into Notepad — “Blank test note”?',input:{text:'meeting at 5'},expiresAt:Date.now()+30000,dryRun:false};
     overlay.webContents.send('test:voice',{id:2,type:'tool:approvalRequired',approval:card});await delay(100);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-summary').textContent"),card.summary);
     // The decision is the first thing in the bubble; the answer before it folds into one line below (UX-23).
@@ -359,7 +361,7 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-details summary').textContent"),'Details');
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-details code').textContent"),'type_text');
     // Pasting is a sensitive tier: framed, with a line saying what leaves the PC (UX-21).
-    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card.sensitive .approval-flow').textContent"),'Pastes into whichever app has focus. Nothing leaves this PC.');
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.approval-card.sensitive .approval-flow').textContent"),'Pastes into the reviewed window only. Nothing leaves this PC.');
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.approval-countdown').textContent"),/Auto-cancels in (30|29) s/);
     // The bubble's tail is aimed at the kite (UX-13).
     assert.match(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').style.getPropertyValue('--tail-y')"),/^\d+px$/);
@@ -397,17 +399,20 @@ app.whenReady().then(async()=>{
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-canvas').textContent"),'','no emoji on the kite');
     await delay(350);assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.kite-shutter').getAttribute('opacity')"),'0','the ring has faded');
     overlay.webContents.send('screen:event',{type:'annotate',id:3,display:{id:1,bounds:{x:0,y:0,width:760,height:960},scaleFactor:1},origin:{x:0,y:0}});await delay(60);
-    assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).cursor"),'crosshair');
-    // On a first use, a tiny hint says which marks work and how many (UX-41).
-    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.mark-hint').textContent"),'Circle, underline, point, or tap · up to 5');
+    assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).cursor"),'default');
+    // An ordinary hold has no screen-selection hint; the first deliberate mark starts capture.
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.mark-hint')"),null);
     for(let stroke=0;stroke<6;stroke++){
       const x=100+stroke*40,y=700;
       overlay.webContents.sendInputEvent({type:'mouseDown',x,y,button:'left',clickCount:1});
+      if(!stroke){await delay(50);assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.mark-hint').textContent"),'Circle, underline, point, or tap · up to 5');}
       overlay.webContents.sendInputEvent({type:'mouseMove',x:x+15,y:y+20,button:'left'});
       overlay.webContents.sendInputEvent({type:'mouseUp',x:x+15,y:y+20,button:'left',clickCount:1});
       await delay(30);
     }
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelectorAll('.annotation path').length"),5);
+    assert.equal(await overlay.webContents.executeJavaScript("getComputedStyle(document.querySelector('.annotation')).cursor"),'crosshair');
+    assert.deepEqual(screenMarks,[3],'one capture per marked hold');
     // Once marking starts the hint gives way to a count (UX-41).
     assert.equal(await overlay.webContents.executeJavaScript("[...document.querySelectorAll('.mark-hint')].map(h=>h.textContent).join()"),'5 of 5');
     overlay.webContents.send('test:voice',{id:3,type:'ptt:stop'});await delay(50);
@@ -806,12 +811,18 @@ app.whenReady().then(async()=>{
     // Phase 2: open from the tray/keyboard path, then continue one conversation with voice and text.
     overlay.webContents.send('conversation:open',{id:testConversation,messages:[],reason:'new'});await delay(100);
     voice(550,{type:'ptt:start'});voice(550,{type:'voice:transcript',text:'Explain this error.'});voice(550,{type:'conversation:started',conversationId:testConversation});
+    voice(550,{type:'vision:attached',attachment:{label:'Marked screen · Display 1',capturedAt:Date.now(),preview:'data:image/jpeg;base64,'+Buffer.from(images.overview).toString('base64')}});await delay(80);
+    assert.match(await js("document.querySelector('.conversation-attachment').textContent"),/Display 1.*View capture/s);
+    await js("document.querySelector('.conversation-attachment details').open=true");await delay(30);
+    assert.equal(await js("document.querySelector('.conversation-attachment img').getAttribute('alt')"),'Screen content shared with this question');
     voice(550,{type:'llm:delta',text:'The service needs to restart.'});voice(550,{type:'llm:done'});await delay(100);
     const setDraft=text=>js(`(()=>{const input=document.querySelector('#conversation-reply');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,${JSON.stringify(text)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
     const submit=()=>js("document.querySelector('.conversation-composer').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))");
     await setDraft('Give me the shortest fix.');await delay(50);await submit();await delay(250);
     assert.equal(typedSends.at(-1),'Give me the shortest fix.');
     assert.match(await js("document.querySelector('.conversation-turns').textContent"),/Explain this error.*service needs to restart/s);
+    assert.match(await js("document.querySelector('.conversation-turns .conversation-attachment').textContent"),/Earlier capture.*not attached/s);
+    assert.equal(await js("document.querySelector('.conversation-turns .conversation-attachment img')"),null,'old captures keep their label, without retaining image pixels');
     assert.match(await js("document.querySelector('.bubble-transcript').textContent"),/Give me the shortest fix/);
     assert.match(await js("document.querySelector('.bubble-reply').textContent"),/Shortest fix/);
     assert.equal(await js("document.querySelector('#conversation-reply').value"),'');

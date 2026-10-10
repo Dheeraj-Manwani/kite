@@ -57,6 +57,10 @@ for(const fail of [false,true]) test(`capture resets protection and visibility w
 test('failed renderer hide restores protection without capturing',async()=>{
   const calls=[];await assert.rejects(()=>protectedCapture({protect:v=>calls.push(v),hide:async v=>{if(v)throw Error('hide failed');},wait:async()=>{},capture:async()=>assert.fail()}));assert.deepEqual(calls,[true,false]);
 });
+for(const fail of [false,true]) test(`visible exclusion avoids hiding and restores protection after ${fail?'failure':'success'}`,async()=>{
+  const calls=[];const run=()=>protectedCapture({keepVisible:true,protect:v=>calls.push(v),hide:async()=>assert.fail('visible strategy must not hide'),wait:async()=>calls.push('compose'),capture:async()=>{calls.push('capture');if(fail)throw Error('failure');return 'fixture';}});
+  if(fail)await assert.rejects(run);else assert.equal(await run(),'fixture');assert.deepEqual(calls,[true,'compose','capture',false]);
+});
 test('read_screen is always confirmed in v1, validated and respects dry-run',async()=>{
   let count=0;const tool=readScreen(false,async()=>{count++;return {ok:true,message:'screen'};});
   assert.equal(needsApproval(tool),true);assert.equal(needsApproval(readScreen(true,async()=>{})),true);

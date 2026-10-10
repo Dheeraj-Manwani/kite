@@ -105,6 +105,7 @@ export function openDatabase(filename: string) {
     finishTool(id: number, decision: ToolDecision, result: unknown, error: string | null, durationMs: number) {
       db.prepare('UPDATE tool_calls SET decision=?, result_json=?, error=?, duration_ms=? WHERE id=?').run(decision, result == null ? null : JSON.stringify(result), error, durationMs, id);
     },
+    updateToolSummary(id: number, summary: string) { db.prepare('UPDATE tool_calls SET summary=? WHERE id=?').run(summary, id); },
     recentTools() { return db.prepare('SELECT * FROM tool_calls ORDER BY id DESC LIMIT 20').all() as ToolAudit[]; },
     addReminder(at: number, label: string) { return Number(db.prepare('INSERT INTO reminders(at,label) VALUES(?,?)').run(at, label).lastInsertRowid); },
     listReminders() { return db.prepare("SELECT * FROM reminders WHERE status='pending' ORDER BY at").all() as Reminder[]; },

@@ -1,8 +1,8 @@
 # Screen vision and annotation
 
-Hold **Ctrl + Win**, wait for the crosshair, then circle, underline, point with an arrow, or tap. Speak while holding, then release. Several marks can be compared in one turn. A silent marked hold asks “What is this?” Ink stays through the answer (including spoken tool approvals), then fades.
+Hold **Ctrl + Win** and speak. **Listening** appears immediately. If you want to share something on screen, click or draw a circle, underline, arrow, or tap while holding, then release. Several marks can be compared in one turn. A silent marked hold asks “What is this?” Ink stays through the answer (including spoken tool approvals), then fades.
 
-Kite captures the display under the cursor before enabling ink. Early clicks are swallowed while capture is pending. Strokes starting outside that display are ignored. There are at most five strokes and 2,000 points per hold. Monitor layout or scaling changes cancel the current interaction, preventing stale coordinates.
+Ordinary voice holds do not capture or hide Kite. The hold remembers the display under the cursor; the first deliberate pointer press starts its single capture and marks the content. The press does not click the app beneath. Strokes starting outside that original display are ignored. There are at most five strokes and 2,000 points per hold. Monitor layout or scaling changes cancel the current interaction, preventing stale coordinates. Marked capture failures ask you to mark again rather than pretending another display was attached.
 
 Ask “what’s on my screen?” without drawing to use `read_screen`. The tool requests confirmation by default. **Settings → Screen vision** includes:
 
@@ -10,7 +10,9 @@ Ask “what’s on my screen?” without drawing to use `read_screen`. The tool 
 - **Screen-read approval:** always required in v1. The earlier opt-out setting is disabled; sensitive screen reads remain confirmed.
 - **Keep screenshots in history:** off by default. Enabling it writes prepared JPEGs to `userData/screens/` and records their paths in `attachments`.
 
-The “Kite is looking” indicator is always shown. During capture, content protection temporarily excludes the overlay, and the renderer also hides every overlay layer except the indicator. A renderer acknowledgment and approximately 40 ms of settling precede capture. Protection and visibility restore in `finally`. Captures are serialized, and canceled queued captures are skipped.
+The “Kite is looking” indicator is shown during a requested capture. The shipping path uses temporary content protection and a brief renderer-hiding fallback; the indicator and whiteboard remain visible. A renderer acknowledgment and approximately 40 ms of settling precede capture. Protection and visibility restore in `finally`. Captures are serialized, and canceled queued captures are skipped.
+
+Temporary protection without hiding passed the synthetic native fixture on the available 100% Windows display. The fallback remains enabled until mixed-monitor scaling and recording-app checks pass. [Electron’s content-protection documentation](https://www.electronjs.org/docs/latest/api/browser-window/#winsetcontentprotectionenable) also describes differences between Windows versions and capture paths, and requires waiting for desktop composition before capture.
 
 ## Images and history
 
@@ -22,6 +24,8 @@ Stroke points are overlay-local DIP. Main adds the overlay origin, checks the st
 Taps receive magenta rings. Underlines include the line and text immediately above it; arrow regions surround the estimated tip. These classifications are geometric heuristics, so unusual shapes may need a clearer mark.
 
 Images stay in memory by default. User rows retain mark types, DIP regions, and capture timing. After completion or cancellation, rolling conversation images become a text placeholder containing the answer. Tool audits never serialize image bytes. The explicit developer test capture is the sole default-off-history exception: it saves a PNG to the OS temp folder.
+
+The current question has a capture label, time, and expandable prepared preview. Earlier turns keep the label and a clear “not attached to this follow-up” message; their preview pixels are dropped when archived. Continuing History restores text and screenshot metadata, without reattaching old images or rerunning old actions.
 
 Vision turns route to a configured vision-capable model and identify it in the bubble. The assistant history row records the answering model. Explicit English screen requests are detected before selecting a model so a text-only model can hand the turn to vision. With no configured vision-capable provider, the bubble offers settings.
 
@@ -38,5 +42,8 @@ Reference: [AI SDK tool calling](https://ai-sdk.dev/docs/ai-sdk-core/tools-and-t
 - `npm run package`, then `npm run test:renderer`: actual OffscreenCanvas JPEG sizes, magenta tap pixels, input interception, five-stroke limit, voice-approval mark preservation, fading, and capture hiding.
 - `npm run test:startup`: bundled app and IPC startup.
 - `npm run test:capture`: **temporarily covers the cursor’s display with a synthetic green window**. It checks that an overlay marker appears in a normal desktop capture, is absent from Kite’s explicit dev PNG, and returns in a normal capture afterward. It uses temporary app data and no provider calls. The test saves its fixture PNG under the OS temp `kite-captures` folder.
+- `npm run test:capture:exclusion`: uses green and pink synthetic windows to check temporary protection while the overlay remains visible; captures are checked in memory and not saved.
+- `npm run test:unit`: ordinary holds never capture, the first valid mark captures once, failed/disconnected captures restore state, and negative origins map correctly.
+- `npm run test:focus`: uses two blank synthetic editors in a separate process. Checks native focus return, named-window paste, same-app window changes, changed titles, closed windows, and clipboard restoration. No Notepad document or private app is edited.
 
 The real capture check passed on the available 100% display. Provider responses were mocked, not billed live. Still verify on the target desktop: spoken word identification, two-image comparison, 125% / 150% mixed-monitor pointer alignment, and continuous OBS/Game Bar recording before/during/after capture. The native capture test checks restoration of normal capture visibility; it does not substitute for testing those recording applications.

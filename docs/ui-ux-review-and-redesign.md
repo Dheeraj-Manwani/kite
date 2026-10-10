@@ -15,9 +15,9 @@ Today, the experience can feel restless. The kite keeps moving, answers move or 
 
 This plan covers **22 issues**. Each issue explains the problem, the proposed fix, an example, and how to check whether it worked.
 
-### Implementation progress — 10 October 2026
+### Implementation progress — 11 October 2026
 
-**Phases 1 and 2 are built and have passed automated checks. A real desktop interaction review is still pending.**
+**Phases 1–3 are built. Phase 3 has passed conversation, capture-policy, and native focus checks; wider desktop review is still pending.**
 
 - New installs use **Subtle** motion and **At screen edge** placement. Kite settles without an idle floating or breathing loop. **Still** uses steady signals; **Playful** keeps optional character movement. Older Calm / Lively preferences become Subtle / Playful.
 - Answers stay in place when the pointer moves, including across displays. Text appears as soon as it arrives, without waiting for speech.
@@ -30,12 +30,16 @@ This plan covers **22 issues**. Each issue explains the problem, the proposed fi
 - Closing, minimizing, expanding, and switching saved conversations preserve the conversation and its draft during the current app session. Use the tray's **Open conversation** to return to it.
 - **New conversation** starts fresh deliberately. **Continue conversation** in History brings back saved questions and answers. Earlier screenshots are not reattached, and earlier actions are not run again.
 - A short, silent, or cancelled hold restores the previous answer. A failed question stays available with **Edit and retry**. Scrolling up or selecting text stops new text from pulling you back to the bottom.
+- **Listening** appears as soon as the hold starts. Ordinary, silent, and cancelled holds take no screenshot, so they no longer hide Kite for capture.
+- A deliberate click or mark during the hold captures the display where that hold began. The pointer stays normal until marking starts. Screen-reading tools still ask for approval.
+- Marked answers show **Display**, **capture time**, and **View capture**. Earlier turns clearly say that their old capture is not attached to the follow-up; the model does not receive those old pixels again.
+- Kite remembers the window you left when opening its textbox and returns to it when closing. An intentional switch to another app takes priority. Paste approval names the app and window, then checks that destination again before sending Ctrl + V. A changed or closed destination stops the paste.
 
-**Checked:** TypeScript, lint, 311 main tests, 31 unit tests, native settings persistence and upgrade checks, and the full renderer interaction suite. The renderer checks cover voice and typed follow-ups, draft restoration, cancelled holds, retry, and saved conversations. Light, dark, and high-contrast reading screenshots were reviewed.
+**Checked:** 315 main tests, 35 unit tests, the full renderer interaction suite, native settings persistence, rebuilt-app startup, and native focus/paste fixtures. Visible capture exclusion passed on the available 100% display using synthetic content. Reading screenshots cover light, dark, and high contrast.
 
 **Limits to understand:** Sent messages are saved in History. Unsent drafts survive view changes while Kite is running; they are not saved across an app restart. The panel can show older messages, but the model receives the most recent conversation context.
 
-**Still to do:** Test actual corner dragging, keyboard navigation and textbox focus, display changes, and 125% / 150% Windows scaling on a real desktop. Activation flicker, permission wording, and the agent screens belong to later phases.
+**Still to do:** Test actual corner dragging, keyboard navigation and input methods, display changes, and 125% / 150% Windows scaling on a real desktop. Marked captures still use the brief hiding fallback. Removing that fallback awaits mixed-display and recording checks; ordinary voice holds already avoid it. Permission wording and the agent screens belong to later phases.
 
 ### What to fix first
 
@@ -621,14 +625,18 @@ Basic readability, keyboard access, and contrast belong in every phase. Phase 7 
 
 **What we will build:**
 
-- [ ] Show Listening as soon as activation is recognized.
-- [ ] Stop capturing the screen for ordinary voice-only questions.
-- [ ] Start screen selection when the user intentionally marks or attaches something.
-- [ ] Test capture exclusion that keeps Kite visible on the physical screen.
-- [ ] Keep the current hiding fallback until the alternative is verified.
-- [ ] Clearly show which screen content is attached and whether it is an earlier capture.
-- [ ] Restore the correct app after closing Kite's textbox.
-- [ ] Show and recheck the destination before approved paste.
+- [x] Show Listening as soon as activation is recognized.
+- [x] Stop capturing the screen for ordinary voice-only questions.
+- [x] Capture a screen when the user deliberately clicks or draws a mark during the hold.
+- [x] Test capture exclusion with a visible synthetic overlay on the available 100% display.
+- [x] Keep the current hiding fallback until the alternative is verified on the supported setups.
+- [x] Clearly show which screen content is attached and whether it is an earlier capture.
+- [x] Restore the correct app after closing Kite's textbox, while respecting a deliberate app switch.
+- [x] Show and recheck the destination before approved paste.
+
+**Status:** Built; automated checks and native focus/paste checks passed. Visible exclusion passed a synthetic Windows test at 100% scaling. The shipping capture path retains temporary hiding while mixed-display, 125% / 150%, and recording-app checks remain pending.
+
+**What is deliberately still cautious:** The paste check covers the named top-level window, not a particular textbox within it. Keep the intended field selected. If the window title changes, ask again so the destination can be reviewed afresh.
 
 **What this fixes:** Activation flicker, unnecessary captures, surprising screen-selection behavior, and uncertainty about where typing or paste will go. Covers UX-R04, R05, R11, and the screenshot part of R18.
 

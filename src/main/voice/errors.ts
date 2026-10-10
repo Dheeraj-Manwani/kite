@@ -1,4 +1,4 @@
-import { VisionUnavailableError } from '../../shared/vision';
+import { ScreenCaptureError, VisionUnavailableError } from '../../shared/vision';
 import type { SecretId } from '../../shared/types';
 import { providerLabels } from '../ai/catalog';
 export class MissingKeyError extends Error {
@@ -13,6 +13,7 @@ const nameOf = (id: SecretId) => id === 'cartesia' ? 'Cartesia' : providerLabels
 const withArticle = (name: string) => `${/^[AEIOU]/i.test(name) ? 'an' : 'a'} ${name}`;
 /** Never forward raw SDK errors: they can contain request headers or bodies. */
 export function friendlyError(error: unknown, provider?: SecretId): FriendlyError {
+  if (error instanceof ScreenCaptureError) return { title: 'I couldn’t attach that screen', text: 'The display may have changed or disconnected. Hold your shortcut and mark it again.' };
   if (error instanceof VisionUnavailableError) return { title: 'I need a vision model to see your screen', text: 'Pick a vision-capable model in Settings, then ask again.', settings: true, setup: true };
   if (error instanceof MissingKeyError) return error.provider === 'groq'
     ? { title: 'I need a Groq key to hear you', text: 'Add one in Settings, then hold your shortcut again.', settings: true, setup: true }

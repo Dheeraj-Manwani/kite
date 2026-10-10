@@ -48,6 +48,7 @@ export function cropRect(region: ScreenBounds, display: DisplayInfo, width: numb
   return { x: Math.max(0, Math.min(width - cw, Math.floor(p.x + w / 2 - cw / 2))), y: Math.max(0, Math.min(height - ch, Math.floor(p.y + h / 2 - ch / 2))), width: cw, height: ch };
 }
 export class VisionUnavailableError extends Error {}
+export class ScreenCaptureError extends Error {}
 export function routeVision(active: ModelEntry, preferred: ModelSelection, models: ModelEntry[], hasKey: (p: ProviderId) => boolean): ModelEntry {
   if (active.supportsVision && hasKey(active.provider)) return active;
   const chosen = models.find(m => m.provider === preferred.provider && m.id === preferred.id && m.supportsVision && hasKey(m.provider))

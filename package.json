@@ -14,6 +14,8 @@
     "typecheck": "tsc --noEmit",
     "test": "node --require ./tests/register.cjs --test --test-concurrency=1 tests/physics.test.cjs tests/voice.test.cjs tests/providers-tts.test.cjs tests/tools.test.cjs tests/vision.test.cjs tests/guide.test.cjs tests/board.test.cjs tests/board-script.test.cjs tests/board-teaching.test.cjs tests/board-owned.test.cjs tests/board-delight.test.cjs tests/board-metrics.test.cjs tests/agent.test.cjs tests/windows.test.cjs tests/shop.test.cjs tests/job.test.cjs tests/permissions.test.cjs tests/memory.test.cjs tests/checkout.test.cjs tests/repeat.test.cjs",
     "test:capture": "electron tests/capture-native.cjs",
+    "test:capture:exclusion": "electron tests/capture-exclusion-native.cjs",
+    "test:focus": "electron tests/focus-native.cjs",
     "test:native": "electron tests/native-smoke.cjs",
     "test:clipboard": "electron tests/clipboard-native.cjs",
     "test:notepad": "electron tests/notepad-focus.cjs",

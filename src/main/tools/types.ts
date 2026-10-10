@@ -24,6 +24,7 @@ export interface ToolDefinition<T = unknown> {
 export interface AuditStore {
   beginTool(messageId: number | null, tool: string, input: unknown, summary: string, dryRun: boolean): number;
   finishTool(id: number, decision: ToolDecision, result: ToolResult | null, error: string | null, durationMs: number): void;
+  updateToolSummary?(id: number, summary: string): void;
   recentTools(): ToolAudit[];
 }
 export interface ReminderStore { addReminder(at: number, label: string): number; listReminders(): Reminder[]; cancelReminder(id: number): boolean; claimReminder(id: number): boolean }

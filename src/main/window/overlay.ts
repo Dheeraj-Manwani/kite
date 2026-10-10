@@ -29,10 +29,11 @@ export function registerKeyboardControlsShortcut() {
 export const keyboardControlsShortcut = () => keyboardShortcutActive ? KEYBOARD_CONTROLS_SHORTCUT : undefined;
 // Blurring returns focus to the app underneath; the window's blur handler makes it unfocusable again.
 export async function releaseOverlayControls() {
-  focusGeneration++;
+  const generation = ++focusGeneration;
   const win = overlayWindow; if (!win?.isFocused()) return;
-  await inputFocus.restore();
-  if (!win.isDestroyed() && win.isFocused()) win.blur();
+  const restored = await inputFocus.restore();
+  if (generation !== focusGeneration) return;
+  if (!win.isDestroyed()) { if (!restored && win.isFocused()) win.blur(); win.setFocusable(false); }
 }
 export function getDesktopBounds() {
   const displays = screen.getAllDisplays().map(display => display.bounds);
@@ -46,6 +47,7 @@ export function getDesktopBounds() {
 }
 export function createOverlayWindow(): BrowserWindow {
   if (overlayWindow) return overlayWindow;
+  void inputFocus.warm();
   const win = new BrowserWindow({
     ...getDesktopBounds(), transparent: true, frame: false, alwaysOnTop: true,
     skipTaskbar: true, resizable: false, hasShadow: false, focusable: false, enableLargerThanScreen: true,

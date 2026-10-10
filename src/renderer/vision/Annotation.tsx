@@ -75,7 +75,7 @@ export function Annotation() {
     {looking && <div className="screen-looking" style={indicator} role="status">Kite is looking</div>}
     {mode && hint && strokes.length <= 1 && <div className="mark-hint" style={{ left: hint.x, top: hint.y }} role="status">Circle, underline, point, or tap · up to {MARKS}</div>}
     {mode && end && strokes.length >= 2 && <div className="mark-hint count" style={{ left: Math.min(innerWidth - 70, end.x + 14), top: Math.min(innerHeight - 34, end.y + 12) }} role="status">{strokes.length} of {MARKS}</div>}
-    <svg className={`annotation ${mode ? 'drawing' : ''} ${preparing ? 'preparing' : ''} ${fading ? 'fading' : ''} ${pulse ? 'pulse' : ''}`}
+    <svg className={`annotation ${mode ? strokes.length ? 'drawing' : 'armed' : ''} ${preparing ? 'preparing' : ''} ${fading ? 'fading' : ''} ${pulse ? 'pulse' : ''}`}
       onPointerDown={e => {
         e.preventDefault(); e.stopPropagation(); const m = current.current;
         if (!m || e.button !== 0 || active.current !== null || vr.strokes.length >= MARKS || vr.strokes.reduce((n, s) => n + s.length, 0) >= 2000) return;

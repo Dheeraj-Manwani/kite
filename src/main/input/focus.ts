@@ -9,6 +9,7 @@ export class InputFocus implements PasteDestination {
   constructor(directory: string, private excludePid: number) {
     this.client = new UiaClient({ directory, excludePid, script: focusScript, name: 'focus', toDip: rect => rect });
   }
+  async warm() { try { await this.client.request({ op: 'ping' }, 3000); } catch { /* focus falls back to ordinary window blur if native access is unavailable */ } }
   async remember() {
     try { const { target, kite } = await this.client.request<{ target: PasteTarget | null; kite: boolean }>({ op: 'foreground', excludePid: this.excludePid }, 3000); if (target || !kite) this.previous = target; }
     catch { this.previous = null; }

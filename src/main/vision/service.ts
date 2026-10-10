@@ -6,7 +6,7 @@ import { getOverlayWindow } from '../window/overlay';
 import { trusted } from '../ipc/trust';
 import { protectedCapture } from './captureCore';
 import type { ScreenBounds } from '../../shared/types';
-import { analyzeStrokes, contains, type DisplayInfo, type ScreenEvent, type Stroke, type VisionImages, type VisionTurn } from '../../shared/vision';
+import { analyzeStrokes, contains, ScreenCaptureError, type DisplayInfo, type ScreenEvent, type Stroke, type VisionImages, type VisionTurn } from '../../shared/vision';
 const delay = (ms: number) => new Promise<void>(resolve => setTimeout(resolve, ms));
 const send = (event: ScreenEvent) => getOverlayWindow()?.webContents.send('screen:event', event);
 let lookingTimer: ReturnType<typeof setTimeout>;
@@ -96,15 +96,19 @@ export class ScreenSession {
     const entry = this.captures.get(id); this.captures.delete(id);
     const skipped = this.skipped.delete(id);
     if (!strokes.length || (!entry && skipped)) return;
-    if (!entry?.result) throw new Error('The marked screen was not captured. Hold your shortcut and mark it again.');
-    const capture = await entry.result; signal.throwIfAborted();
+    if (!entry?.result) throw new ScreenCaptureError('The marked screen was not captured. Hold your shortcut and mark it again.');
+    let capture;
+    try { capture = await entry.result; signal.throwIfAborted(); }
+    catch (error) { signal.throwIfAborted(); throw new ScreenCaptureError(error instanceof Error ? error.message : 'Screen capture failed'); }
     const global = strokes.map(s => s.map(p => ({ ...p, x: p.x + entry.origin.x, y: p.y + entry.origin.y })))
       .filter(s => s.length && contains(capture.display.bounds, s[0]));
     if (!global.length) return;
-    const images = await prepareImages(capture, global, signal);
+    let images;
+    try { images = await prepareImages(capture, global, signal); }
+    catch { signal.throwIfAborted(); throw new ScreenCaptureError('Screen preparation failed'); }
     return { images, analysis: analyzeStrokes(global), captureMs: capture.captureMs, attachment: {
       label: `Marked screen · Display ${screen.getAllDisplays().findIndex(d => d.id === capture.display.id) + 1}`,
-      capturedAt: entry.capturedAt!, preview: `data:image/jpeg;base64,${Buffer.from(images.overview).toString('base64')}`,
+      capturedAt: entry.capturedAt ?? Date.now(), preview: `data:image/jpeg;base64,${Buffer.from(images.overview).toString('base64')}`,
     } };
   }
 }
