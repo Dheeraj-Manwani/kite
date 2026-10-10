@@ -1,5 +1,5 @@
 import { restSail } from './sail';
-import { kiteSizes, type Liveliness } from '../../shared/release';
+import { kiteSizes, type Liveliness, type KitePlacement } from '../../shared/release';
 import type { AppSettings } from '../../shared/types';
 
 export const KITE_SCALE = 1;
@@ -19,7 +19,9 @@ export const config = {
   // How much of each kind of motion shows (docs/design.md §K5.5, K-06): follow is how moods change the follow,
   // expression is mood and idle-behaviour poses, ambient is breathing, the tail's swing, and the dozing dim.
   // Tuned so nothing moves less than about a pixel; a Liveliness setting can scale these later (K-15).
-  motion: { follow: 0.5, expression: 0.45, ambient: 0.5 } as { follow: number; expression: number; ambient: number },
+  motion: { follow: 0.4, expression: 0.2, ambient: 0 } as { follow: number; expression: number; ambient: number },
+  liveliness: 'subtle' as Liveliness,
+  placement: 'screenEdge' as KitePlacement,
   automaticOneShots: false,
   moodBlend: 0.25, behaviorBlend: 0.3, maxDt: 1 / 30,
   stillSpeed: 12, excitedSpeed: 1100, boredAfter: 8, dozeAfter: 30,
@@ -29,15 +31,19 @@ export const config = {
 };
 
 /**
- * The Liveliness setting's motion amounts (docs/design.md §K5.5, K-15). Lively is the tuning above. Calm halves the
- * idle breathing and sway (still about a pixel, the floor in §5.5) and quietens the moods; every pose and gesture still reads.
+ * Subtle rests without an idle loop. Playful opts into the original character motion.
+ * Still uses steady state cues instead of decorative movement.
  */
 export const livelinessMotion: Record<Liveliness, { follow: number; expression: number; ambient: number }> = {
-  lively: { ...config.motion }, calm: { follow: 0.4, expression: 0.2, ambient: 0.25 },
+  still: { follow: 0.4, expression: 0, ambient: 0 },
+  subtle: { follow: 0.4, expression: 0.2, ambient: 0 },
+  playful: { follow: 0.5, expression: 0.45, ambient: 0.5 },
 };
 /** The kite's preferences, applied live: size (K-14; the onboarding stage keeps its own), liveliness, and color (K-15). */
-export function applyKitePreferences(settings: Pick<AppSettings, 'kiteSize' | 'liveliness' | 'kiteSkin'>, options: { size?: boolean } = {}) {
+export function applyKitePreferences(settings: Pick<AppSettings, 'kiteSize' | 'liveliness' | 'kiteSkin' | 'kitePlacement'>, options: { size?: boolean } = {}) {
   if (options.size !== false) config.scale = kiteSizes[settings.kiteSize] ?? 1;
-  config.motion = { ...livelinessMotion[settings.liveliness] ?? livelinessMotion.lively };
+  config.liveliness = settings.liveliness ?? 'subtle';
+  config.motion = { ...livelinessMotion[config.liveliness] ?? livelinessMotion.subtle };
+  config.placement = settings.kitePlacement ?? 'screenEdge';
   document.documentElement.dataset.skin = settings.kiteSkin ?? 'rose';
 }

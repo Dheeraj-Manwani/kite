@@ -3,7 +3,7 @@ import { guideRuntime as gr } from '../guide/runtime';
 import { boardRuntime as br } from '../board/runtime';
 import { taskRuntime } from '../agent/runtime';
 import { RefObject, useEffect } from 'react';
-import type { CursorGeometry, CursorPoint } from '../../shared/types';
+import type { CursorGeometry, CursorPoint, ScreenBounds } from '../../shared/types';
 import { useKiteStore } from '../store/kite';
 import { config } from './config';
 import { createBehavior, updateBehavior } from './behaviors';
@@ -55,6 +55,7 @@ export function useKiteLoop(refs: KiteElements) {
     let rotation = spring(config.baseAngle), stretch = spring(1);
     let previousCursor = { x: 0, y: 0 };
     let previousOrigin = { x: 0, y: 0 };
+    let restingDisplay: ScreenBounds | null = null, placement = config.placement;
     let behavior = createBehavior(0, Math.random()), shake = createShake();
     let motion = { ...moods.idle };
     let currentMood = useKiteStore.getState().mood;
@@ -92,7 +93,8 @@ export function useKiteLoop(refs: KiteElements) {
       time += dt;
       sampleVoice(dt);
       br.tick?.(now);
-      const reaction = reactionMotion(now, reduced);
+      const decorative = !reduced && config.liveliness === 'playful' && !voiceRuntime.bubble;
+      const reaction = reactionMotion(now, !decorative);
       const workingHard = voiceRuntime.waitingSince > 0 && now - voiceRuntime.waitingSince > 3000;
       fpsFrames++; fpsTime += rawDt;
       if (fpsTime >= 0.5) {
@@ -103,16 +105,22 @@ export function useKiteLoop(refs: KiteElements) {
       const geometry = cursorInput.geometry;
       if (!geometry) return;
       const cursor = { x: cursorInput.point.x - geometry.origin.x, y: cursorInput.point.y - geometry.origin.y };
+      if (!restingDisplay || placement !== config.placement || previousOrigin.x !== geometry.origin.x || previousOrigin.y !== geometry.origin.y) {
+        restingDisplay = { ...geometry.display }; placement = config.placement;
+      }
       if (!initialized || previousOrigin.x !== geometry.origin.x || previousOrigin.y !== geometry.origin.y) {
         body = bodySpring({ x: cursor.x + config.offsetX * config.scale, y: cursor.y + config.offsetY * config.scale }); dots = null; flight = null;
         previousCursor = cursor; previousOrigin = geometry.origin; initialized = true;
       }
       // "Let's fly" (design.md §K5.7, K-07): onboarding hands over its stage kite, which loops from where the window
       // was over to the cursor, shrinking to its everyday size on the way. Under reduced motion it is simply here.
-      const home = { x: cursor.x + config.offsetX * config.scale, y: cursor.y + config.offsetY * config.scale };
+      const home = config.placement === 'screenEdge'
+        ? { x: restingDisplay.x - geometry.origin.x + restingDisplay.width - 44 * config.scale,
+          y: restingDisplay.y - geometry.origin.y + restingDisplay.height - 80 * config.scale }
+        : { x: cursor.x + config.offsetX * config.scale, y: cursor.y + config.offsetY * config.scale };
       if (runtime.flight) {
         const from = { x: runtime.flight.x - geometry.origin.x, y: runtime.flight.y - geometry.origin.y };
-        if (!reduced) { flight = { path: loopFlight(from, home), start: time, scale: runtime.flight.scale, hold: true }; body = bodySpring(from); dots = null; }
+        if (decorative) { flight = { path: loopFlight(from, home), start: time, scale: runtime.flight.scale, hold: true }; body = bodySpring(from); dots = null; }
         runtime.flight = null;
       }
       // Paused (design.md §K5.3, K-09): the kite reels out, up and off the screen, and on resume it drifts back down
@@ -133,7 +141,6 @@ export function useKiteLoop(refs: KiteElements) {
       const flown = flight ? Math.min(1, (time - flight.start) / flight.path.duration) : 1;
       const flying = flight ? flight.path.at(flown) : null;
       const scale = config.scale * (flight ? 1 + (flight.scale - 1) * (1 - easeInOut(flown / .6)) : 1);
-      const hold = !!flight?.hold;
       if (flight && flown >= 1) { if (flight.gone) gone = true; flight = null; }
       const velocity = { x: (cursor.x - previousCursor.x) / dt, y: (cursor.y - previousCursor.y) / dt };
       previousCursor = cursor;
@@ -170,7 +177,7 @@ export function useKiteLoop(refs: KiteElements) {
       let requested = runtime.trigger ?? (config.automaticOneShots && shakeResult.fired ? 'dizzy' : undefined);
       runtime.trigger = null;
       if (mood !== 'idle') requested = undefined;
-      const behaviorResult = mood === 'idle' && !pointing
+      const behaviorResult = mood === 'idle' && !pointing && decorative
         ? updateBehavior(behavior, time, speed, Math.random(), requested, reduced, config.automaticOneShots)
         : { state: createBehavior(time, Math.random()), motion: moods.idle, spin: 0 };
       behavior = behaviorResult.state;
@@ -196,43 +203,44 @@ export function useKiteLoop(refs: KiteElements) {
       // from the bubble, which holds still meanwhile.
       if (active?.kind === 'success' && active.at !== celebrated) {
         celebrated = active.at;
-        if (!reduced && !flight && !gone) {
+        if (decorative && !flight && !gone) {
           const here = { x: body.x.value, y: body.y.value }, away = { x: voiceRuntime.bubble?.dataset.side === 'left' ? 1 : -1, y: 0 };
           flight = { path: loopFlight(here, here, { radius: 28 * config.scale, heading: { x: 0, y: -1 }, bulge: away, duration: 1 }), start: time, scale: 1, hold: true };
         }
       }
       // Something changed about me (§5.4): a colour ripple, a sheen that crosses the sail. Reduced motion glints instead.
-      if (active?.kind === 'costume' && active.at !== rippled) { rippled = active.at; rippleAt = time; rippleStrength = active.intensity ?? 1; }
+      if (decorative && active?.kind === 'costume' && active.at !== rippled) { rippled = active.at; rippleAt = time; rippleStrength = active.intensity ?? 1; }
       // Follow me (§5.4): reaching each guide step is a dive and swoop rather than a plain spring flight.
       const anchor = guiding && pointer === gr ? gr.anchor : null;
-      if (anchor && (!guideAnchor || anchor.x !== guideAnchor.x || anchor.y !== guideAnchor.y) && !flight && !reduced && !gone) {
+      if (anchor && (!guideAnchor || anchor.x !== guideAnchor.x || anchor.y !== guideAnchor.y) && !flight && decorative && !gone) {
         const from = { x: body.x.value, y: body.y.value };
         if (Math.hypot(anchor.x - from.x, anchor.y - from.y) > 60) flight = { path: swoopFlight(from, anchor), start: time, scale: 1, hold: false };
       }
       guideAnchor = anchor ? { ...anchor } : null;
       if (returning && time - returning > (reduced ? .3 : 1.1)) { returning = 0; react('flutter'); }
-      const reacting = active && since < 1.2 ? reactionPoses[active.kind] : undefined;
-      const name: PoseName = steering ? 'rest' : active?.kind === 'nod' && since < .45 ? 'released' : reacting
+      const reacting = decorative && active && since < 1.2 ? reactionPoses[active.kind] : undefined;
+      const name: PoseName = steering ? 'rest' : decorative && active?.kind === 'nod' && since < .45 ? 'released' : reacting
         ?? (voiceRuntime.toolPose === 'proposing' ? 'proposing' : voiceRuntime.toolPose === 'executing' ? 'working'
         : mood === 'listening' ? time - listenStart < .15 ? 'pressed' : silentFor > 1.5 ? 'silent' : 'listening'
         : mood === 'thinking' ? workingHard ? 'working' : 'thinking' : mood === 'talking' ? 'talking' : behavior.name === 'dozing' ? 'dozing' : 'rest');
       if (name !== poseName) { poseName = name; poseSince = time; }
-      const pose = poseFor({ name, t: time - poseSince, time, levels, beat, stagger, reduced, word: voiceRuntime.wordAt ? (now - voiceRuntime.wordAt) / 1000 : Infinity });
+      const steady = reduced || config.liveliness === 'still' || mood === 'idle' && !decorative || !!voiceRuntime.bubble || voiceRuntime.toolPose === 'proposing';
+      const pose = poseFor({ name, t: time - poseSince, time, levels, beat, stagger, reduced: steady, word: voiceRuntime.wordAt ? (now - voiceRuntime.wordAt) / 1000 : Infinity });
       turn = reduced ? spring(pose.turn) : stepSpring(turn, pose.turn, 160, 24, dt);
       lift = reduced ? spring(pose.lift) : stepSpring(lift, pose.lift, 160, 24, dt);
       const { follow, expression, ambient } = config.motion;
       // Calm while you read: with an answer on screen, idle drifting and swaying stop and only breathing remains (design.md §K4).
-      const expressive = mood === 'idle' && voiceRuntime.bubble ? 0 : expression;
-      const bob = Math.sin(bobPhase) * motion.bob * (mood === 'idle' ? ambient : expression) * (reduced ? 0.25 : 1) * (mood === 'talking' ? 0.5 + speech : 1);
+      const expressive = steady ? 0 : expression;
+      const bob = steady ? 0 : Math.sin(bobPhase) * motion.bob * (mood === 'idle' ? ambient : expression) * (mood === 'talking' ? 0.5 + speech : 1);
       const target = {
-        x: cursor.x + (config.offsetX + motion.driftX * expressive + reaction.x) * scale,
-        y: cursor.y + (config.offsetY + bob + lift.value + reaction.y + (mood === 'talking' && speech < 0.06 ? 1.4 : -speech * 2) + (wake ? behaviorResult.motion.driftY : motion.driftY) * expressive) * scale,
+        x: home.x + (motion.driftX * expressive + reaction.x) * scale,
+        y: home.y + (bob + lift.value + reaction.y + (steady ? 0 : mood === 'talking' && speech < 0.06 ? 1.4 : -speech * 2) + (wake ? behaviorResult.motion.driftY : motion.driftY) * expressive) * scale,
       };
       if (vr.drawing && vr.pen) { target.x = vr.pen.x; target.y = vr.pen.y; }
       if (guiding) {
         // A small periodic poke toward the control, like a fingertip tapping the screen.
         const dx = pointer.aim.x - pointer.anchor.x, dy = pointer.aim.y - pointer.anchor.y, length = Math.hypot(dx, dy) || 1;
-        const phase = (time % 1.8) / 1.8, poke = reduced ? 0 : phase < 0.2 ? Math.sin(phase / 0.2 * Math.PI) * 5 : 0;
+        const phase = (time % 1.8) / 1.8, poke = decorative && phase < 0.2 ? Math.sin(phase / 0.2 * Math.PI) * 5 : 0;
         target.x = pointer.anchor.x + dx / length * poke; target.y = pointer.anchor.y + dy / length * poke + bob * scale * 0.4;
       }
       if (ink) {
@@ -296,7 +304,8 @@ export function useKiteLoop(refs: KiteElements) {
       }
       const shine = reduced && rippling ? (rippleStrength * Math.sin(rippleT * Math.PI)).toFixed(2) : '';
       if (shine !== glint) { glint = shine; svg.style.setProperty('--kite-glint', shine || '0'); }
-      svg.style.visibility = gone && fade <= 0 ? 'hidden' : 'visible';
+      const invokedOnly = config.placement === 'invoked' && mood === 'idle' && !voiceRuntime.bubble && !voiceRuntime.notice && !guiding && !ink && !vr.drawing;
+      svg.style.visibility = gone && fade <= 0 || invokedOnly ? 'hidden' : 'visible';
       // Pointing over a neighbouring control's label, the kite lets the label show through (design.md §K5.6, K-08).
       const see = guiding && pointer === gr && gr.dim ? .85 : 1;
       svg.style.opacity = String((1 + (motion.opacity - 1) * ambient) * fade * see);
@@ -314,7 +323,7 @@ export function useKiteLoop(refs: KiteElements) {
       // The tail swings only while resting, dozing, or talking; every other pose shapes it (K-05).
       const swinging = name === 'rest' || name === 'dozing' || name === 'talking';
       const alarm = now < voiceRuntime.alarmUntil;
-      const amplitude = alarm ? 4 : !swinging ? 0 : Math.min(config.tailWagLimit, config.wagAmplitude * ambient * motion.wag * (mood === 'talking' ? 0.5 + speech : 1));
+      const amplitude = steady ? 0 : alarm && decorative ? 4 : !swinging ? 0 : Math.min(config.tailWagLimit, config.wagAmplitude * ambient * motion.wag * (mood === 'talking' ? 0.5 + speech : 1));
       const blend = reduced ? 1 : 1 - Math.exp(-dt * 14);
       const shaped = (dotPose ?? pose.tail).map((d, i) => { const p = pose.tail[i]; return {
         offset: { x: d.offset.x + (p.offset.x - d.offset.x) * blend, y: d.offset.y + (p.offset.y - d.offset.y) * blend },
@@ -345,7 +354,7 @@ export function useKiteLoop(refs: KiteElements) {
         handsOff = taskRuntime.handsOff; handsOffRing?.setAttribute('opacity', handsOff ? '1' : '0');
       }
       if (handsOff && handsOffRing) { const tip = dots[dots.length - 1]; handsOffRing.setAttribute('transform', `translate(${tip.x.value} ${tip.y.value}) scale(${scale})`); }
-      positionBubble(body.x.value, body.y.value, geometry, now, hold);
+      positionBubble(body.x.value, body.y.value, config.placement === 'screenEdge' ? { ...geometry, display: restingDisplay } : geometry, now);
       if (time >= blinkAt) {
         blinkStart = time; blinkAt = time + config.blinkMin + Math.random() * (config.blinkMax - config.blinkMin);
       }

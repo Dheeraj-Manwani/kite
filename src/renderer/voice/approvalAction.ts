@@ -41,10 +41,10 @@ export function approvalRisk(card: Pick<ApprovalCard, 'toolName' | 'input'>, sna
   const named = (card.input as { app?: unknown } | null)?.app;
   const app = typeof named === 'string' && named.trim() ? named.trim() : 'the app';
   const flows: Record<string, string> = {
+    type_text: 'Pastes into the reviewed window only. Nothing leaves this PC.',
     read_screen: `A screenshot of this display will be sent to ${visionName}.`,
     read_clipboard: `Up to 4,000 characters from your clipboard will be sent to ${mainName}.`,
     write_clipboard: 'Replaces what’s on your clipboard. Nothing leaves this PC.',
-    type_text: 'Pastes into whichever app has focus. Nothing leaves this PC.',
     show_me_how: `Kite reads the controls in ${app} on this PC. If it can’t find one, it may send a screenshot of ${app} to ${visionName}.`,
     do_task: `Each step sends ${app}’s controls and their text to ${jobs?.label ?? mainName}${(jobs ?? main)?.supportsVision ? ', sometimes with a screenshot' : ''}.`,
     reorder: `Each step sends the store’s pages to ${jobs?.label ?? mainName}. Your saved details stay on this PC.`,

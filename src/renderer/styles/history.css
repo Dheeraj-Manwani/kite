@@ -19,7 +19,7 @@
 .history-empty { display: grid; justify-items: center; gap: 12px; padding: 64px 20px; text-align: center; }
 .history-empty p { margin: 0; color: var(--text); font-size: var(--fs-lead); }
 .history-conversation { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
-.conversation-head { display: flex; align-items: center; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); color: var(--text-muted); }
+.conversation-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding-bottom: 8px; border-bottom: 1px solid var(--border); font-size: var(--fs-caption); color: var(--text-muted); }
 .conversation-head span { margin-right: auto; }
 .history-view .icon-button { padding: 6px; border-color: transparent; line-height: 0; color: var(--text-muted); }
 .history-view .icon-button.danger { color: var(--danger); }

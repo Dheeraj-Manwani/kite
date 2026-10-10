@@ -81,6 +81,7 @@ export default function HistoryView() {
       </nav>
       <article className="history-conversation">
         {selected && current && <header className="conversation-head"><span>{dayLabel(current.started_at)} · {time(current.started_at)}</span>
+          <button className="ghost" disabled={!detail?.messages.length} onClick={() => void window.kite.continueConversation(selected).then(result => { if (!result.ok) setToast(result.error ?? 'Couldn’t continue this conversation.'); }).catch(() => setToast('Couldn’t continue this conversation.'))}>Continue conversation</button>
           <button className="ghost icon-button" aria-label="Export as Markdown" title="Export as Markdown" onClick={() => void window.kite.exportHistory(selected).then(r => { if (r.ok) setToast('Exported.'); else if (r.error) setToast(r.error); })}><ExportIcon /></button>
           <button className="ghost icon-button danger" aria-label="Delete conversation" title="Delete conversation" onClick={() => void remove(selected)}><TrashIcon /></button></header>}
         {detail?.messages.map((m, i) => {

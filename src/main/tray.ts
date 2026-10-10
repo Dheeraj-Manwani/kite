@@ -34,6 +34,7 @@ export function createKiteTray(preferences: ReturnType<typeof openPreferences>) 
         type: 'radio' as const, checked: model.provider === settings.model.provider && model.id === settings.model.id,
         click: () => { preferences.update({ model: { provider: model.provider, id: model.id } }); } })) : [{ label: 'Add a provider key in Settings', enabled: false }] },
       { type: 'separator' },
+      { label: 'Open conversation', click: focusOverlayControls },
       { label: 'Settings', click: () => { createSettingsWindow(); } },
       { label: 'History', click: () => createSettingsWindow('history') },
       { label: 'Agents', click: () => createSettingsWindow('agents') },

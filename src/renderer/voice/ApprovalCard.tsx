@@ -30,7 +30,7 @@ export function ApprovalCard({ card }: { card: Card }) {
     {risk.flow && <p className="approval-flow"><ShieldIcon />{risk.flow}</p>}
     {card.toolName === 'show_me_how' && <ol className="approval-steps">{guideSteps(card.input).map((step, i) => <li key={i}>{step}</li>)}</ol>}
     {card.dryRun && <small>Preview only. Nothing will run.</small>}
-    {card.toolName === 'type_text' && <small>Focus the destination app first. Voice approval is recommended.</small>}
+    {card.toolName === 'type_text' && <small>Paste goes only to the window named above. Switching apps or changing that window requires a new request.</small>}
     <div className="approval-actions">
       {card.toolName === 'do_task'
       ? <div className="approval-buttons"><button className="primary" disabled={busy || !seconds} onClick={() => { void decide(true, 'task'); }}>{approvalAction(card)}</button>

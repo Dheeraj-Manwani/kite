@@ -6,6 +6,9 @@ export class Conversation {
   private conversationId: string | undefined;
   constructor(private createId: () => string, private limit = 10, private inactivityMs = 300_000) {}
   reset() { this.messages = []; this.conversationId = undefined; this.lastActivity = 0; }
+  restore(id: string, messages: ChatMessage[], now: number) {
+    this.conversationId = id; this.messages = messages.slice(-this.limit).map(message => ({ ...message })); this.lastActivity = now;
+  }
   begin(now: number): { id: string; fresh: boolean } {
     const fresh = !this.conversationId || now - this.lastActivity >= this.inactivityMs;
     if (fresh) { this.messages = []; this.conversationId = this.createId(); }

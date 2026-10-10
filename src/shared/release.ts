@@ -15,8 +15,10 @@ export type KiteSize = keyof typeof kiteSizes;
 export const kiteSkins = ['rose', 'teal', 'violet', 'sky'] as const;
 export type KiteSkin = typeof kiteSkins[number];
 /** How much the kite moves on its own (design.md §K5.5, K-15): Lively is the tuned default, Calm keeps it nearly still. */
-export const livelinessLevels = ['calm', 'lively'] as const;
+export const livelinessLevels = ['still', 'subtle', 'playful'] as const;
 export type Liveliness = typeof livelinessLevels[number];
+export const kitePlacements = ['screenEdge', 'pointer', 'invoked'] as const;
+export type KitePlacement = typeof kitePlacements[number];
 export const hotkeyLabel = (keys: readonly string[]) => keys.map(k => k === 'Meta' ? 'Win' : k === 'Control' ? 'Ctrl' : k).join(' + ');
 export function hotkeyWarning(keys: readonly string[]) {
   if (keys.includes('Alt') && keys.includes('Shift')) return 'Alt + Shift can switch Windows input languages.';
@@ -28,6 +30,7 @@ export function hotkeyWarning(keys: readonly string[]) {
 export interface ConversationSummary { id: string; started_at: number; preview: string; models: string; count: number; snippet?: string }
 export interface HistoryMessage { id: number; role: string; content: string; provider: string; model: string; created_at: number; total_ms: number; first_token_ms: number; voice_to_voice_ms: number | null; annotation_json: string | null; attachments?: number }
 export interface HistoryDetail { messages: HistoryMessage[]; tools: import('./types').ToolAudit[] }
+export interface OpenConversation { id: string | null; messages: HistoryMessage[]; reason: 'new' | 'resume' | 'deleted' }
 export interface PerfSnapshot { mainMB: number; rendererMB: number; rendererFPS: number; frameMs: number; totalMB: number; cpu: number; processes: number; voiceMedianMs: number | null; voiceSamples: number }
 /** Where onboarding's stage kite was when "Let's fly" closed the window: screen DIPs, and its scale. */
 export interface StageKite { x: number; y: number; scale: number }
@@ -35,4 +38,5 @@ export type AppEvent = { type: 'paused'; until: number | null } | { type: 'resum
   /** Memory: a fact was saved (Undo by token), or saved values to show the user and never a model. */
   | { type: 'memory:saved'; token: string; text: string } | { type: 'memory:show'; text: string }
   | { type: 'background:notice'; text: string }
-  | { type: 'onboarding:done'; from: StageKite };
+  | { type: 'onboarding:done'; from: StageKite }
+  | { type: 'conversation:show' };

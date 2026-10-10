@@ -9,6 +9,8 @@ export interface ModelSelection { provider: ProviderId; id: string }
 export interface ModelEntry extends ModelSelection { label: string; supportsVision: boolean; supportsTools: boolean; tier: 'flagship' | 'fast' | 'budget' }
 export interface VoiceChoice { id: string; name: string }
 export interface AppSettings { onboardingComplete: boolean; hotkey: import('./release').Modifier[]; launchOnStartup: boolean; reducedMotion: boolean; toolApprovals: Partial<Record<import('./release').ConfigurableTool, boolean>>; visionModel: ModelSelection; screenWithoutAsking: boolean; keepScreenshots: boolean; model: ModelSelection; fallbackEnabled: boolean; fallback: ModelSelection; ttsEnabled: boolean; voiceId: string; speed: number; dryRun: boolean; searchEngine: 'google' | 'bing' | 'duckduckgo'; guideMode: boolean; whiteboard: boolean; /** Show whiteboard captions even while Kite speaks them. */ boardCaptions: boolean; computerUse: boolean; kiteSize: import('./release').KiteSize; earcons: boolean; liveliness: import('./release').Liveliness; kiteSkin: import('./release').KiteSkin;
+  /** Where the desktop companion rests. Missing older preferences use the screen edge. */
+  kitePlacement?: import('./release').KitePlacement;
   /** What tasks and jobs may do without asking (ADR 014). */
   permissions: import('./permissions').PermissionSettings;
   /** The model that runs tasks and jobs; null picks one automatically (agent.ts `jobsModel`). */
@@ -21,12 +23,14 @@ export interface AboutInfo { version: string; updateStatus: string; updateReady:
 export interface SettingsSnapshot { settings: AppSettings; models: ModelEntry[]; voices: VoiceChoice[]; keys: Record<SecretId, boolean>; boardPlannerEnabled?: boolean }
 export type KeyStatus = 'ok' | 'invalid key' | 'no credit / rate-limited' | 'network error' | 'model unavailable';
 export interface Timing { captureMs?: number; transcribeMs: number; firstTokenMs: number; totalMs: number; ttsFirstAudioMs?: number; voiceToVoiceMs?: number; voiceAverageMs?: number }
-export type VoiceEventType = 'ptt:start' | 'ptt:stop' | 'ptt:cancel' | 'ptt:tooShort'
+export type VoiceEventType = 'ptt:start' | 'ptt:stop' | 'ptt:cancel' | 'ptt:tooShort' | 'text:start' | 'conversation:started'
   | 'voice:thinking' | 'voice:transcript' | 'voice:empty' | 'voice:aborted'
-  | 'vision:routed' | 'vision:done' | 'llm:delta' | 'llm:done' | 'llm:error' | 'model:changed' | 'model:fallback' | 'voice:muted' | 'voice:metrics'
+  | 'vision:attached' | 'vision:routed' | 'vision:done' | 'llm:delta' | 'llm:done' | 'llm:error' | 'model:changed' | 'model:fallback' | 'voice:muted' | 'voice:metrics'
   | 'tool:approvalRequired' | 'tool:decision' | 'tool:executing' | 'tool:result' | 'approval:resume' | 'reminder:fired'
   | 'tts:start' | 'tts:chunk' | 'tts:timestamps' | 'tts:done' | 'tts:stop' | 'tts:error' | 'guide:announce';
 export interface VoiceEvent { type: VoiceEventType; id: number; text?: string; title?: string; setup?: boolean; timing?: Timing; settings?: boolean;
+  conversationId?: string;
+  attachment?: import('./vision').ScreenAttachment;
   approval?: ApprovalCard; decision?: ToolDecision; toolName?: string; success?: boolean; reminderId?: number;
   audio?: ArrayBuffer; timestamps?: { words: string[]; start: number[]; end: number[] }; }
 export type ToolDecision = 'approved' | 'denied' | 'timeout' | 'auto';
@@ -93,6 +97,7 @@ export interface KiteAPI {
   onScreenEvent(callback: (event: import('./vision').ScreenEvent) => void): () => void;
   screenPrepared(token: string, images: import('./vision').VisionImages | null): void;
   screenHidden(token: string): void;
+  markScreen(id: number): void;
   testCapture(): Promise<OperationResult & { path?: string }>;
   onCursorUpdate(callback: (point: CursorPoint, geometry: CursorGeometry) => void): () => void;
   onDevPanelToggle(callback: () => void): () => void;
@@ -116,6 +121,11 @@ export interface KiteAPI {
   refreshVoices(): Promise<OperationResult>;
   previewVoice(): Promise<OperationResult>;
   reportPlayback(id: number, event: 'started' | 'ended' | 'failed'): void;
+  stopSpeech(id: number): void;
+  submitText(text: string): Promise<OperationResult>;
+  newConversation(): Promise<OperationResult>;
+  continueConversation(id: string): Promise<OperationResult>;
+  onConversationOpen(callback: (snapshot: import('./release').OpenConversation) => void): () => void;
   onVoiceEvent(callback: (event: VoiceEvent) => void): () => void;
   /** `marks`: ids of whiteboard elements the user drew over while speaking. */
   submitAudio(buffer: ArrayBuffer, interactionId: number, strokes?: import('./vision').Stroke[], marks?: string[]): Promise<OperationResult>;

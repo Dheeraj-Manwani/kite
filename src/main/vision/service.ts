@@ -67,17 +67,22 @@ export function prepareImages(capture: { png: Buffer; display: DisplayInfo }, st
   });
 }
 export class ScreenSession {
-  private captures = new Map<number, { result: ReturnType<typeof captureUnderCursor>; origin: { x: number; y: number } }>();
+  private captures = new Map<number, { result?: ReturnType<typeof captureUnderCursor>; origin: { x: number; y: number }; display: DisplayInfo; signal: AbortSignal; ready(): boolean; measured(ms: number): void; capturedAt?: number }>();
   /** Holds that intentionally took no screenshot (marking Kite's own whiteboard). */
   private skipped = new Set<number>();
   start(id: number, signal: AbortSignal, ready: () => boolean, measured: (ms: number) => void) {
     const origin = getOverlayWindow()?.getBounds(); if (!origin) return;
-    const entry = { result: captureUnderCursor(signal), origin: { x: origin.x, y: origin.y } };
+    const d = screen.getDisplayNearestPoint(screen.getCursorScreenPoint());
+    const entry = { origin: { x: origin.x, y: origin.y }, display: { id: d.id, bounds: { ...d.bounds }, scaleFactor: d.scaleFactor }, signal, ready, measured };
     this.captures.set(id, entry);
-    void entry.result.then(c => {
-      if (!signal.aborted) measured(c.captureMs);
-      if (!signal.aborted && ready()) send({ type: 'annotate', id, display: c.display, origin: entry.origin });
-    }).catch(() => { /* Voice remains available if capture fails; never use another screen. */ });
+    // The hold can accept a deliberate mark immediately, but never captures just for listening.
+    if (!signal.aborted && ready()) send({ type: 'annotate', id, display: entry.display, origin: entry.origin });
+  }
+  mark(id: number) {
+    const entry = this.captures.get(id);
+    if (!entry || entry.result || entry.signal.aborted || !entry.ready()) return;
+    entry.capturedAt = Date.now(); entry.result = captureDisplay(entry.display.id, entry.signal);
+    void entry.result.then(c => { if (!entry.signal.aborted) entry.measured(c.captureMs); }).catch(() => { /* prepare reports a marked capture failure; ordinary voice is unaffected. */ });
   }
   /** Allow marking at once without capturing: the hold began over Kite's whiteboard. */
   skip(id: number, ready: () => boolean) {
@@ -91,15 +96,20 @@ export class ScreenSession {
     const entry = this.captures.get(id); this.captures.delete(id);
     const skipped = this.skipped.delete(id);
     if (!strokes.length || (!entry && skipped)) return;
-    if (!entry) throw new Error('No capture for this hold');
+    if (!entry?.result) throw new Error('The marked screen was not captured. Hold your shortcut and mark it again.');
     const capture = await entry.result; signal.throwIfAborted();
     const global = strokes.map(s => s.map(p => ({ ...p, x: p.x + entry.origin.x, y: p.y + entry.origin.y })))
       .filter(s => s.length && contains(capture.display.bounds, s[0]));
     if (!global.length) return;
-    return { images: await prepareImages(capture, global, signal), analysis: analyzeStrokes(global), captureMs: capture.captureMs };
+    const images = await prepareImages(capture, global, signal);
+    return { images, analysis: analyzeStrokes(global), captureMs: capture.captureMs, attachment: {
+      label: `Marked screen · Display ${screen.getAllDisplays().findIndex(d => d.id === capture.display.id) + 1}`,
+      capturedAt: entry.capturedAt!, preview: `data:image/jpeg;base64,${Buffer.from(images.overview).toString('base64')}`,
+    } };
   }
 }
-export function registerScreenIPC() {
+export function registerScreenIPC(mark?: (id: number) => void) {
+  ipcMain.on('screen:mark', (e, id) => { if (trusted(e, 'overlay') && Number.isSafeInteger(id) && id > 0) mark?.(id); });
   ipcMain.on('screen:hidden', (e, token) => { if (trusted(e, 'overlay') && typeof token === 'string') hiddenAck?.(token); });
   ipcMain.on('screen:prepared', (e, token, images) => {
     if (!trusted(e, 'overlay') || typeof token !== 'string' || !pending.has(token)) return;

@@ -95,9 +95,17 @@ app.whenReady().then(async () => {
     preferences.update({kiteSize:'extraLarge',earcons:true});assert.equal(preferences.get().kiteSize,'extraLarge');assert.equal(preferences.get().earcons,true);
     assert.throws(()=>preferences.update({kiteSize:'huge'}));assert.throws(()=>preferences.update({earcons:'yes'}));
     // Liveliness and kite color (K-15): Lively and rose by default; only the known values are kept.
-    assert.equal(preferences.get().liveliness,'lively');assert.equal(preferences.get().kiteSkin,'rose');
-    preferences.update({liveliness:'calm',kiteSkin:'teal'});assert.equal(preferences.get().liveliness,'calm');assert.equal(preferences.get().kiteSkin,'teal');
+    assert.equal(preferences.get().liveliness,'subtle');assert.equal(preferences.get().kitePlacement,'screenEdge');assert.equal(preferences.get().kiteSkin,'rose');
+    preferences.update({liveliness:'still',kitePlacement:'invoked',kiteSkin:'teal'});assert.equal(preferences.get().liveliness,'still');assert.equal(preferences.get().kiteSkin,'teal');
+    assert.equal(openPreferences(()=>true).get().kitePlacement,'invoked');
+    assert.throws(()=>preferences.update({kitePlacement:'anywhere'}));
     assert.throws(()=>preferences.update({liveliness:'wild'}));assert.throws(()=>preferences.update({kiteSkin:'white'}));
+    const preferenceFile=path.join(temporary,'preferences.json');
+    for(const [legacy,current] of [['calm','subtle'],['lively','playful']]) {
+      const saved=JSON.parse(fs.readFileSync(preferenceFile,'utf8'));saved.preferences.liveliness=legacy;delete saved.preferences.kitePlacement;
+      fs.writeFileSync(preferenceFile,JSON.stringify(saved));
+      const upgraded=openPreferences(()=>true);assert.equal(upgraded.get().liveliness,current);assert.equal(upgraded.get().kitePlacement,'screenEdge');
+    }
     const {createKiteTray}=require('../src/main/tray.ts');const tray=createKiteTray(preferences);tray.update();tray.destroy();
     console.log('PASS safeStorage, SQLite migration/metrics/audit/reminders across restart, settings persistence and native tray');
   } catch(error) { console.error(error);process.exitCode=1; }

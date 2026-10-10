@@ -55,6 +55,7 @@ const api: KiteAPI = {
   onScreenEvent(callback) { const listener = (_e: IpcRendererEvent, event: import('../shared/vision').ScreenEvent) => callback(event); ipcRenderer.on('screen:event', listener); return () => ipcRenderer.removeListener('screen:event', listener); },
   screenPrepared: (token, images) => ipcRenderer.send('screen:prepared', token, images),
   screenHidden: token => ipcRenderer.send('screen:hidden', token),
+  markScreen: id => ipcRenderer.send('screen:mark', id),
   testCapture: () => ipcRenderer.invoke('screen:test'),
   onCursorUpdate(callback) {
     const listener = (_event: IpcRendererEvent, point: CursorPoint, geometry: CursorGeometry) => callback(point, geometry);
@@ -89,6 +90,11 @@ const api: KiteAPI = {
   refreshVoices: () => ipcRenderer.invoke('voices:refresh'),
   previewVoice: () => ipcRenderer.invoke('voice:preview'),
   reportPlayback: (id, event) => ipcRenderer.send('tts:playback', id, event),
+  stopSpeech: id => ipcRenderer.send('tts:stopSpeech', id),
+  submitText: text => ipcRenderer.invoke('conversation:submit', text),
+  newConversation: () => ipcRenderer.invoke('conversation:new'),
+  continueConversation: id => ipcRenderer.invoke('conversation:continue', id),
+  onConversationOpen(callback) { const listener = (_event: IpcRendererEvent, snapshot: import('../shared/release').OpenConversation) => callback(snapshot); ipcRenderer.on('conversation:open', listener); return () => ipcRenderer.removeListener('conversation:open', listener); },
   hasKey: provider => ipcRenderer.invoke('secrets:has', provider),
   setKey: (provider, key) => ipcRenderer.invoke('secrets:set', provider, key),
   deleteKey: provider => ipcRenderer.invoke('secrets:delete', provider),
@@ -133,7 +139,7 @@ const api: KiteAPI = {
   printRecentMessages: () => ipcRenderer.invoke('dev:recentMessages'),
   copyText: text => ipcRenderer.invoke('bubble:copy', text),
   onVoiceEvent(callback) {
-    const channels: VoiceEventType[] = ['vision:routed', 'vision:done', 'ptt:start', 'ptt:stop', 'ptt:cancel', 'ptt:tooShort',
+    const channels: VoiceEventType[] = ['text:start', 'conversation:started', 'vision:attached', 'vision:routed', 'vision:done', 'ptt:start', 'ptt:stop', 'ptt:cancel', 'ptt:tooShort',
       'voice:thinking', 'voice:transcript', 'voice:empty', 'voice:aborted', 'llm:delta', 'llm:done', 'llm:error', 'model:changed', 'model:fallback', 'voice:muted', 'voice:metrics', 'tool:approvalRequired', 'tool:decision', 'tool:executing', 'tool:result', 'approval:resume', 'reminder:fired', 'tts:start', 'tts:chunk', 'tts:timestamps', 'tts:done', 'tts:stop', 'tts:error', 'guide:announce'];
     const listener = (_event: IpcRendererEvent, event: VoiceEvent) => callback(event);
     channels.forEach(channel => ipcRenderer.on(channel, listener));

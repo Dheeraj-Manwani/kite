@@ -39,6 +39,14 @@ test('conversation trims, copies context, and resets at five minutes', () => {
   assert.deepEqual(session.begin(300200), { id:'2',fresh:true });
   assert.equal(session.context().length, 0);
 });
+test('an open conversation survives long reading; History continuation restores bounded text context and identity', () => {
+  const session = new Conversation(() => 'fresh', 4, Infinity);
+  assert.equal(session.begin(10).id, 'fresh'); session.add({ role: 'user', content: 'Explain this' }, 10);
+  assert.equal(session.begin(3_600_000).fresh, false); assert.equal(session.context()[0].content, 'Explain this');
+  session.restore('saved', Array.from({length:8}, (_, i) => ({ role: i % 2 ? 'assistant' : 'user', content: String(i) })), 3_600_000);
+  assert.equal(session.begin(7_200_000).id, 'saved'); assert.deepEqual(session.context().map(m => m.content), ['4','5','6','7']);
+  session.reset(); assert.equal(session.begin(7_200_001).fresh, true); assert.deepEqual(session.context(), []);
+});
 test('secrets encrypted round-trip, hasKey, delete and no plaintext fallback', () => {
   const saved = new Map();
   let available = true;
@@ -74,6 +82,38 @@ function fixture(overrides={}) {
   };
   return { controller:new VoiceController(deps),events,messages,escape };
 }
+test('voice and typed follow-ups share context and history, while pending requests block a second typed send', async () => {
+  const contexts=[]; const f=fixture({ask:async(messages,_key,_signal,delta)=>{contexts.push(messages);delta('The explanation.');return 'The explanation.';}});
+  const first=f.controller.start();assert.equal(f.controller.canSubmitText(),false);f.controller.stop();await f.controller.submit(first,new ArrayBuffer(8));
+  assert.equal(f.controller.canSubmitText(),true);await f.controller.submitText('Give me the shortest fix.');
+  assert.deepEqual(contexts[1].map(m=>m.content),['Hello','The explanation.','Give me the shortest fix.']);
+  assert.ok(f.events.some(e=>e.type==='text:start'));assert.deepEqual(new Set(f.events.filter(e=>e.type==='conversation:started').map(e=>e.conversationId)),new Set(['conversation']));
+  assert.deepEqual(new Set(f.messages.map(row=>row[0])),new Set(['conversation']));
+  await f.controller.shutdown();
+});
+
+test('Stop speech leaves the answer running, ignores stale requests, and allows speech on the next question', async () => {
+  let delta, finish, signal, cancelled = 0;
+  const spoken = [];
+  const f = fixture({ settings: () => ({ ttsEnabled: true, voiceId: 'test' }),
+    tts: { start: id => spoken.push(id), push: () => {}, finish: () => {}, cancel: () => cancelled++ },
+    ask: (_messages, _key, currentSignal, onDelta) => {
+      delta = onDelta; signal = currentSignal; return new Promise(resolve => { finish = resolve; });
+    } });
+  const first = f.controller.start(); f.controller.stop();
+  const pending = f.controller.submit(first, new ArrayBuffer(8)); await new Promise(resolve => setImmediate(resolve));
+  delta('Read this.'); assert.deepEqual(spoken, [first]);
+  const before = cancelled; f.controller.mute(first + 100); assert.equal(cancelled, before);
+  f.controller.mute(first); assert.equal(signal.aborted, false, 'audio stop does not cancel the model');
+  delta(' And this.'); finish('Read this. And this.'); await pending;
+  assert.ok(f.events.some(event => event.type === 'llm:done' && event.id === first));
+  assert.ok(f.messages.some(row => row[1] === 'assistant' && row[2] === 'Read this. And this.'));
+  const next = f.controller.start(); f.controller.stop();
+  const following = f.controller.submit(next, new ArrayBuffer(8)); await new Promise(resolve => setImmediate(resolve));
+  delta('Next answer.'); assert.deepEqual(spoken, [first, next]);
+  const activeCancellations = cancelled; f.controller.mute(first); assert.equal(cancelled, activeCancellations);
+  finish('Next answer.'); await following; f.controller.playback(next, 'ended'); await f.controller.shutdown();
+});
 
 for (const [utterance,expected] of [['yes','approved'],['no','denied'],['no, open Firefox instead','new-request']]) {
   test('voice approval resumes or replaces pending interaction: '+utterance,async()=>{
@@ -85,7 +125,7 @@ for (const [utterance,expected] of [['yes','approved'],['no','denied'],['no, ope
       delta('New request.');return 'New request.';
     }});controller=f.controller;
     const first=controller.start();controller.stop();const pending=controller.submit(first,new ArrayBuffer(8));await new Promise(r=>setImmediate(r));
-    assert.ok(broker.current);const second=controller.start();assert.equal(parentSignal.aborted,false,'PTT preserves pending approval for voice classification');controller.stop();
+    assert.ok(broker.current);assert.equal(controller.canSubmitText(),false,'typing cannot dismiss a pending permission');const second=controller.start();assert.equal(parentSignal.aborted,false,'PTT preserves pending approval for voice classification');controller.stop();
     await controller.submit(second,new ArrayBuffer(8));await pending;
     assert.equal(decision,expected==='approved'?'approved':'denied');assert.equal(asks,expected==='new-request'?2:1);
     assert.equal(broker.current,undefined);assert.equal(f.escape.at(-1),false);
@@ -105,7 +145,7 @@ test('interaction persists transcript before reply and releases Escape on comple
   const f=fixture(), id=f.controller.start(); f.controller.stop();
   await f.controller.submit(id,new ArrayBuffer(8));
   assert.deepEqual(f.messages.map(x=>x[1]),['user','assistant']);
-  assert.deepEqual(f.events.map(x=>x.type),['ptt:start','ptt:stop','voice:thinking','voice:transcript','llm:delta','llm:done']);
+  assert.deepEqual(f.events.map(x=>x.type),['ptt:start','ptt:stop','voice:thinking','voice:transcript','conversation:started','llm:delta','llm:done']);
   assert.deepEqual(f.escape,[true,false]);
   assert.ok(f.events.at(-1).timing.totalMs>=0);
 });

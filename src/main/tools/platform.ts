@@ -1,6 +1,5 @@
 import { configurableTools } from '../../shared/release';
 import { app, clipboard, shell } from 'electron';
-import { uIOhook, UiohookKey } from 'uiohook-napi';
 import type { AppSettings } from '../../shared/types';
 import type { ReminderStore } from './types';
 import type { AppIndex } from './appIndex';
@@ -17,9 +16,10 @@ import { listReminders } from './impl/list_reminders';
 import { cancelReminder } from './impl/cancel_reminder';
 import { createNote } from './impl/create_note';
 import { electronClipboard } from './electronClipboard';
+import { inputFocus } from '../window/overlay';
 export function createTools(apps: AppIndex, store: ReminderStore, settings: AppSettings) {
   return [getDatetime, openApp(apps.snapshot(), value => shell.openPath(value)), openUrl(value => shell.openExternal(value)),
-    webSearch(settings.searchEngine, value => shell.openExternal(value)), typeText(electronClipboard, () => uIOhook.keyTap(UiohookKey.V, [UiohookKey.Ctrl])),
+    webSearch(settings.searchEngine, value => shell.openExternal(value)), typeText(electronClipboard, inputFocus),
     readClipboard(() => clipboard.readText()), writeClipboard(text => clipboard.writeText(text)), setTimer(store), setReminder(store), listReminders(store), cancelReminder(store),
     createNote(app.getPath('documents'), value => shell.openPath(value))].map(tool => configurableTools.includes(tool.name as typeof configurableTools[number]) ? { ...tool, approvalRequired: settings.toolApprovals?.[tool.name as typeof configurableTools[number]] } : tool);
 }

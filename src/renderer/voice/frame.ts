@@ -65,21 +65,22 @@ export function reactionMotion(now: number, reduced: boolean) {
 }
 let lastReport = 0;
 let reportedElement: HTMLElement | null = null;
-/** The bubble placed since it last appeared: a hold never leaves a newly shown bubble where an old one was. */
-let placed: HTMLElement | null = null;
+/** An answer belongs to its opening display, even when the pointer crosses to another display. */
+let placed: { element: HTMLElement; key: string; x: number; y: number; left: number; top: number; right: number; bottom: number; originX: number; originY: number } | null = null;
 /** Called from the existing kite rAF; no second loop or per-frame React state. */
-/** `hold` keeps the bubble where it is while the kite does a trick beside it. A notice from the kite (UX-18) uses the same spot when no answer is showing. */
-export function positionBubble(x: number, y: number, geometry: CursorGeometry, now: number, hold = false) {
+/** A notice uses the same placement rules when no answer is showing. */
+export function positionBubble(x: number, y: number, geometry: CursorGeometry, now: number) {
   const bubble = voiceRuntime.bubble ?? voiceRuntime.notice;
   if (!bubble) { reportedElement = null; placed = null; return; }
-  if (!voiceRuntime.hover && (!hold || placed !== bubble)) {
-    placed = bubble;
+  const key = bubble.dataset.anchor ?? '';
+  if (!placed || placed.element !== bubble || placed.key !== key || placed.originX !== geometry.origin.x || placed.originY !== geometry.origin.y) {
     const left = Math.max(0, geometry.display.x - geometry.origin.x);
     const top = Math.max(0, geometry.display.y - geometry.origin.y);
     const right = Math.min(innerWidth, left + geometry.display.width);
     const bottom = Math.min(innerHeight, top + geometry.display.height);
     bubble.style.maxWidth = Math.max(80, right - left - 24) + 'px';
-    bubble.style.maxHeight = Math.max(60, bottom - top - 24) + 'px';
+    bubble.style.maxHeight = Math.max(60, Math.min(560, bottom - top - 24)) + 'px';
+    bubble.style.setProperty('--panel-min-width', Math.min(340, Math.max(80, right - left - 24)) + 'px');
     const width = bubble.offsetWidth, height = bubble.offsetHeight;
     // The gap clears the kite's wings at every size setting: 24 px at Standard (design.md K-14).
     const gap = 11 + 13 * config.scale;
@@ -88,10 +89,17 @@ export function positionBubble(x: number, y: number, geometry: CursorGeometry, n
     const bubbleY = clamp(y + height < bottom - 12 ? y - 12 : y - height + 12, top + 12, Math.max(top + 12, bottom - height - 12));
     bubble.dataset.side = fitsRight ? 'right' : 'left';
     bubble.style.translate = `${bubbleX}px ${bubbleY}px`;
+    placed = { element: bubble, key, x: bubbleX, y: bubbleY, left, top, right, bottom, originX: geometry.origin.x, originY: geometry.origin.y };
     // The tail sits level with the kite, kept clear of the rounded corners (UX-13).
     const tail = String(Math.round(clamp(y - bubbleY, 16, Math.max(16, height - 16))));
     if (bubble.dataset.tail !== tail) { bubble.dataset.tail = tail; bubble.style.setProperty('--tail-y', tail + 'px'); }
   }
+  // Streaming, expanding and resizing may grow the panel. Only bring an overflowing edge back on screen.
+  // Never derive its position from the moving kite once it has opened.
+  const width = bubble.offsetWidth, height = bubble.offsetHeight;
+  placed.x = clamp(placed.x, placed.left + 12, Math.max(placed.left + 12, placed.right - width - 12));
+  placed.y = clamp(placed.y, placed.top + 12, Math.max(placed.top + 12, placed.bottom - height - 12));
+  bubble.style.translate = `${placed.x}px ${placed.y}px`;
   if (now - lastReport > 50 || reportedElement !== bubble) {
     const rect = bubble.getBoundingClientRect();
     window.kite.setBubbleBounds({ x: rect.x, y: rect.y, width: rect.width, height: rect.height });

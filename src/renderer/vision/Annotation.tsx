@@ -29,9 +29,8 @@ export function Annotation() {
       } else if (event.type === 'annotate') {
         if (vr.id !== event.id) return;
         setPreparing(false); current.current = event; setMode(event); vr.drawing = true; window.kite.setOverlayInteractive(true);
-        let uses = HINTS;
-        try { uses = Number(localStorage.getItem(HINT_KEY)) || 0; localStorage.setItem(HINT_KEY, String(uses + 1)); } catch { /* no storage, no hint */ }
-        setHint(uses < HINTS ? nearCursor() : null);
+        // Keep ordinary voice holds quiet; show the marking hint only after the first deliberate press.
+        setHint(null);
       } else clear();
     });
     let approvalPending = false;
@@ -74,14 +73,19 @@ export function Annotation() {
   const end = strokes.at(-1)?.at(-1);
   return <>
     {looking && <div className="screen-looking" style={indicator} role="status">Kite is looking</div>}
-    {mode && hint && !strokes.length && <div className="mark-hint" style={{ left: hint.x, top: hint.y }} role="status">Circle, underline, point, or tap · up to {MARKS}</div>}
+    {mode && hint && strokes.length <= 1 && <div className="mark-hint" style={{ left: hint.x, top: hint.y }} role="status">Circle, underline, point, or tap · up to {MARKS}</div>}
     {mode && end && strokes.length >= 2 && <div className="mark-hint count" style={{ left: Math.min(innerWidth - 70, end.x + 14), top: Math.min(innerHeight - 34, end.y + 12) }} role="status">{strokes.length} of {MARKS}</div>}
     <svg className={`annotation ${mode ? 'drawing' : ''} ${preparing ? 'preparing' : ''} ${fading ? 'fading' : ''} ${pulse ? 'pulse' : ''}`}
       onPointerDown={e => {
         e.preventDefault(); e.stopPropagation(); const m = current.current;
         if (!m || e.button !== 0 || active.current !== null || vr.strokes.length >= MARKS || vr.strokes.reduce((n, s) => n + s.length, 0) >= 2000) return;
         const p = point(e); if (!contains(m.display.bounds, { x: p.x + m.origin.x, y: p.y + m.origin.y })) return;
-        e.currentTarget.setPointerCapture(e.pointerId); active.current = e.pointerId; vr.strokes.push([p]); vr.pen = p; publish();
+        e.currentTarget.setPointerCapture(e.pointerId); active.current = e.pointerId;
+        if (!vr.strokes.length) {
+          window.kite.markScreen(m.id);
+          try { const uses = Number(localStorage.getItem(HINT_KEY)) || 0; localStorage.setItem(HINT_KEY, String(uses + 1)); if (uses < HINTS) setHint(nearCursor()); } catch { /* no storage, no hint */ }
+        }
+        vr.strokes.push([p]); vr.pen = p; publish();
       }} onPointerMove={add} onPointerUp={e => { add(e); active.current = null; }} onPointerCancel={() => { active.current = null; }}>
       {strokes.map((s, i) => <path key={i} d={inkPath(s)} />)}
     </svg>

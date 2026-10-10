@@ -2,7 +2,7 @@ import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { HotkeyRecorder } from './HotkeyRecorder';
 import { Keycaps } from './Keycaps';
 import { sections, type Section } from './sections';
-import { configurableTools, kiteSkins, livelinessLevels, type ConfigurableTool, type KiteSize, type KiteSkin, type Liveliness } from '../../shared/release';
+import { configurableTools, kiteSkins, livelinessLevels, kitePlacements, type ConfigurableTool, type KiteSize, type KiteSkin, type Liveliness, type KitePlacement } from '../../shared/release';
 import { SailMark } from '../kite/SailMark';
 import { routeVision } from '../../shared/vision';
 import type { AboutInfo, AppSettings, ModelSelection, OperationResult, ProviderId, SettingsSnapshot } from '../../shared/types';
@@ -26,7 +26,8 @@ const askByDefault = (name: ConfigurableTool) => !['get_datetime', 'list_reminde
 const alwaysAsks = ['Type or paste into an app', 'Read or change your clipboard', 'Look at your screen', 'Start a guide', 'Do a task in an app'];
 const encode = (m: ModelSelection) => `${m.provider}:${m.id}`;
 const kiteSizeLabels: Record<KiteSize, string> = { standard: 'Standard', large: 'Large', extraLarge: 'Extra large' };
-const livelinessLabels: Record<Liveliness, string> = { lively: 'Lively', calm: 'Calm' };
+const livelinessLabels: Record<Liveliness, string> = { still: 'Still', subtle: 'Subtle', playful: 'Playful' };
+const placementLabels: Record<KitePlacement, string> = { screenEdge: 'At screen edge', pointer: 'Follow pointer', invoked: 'Show when invoked' };
 const skinLabels: Record<KiteSkin, string> = { rose: 'Rose', teal: 'Teal', violet: 'Violet', sky: 'Sky' };
 // The speed slider's range, and where 1.0× ("Normal") sits on it (UX-56).
 const SPEED = { min: .6, max: 1.5 };
@@ -87,9 +88,12 @@ export function SettingsView({ section = 'general' }: { section?: Section }) {
         <select aria-label="Kite size" value={s.kiteSize ?? 'standard'} onChange={e => update({ kiteSize: e.target.value as KiteSize })}>
           {(Object.keys(kiteSizeLabels) as KiteSize[]).map(size => <option key={size} value={size}>{kiteSizeLabels[size]}</option>)}</select></Row>
       {/* The kite's character, within its rules (docs/design.md K-15): how much it moves, and what it wears. */}
-      <Row label="Liveliness" description="How much the kite moves on its own. Calm halves its idle motion; it still shows what it's doing.">
-        <select aria-label="Liveliness" value={s.liveliness ?? 'lively'} onChange={e => update({ liveliness: e.target.value as Liveliness })}>
-          {[...livelinessLevels].reverse().map(level => <option key={level} value={level}>{livelinessLabels[level]}</option>)}</select></Row>
+      <Row label="Motion" description="Still uses steady signals. Subtle rests quietly. Playful adds movement and occasional reactions.">
+        <select aria-label="Motion" value={s.liveliness ?? 'subtle'} onChange={e => update({ liveliness: e.target.value as Liveliness })}>
+          {livelinessLevels.map(level => <option key={level} value={level}>{livelinessLabels[level]}</option>)}</select></Row>
+      <Row label="Placement" description="Keep Kite at the screen edge, beside your pointer, or visible only while helping. Answers stay in place.">
+        <select aria-label="Placement" value={s.kitePlacement ?? 'screenEdge'} onChange={e => update({ kitePlacement: e.target.value as KitePlacement })}>
+          {kitePlacements.map(place => <option key={place} value={place}>{placementLabels[place]}</option>)}</select></Row>
       <Row label="Kite color" description="The logo stays rose.">
         <span className="kite-color-preview" data-skin={s.kiteSkin ?? 'rose'} aria-hidden="true"><SailMark size={22} live /></span>
         <select aria-label="Kite color" value={s.kiteSkin ?? 'rose'} onChange={e => update({ kiteSkin: e.target.value as KiteSkin })}>

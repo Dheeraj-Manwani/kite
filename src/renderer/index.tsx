@@ -34,12 +34,13 @@ function Overlay() {
     const focused=()=>{
       document.documentElement.classList.add('overlay-focused');
       requestAnimationFrame(()=>{
-        const target=[...document.querySelectorAll<HTMLElement>('.overlay button:not(:disabled), .overlay summary')].find(el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}));
+        const controls=[...document.querySelectorAll<HTMLElement>('.overlay textarea, .overlay button:not(:disabled), .overlay summary')].filter(el=>el.checkVisibility({checkOpacity:true,checkVisibilityCSS:true}));
+        const target=controls.find(el=>el.tagName==='TEXTAREA')??controls[0];
         if(target)target.focus();else window.kite.releaseOverlay();
       });
     };
     const blurred=()=>document.documentElement.classList.remove('overlay-focused');
-    const escape=(e:KeyboardEvent)=>{if(e.key==='Escape')window.kite.releaseOverlay();};
+    const escape=(e:KeyboardEvent)=>{if(e.key==='Escape'&&!e.isComposing)window.kite.releaseOverlay();};
     window.addEventListener('focus',focused);window.addEventListener('blur',blurred);window.addEventListener('keydown',escape);
     return()=>{off();window.removeEventListener('focus',focused);window.removeEventListener('blur',blurred);window.removeEventListener('keydown',escape);};
   },[]);

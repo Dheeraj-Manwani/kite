@@ -10,6 +10,8 @@ export interface ToolDefinition<T = unknown> {
   name: string; description: string; inputSchema: z.ZodType<T>; kind: 'info' | 'action' | 'sensitive-read'; approvalRequired?: boolean;
   /** A successful real (not dry-run) call ends the voice turn: what the tool starts speaks for itself, so no reply follows. */
   endsTurn?: boolean;
+  /** Read-only review before approval, e.g. bind a paste to a particular window. */
+  review?(input: T, ctx: ToolContext): Promise<string>;
   /**
    * Tools that can start before their input is complete (a whiteboard lesson): `stream` receives the input parsed so far
    * as the model writes it; `streamEnd` hears when it will never be executed. A streamEnd result with ok means what was

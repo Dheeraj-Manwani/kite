@@ -7,7 +7,8 @@ export type MarkType = 'tap' | 'enclosure' | 'underline' | 'arrow';
 export interface Mark { markType: MarkType; region: ScreenBounds }
 export interface Analysis { marks: Mark[]; union: ScreenBounds | null }
 export interface VisionImages { overview: Uint8Array; zoom?: Uint8Array }
-export interface VisionTurn { images: VisionImages; analysis: Analysis; captureMs: number }
+export interface ScreenAttachment { label: string; capturedAt: number; preview?: string }
+export interface VisionTurn { images: VisionImages; analysis: Analysis; captureMs: number; attachment?: ScreenAttachment }
 export type ScreenEvent =
   | { type: 'looking'; hidden: boolean; active: boolean; token?: string }
   | { type: 'annotate'; id: number; display: DisplayInfo; origin: CursorPoint }

@@ -10,7 +10,7 @@ const { catalog } = require('../src/main/ai/catalog.ts');
 const { defaultPermissions } = require('../src/shared/permissions.ts');
 const snapshot = { settings:{model:{provider:'moonshot',id:'kimi-k2.6'},fallbackEnabled:false,fallback:{provider:'groq',id:'openai/gpt-oss-20b'},ttsEnabled:true,voiceId:'mock-voice',speed:1},
   models:catalog,voices:[{id:'mock-voice',name:'Test voice'}],keys:{openai:true,anthropic:true,google:true,groq:true,moonshot:true,deepseek:true,cartesia:true} };
-Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,boardCaptions:false,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'lively',kiteSkin:'rose',permissions:structuredClone(defaultPermissions),jobsModel:null,memory:true});
+Object.assign(snapshot.settings,{hotkey:['Control','Meta'],onboardingComplete:false,launchOnStartup:false,reducedMotion:false,toolApprovals:{},dryRun:false,searchEngine:'google',visionModel:{provider:'moonshot',id:'kimi-k2.5'},screenWithoutAsking:false,keepScreenshots:false,guideMode:true,whiteboard:true,boardCaptions:false,computerUse:true,kiteSize:'standard',earcons:false,liveliness:'playful',kitePlacement:'pointer',kiteSkin:'rose',permissions:structuredClone(defaultPermissions),jobsModel:null,memory:true});
 const memoryFacts=[{id:1,kind:'profile',key:'profile.phone',label:'Phone number',value:'9876543210',source:'From what you said, 1 Oct',created:1,updated:1,used:null},
   {id:2,kind:'address',key:'home.pincode',label:'Home pincode',value:'411045',source:'From the shop.example.in task, 1 Oct',created:1,updated:1,used:Date.now()},
   {id:3,kind:'address',key:'home.city',label:'Home city',value:'Pune',source:'From the shop.example.in task, 1 Oct',created:1,updated:1,used:null},
@@ -27,14 +27,27 @@ listMemory:()=>ipcRenderer.invoke('test:memoryList'),editMemory:(id,patch)=>ipcR
 undoMemory:token=>ipcRenderer.invoke('test:memoryUndo',token),onMemoryChanged:cb=>subscribe('memory:changed',cb),letsFly:from=>ipcRenderer.send('test:fly',from),getSettings:()=>ipcRenderer.invoke('test:settings'),onSettingsChanged:cb=>subscribe('settings:changed',cb),
 updateSettings:patch=>ipcRenderer.invoke('test:update',patch),hasKey:async()=>true,setKey:async()=>({ok:true}),deleteKey:async()=>({ok:true}),testKey:async()=>({status:'ok'}),refreshModels:async()=>({ok:true}),refreshVoices:async()=>({ok:true}),previewVoice:async()=>({ok:true}),
 onScreenEvent:cb=>subscribe('screen:event',cb),screenHidden:()=>{},screenPrepared:(token,images)=>ipcRenderer.send('test:prepared',token,images),testCapture:async()=>({ok:false}),
-onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),
+onVoiceEvent:cb=>subscribe('test:voice',cb),reportPlayback:(id,event)=>ipcRenderer.send('test:playback',id,event),stopSpeech:id=>ipcRenderer.send('test:stopSpeech',id),
+onConversationOpen:cb=>subscribe('conversation:open',cb),submitText:text=>ipcRenderer.invoke('test:submitText',text),newConversation:()=>ipcRenderer.invoke('test:newConversation'),continueConversation:id=>ipcRenderer.invoke('test:continueConversation',id),
 approveTool:(id,approved,scope)=>ipcRenderer.invoke('test:approve',scope?{id,approved,scope}:{id,approved}),getToolCalls:async()=>[],onToolCallsChanged:cb=>subscribe('tools:changed',cb),setDryRun:async()=>({ok:true}),rescanApps:async()=>({ok:true}),dismissReminder:()=>{},
 onCursorUpdate:cb=>subscribe('cursor:update',cb),onDevPanelToggle:cb=>subscribe('dev:togglePanel',cb),setDevPanelBounds:()=>{},setBubbleBounds:()=>{},onGuideEvent:cb=>subscribe('guide:state',cb),guideControl:action=>ipcRenderer.send('test:guide',action),setGuideBounds:bounds=>ipcRenderer.send('test:guideBounds',bounds),setOverlayInteractive:()=>{},openSettings:()=>{},reportAudioResult:()=>{},submitAudio:async()=>({ok:true}),printRecentMessages:async()=>({ok:true}),copyText:async()=>({ok:true}),
 onBoardEvent:cb=>subscribe('board:state',cb),boardControl:action=>ipcRenderer.send('test:board',action),boardDrawn:(id,key)=>ipcRenderer.send('test:boardDrawn',id,key),setBoardBounds:bounds=>ipcRenderer.send('test:boardBounds',bounds),exportBoard:(action,png,title)=>ipcRenderer.invoke('test:boardExport',action,png,title),demoBoard:async()=>({ok:true}),
 onTaskEvent:cb=>subscribe('task:state',cb),taskControl:action=>ipcRenderer.send('test:task',action),taskChoose:(index,remember)=>ipcRenderer.send('test:taskChoose',index,remember),setTaskBounds:bounds=>ipcRenderer.send('test:taskBounds',bounds)});`);
 const delay = ms => new Promise(resolve=>setTimeout(resolve,ms));
 app.whenReady().then(async()=>{
-  const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[], memoryCalls=[];
+  const windows=[]; const errors=[], reports=[], decisions=[], flights=[], abouts=[], memoryCalls=[], speechStops=[];let lastScript='';
+  const typedSends=[], continued=[];let typedId=600, conversationNumber=0, testConversation='live-test', rejectTyped=false;
+  ipcMain.handle('test:submitText',(event,text)=>{
+    if(rejectTyped)return {ok:false,error:'Couldn’t send. Try again.'};
+    typedSends.push(text);const id=++typedId;const send=type=>event.sender.send('test:voice',{id,...type});
+    send({type:'text:start'});send({type:'voice:transcript',text});send({type:'conversation:started',conversationId:testConversation});
+    setTimeout(()=>{if(text==='A question that fails')send({type:'llm:error',title:'Couldn’t reach the model',text:'Try again.'});else{send({type:'llm:delta',text:'Shortest fix: restart the test service.'});send({type:'llm:done'});}},50);
+    return {ok:true};
+  });
+  ipcMain.handle('test:newConversation',event=>{testConversation='new-'+(++conversationNumber);event.sender.send('conversation:open',{id:testConversation,messages:[],reason:'new'});return {ok:true};});
+  ipcMain.handle('test:continueConversation',(_event,id)=>{continued.push(id);testConversation=id;const overlay=windows.find(win=>!win.isDestroyed()&&win.webContents.getURL().endsWith('#overlay'));
+    overlay?.webContents.send('conversation:open',{id,reason:'resume',messages:[{id:901,role:'user',content:'Explain this saved error.'},{id:902,role:'assistant',content:'The saved explanation.'}]});return {ok:true};});
+  ipcMain.on('test:stopSpeech',(_event,id)=>speechStops.push(id));
   ipcMain.handle('test:memoryList',()=>memoryFacts);
   ipcMain.handle('test:memoryEdit',(_e,id,patch)=>{memoryCalls.push(['edit',id,patch]);return {ok:true};});
   ipcMain.handle('test:memoryDelete',(_e,id)=>{memoryCalls.push(['delete',id]);return {ok:true};});
@@ -50,6 +63,8 @@ app.whenReady().then(async()=>{
     ipcMain.handle('test:approve',(_event,input)=>{decisions.push(input);return {ok:true};});
     const create = async view => {
       const win=new BrowserWindow({width:760,height:960,show:false,webPreferences:{preload,sandbox:true,contextIsolation:true,backgroundThrottling:false,offscreen:true,autoplayPolicy:'no-user-gesture-required'}});windows.push(win);
+      const execute=win.webContents.executeJavaScript.bind(win.webContents);
+      win.webContents.executeJavaScript=(code,...args)=>{lastScript=code;return execute(code,...args).catch(error=>{throw new Error('Renderer script failed: '+code+'\n'+error.stack);});};
       win.webContents.on('console-message',details=>{if(details.level==='error')errors.push(details.message);});
       await win.loadFile(path.join(__dirname,'../.vite/renderer/main_window/index.html'),{hash:view});await delay(350);return win;
     };
@@ -64,7 +79,8 @@ app.whenReady().then(async()=>{
     await sjs("const k=document.querySelector('select[aria-label=\"Kite size\"]');k.value='large';k.dispatchEvent(new Event('change',{bubbles:true}));");await delay(80);
     assert.equal(snapshot.settings.kiteSize,'large');snapshot.settings.kiteSize='standard';
     // Liveliness and kite color (K-15), with a live preview of the color; the logo in the sidebar stays rose.
-    assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Liveliness\"]').options].map(o=>o.textContent)"),['Lively','Calm']);
+    assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Motion\"]').options].map(o=>o.textContent)"),['Still','Subtle','Playful']);
+    assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Placement\"]').options].map(o=>o.textContent)"),['At screen edge','Follow pointer','Show when invoked']);
     assert.deepEqual(await sjs("[...document.querySelector('select[aria-label=\"Kite color\"]').options].map(o=>o.textContent)"),['Rose','Teal','Violet','Sky']);
     await sjs("const c=document.querySelector('select[aria-label=\"Kite color\"]');c.value='violet';c.dispatchEvent(new Event('change',{bubbles:true}));");await delay(80);
     assert.equal(snapshot.settings.kiteSkin,'violet');
@@ -240,6 +256,8 @@ app.whenReady().then(async()=>{
     assert.deepEqual(await tjs("[...document.querySelectorAll('.cheat-sheet dd')].map(d=>d.textContent)"),['Hold to talk. Let go to send.','Circle something on your screen, then ask about it.','Cancel','Ask, and I’ll show you the way one step at a time.']);
     assert.equal(await tjs("document.querySelector('.cheat-sheet .keycaps').getAttribute('aria-label')"),'Ctrl + Win');
     assert.equal(await tjs("[...document.querySelectorAll('.onboarding footer button')].map(b=>b.textContent).join()"),'Back,Let’s fly');
+    // Let the previous drawing animation settle before comparing the handoff's origin.
+    await delay(1500);
     fs.writeFileSync(path.join(temporary,'onboarding.png'),(await tutorial.webContents.capturePage()).toPNG());
     // Let's fly hands the stage kite, where it is and how big, to the overlay (K-07).
     await tjs("[...document.querySelectorAll('.onboarding footer button')].find(b=>b.textContent==='Let’s fly').click()");
@@ -287,7 +305,7 @@ app.whenReady().then(async()=>{
     send({type:'tts:chunk',audio:new Float32Array(44100*5).buffer});send({type:'tts:done'});send({type:'llm:done'});
     for(let i=0;i<100 && !reports.some(r=>r.event==='started');i++)await delay(50);
     await delay(100);
-    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-reply').textContent"),'Hello', JSON.stringify({reports,errors,debug:await overlay.webContents.executeJavaScript("({frames:window.framesRun,contexts:window.audioContexts.map(c=>({state:c.state,time:c.currentTime})),text:document.querySelector('.speech-bubble').outerHTML})")}));
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-reply').textContent"),'Hello world.','all available text is readable before speech reaches the second word');
     await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').dispatchEvent(new PointerEvent('pointerover',{bubbles:true}))");await delay(50);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-reply').textContent"),'Hello world.');
     // The answer ends with who answered (the Settings step above switched to Claude Sonnet 5), then Copy, Pin, and Open in History (UX-14).
@@ -295,8 +313,7 @@ app.whenReady().then(async()=>{
     // One short announcement per state; the streaming bubble itself is not a live region (UX-91).
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').getAttribute('aria-live')"),null);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble .sr-only').textContent"),'Answer ready');
-    await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer [aria-label=\"Keep this open\"]').click()");await delay(50);
-    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer [aria-pressed]').getAttribute('aria-pressed')"),'true');
+    assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.bubble-footer [aria-label=\"Keep this open\"]')"),null,'answers stay open without a pin');
     send({type:'voice:aborted'});await delay(100);
     assert.equal(await overlay.webContents.executeJavaScript("document.querySelector('.speech-bubble').getAttribute('aria-hidden')"),'true');
     assert.ok(reports.some(r=>r.event==='started'));
@@ -665,29 +682,31 @@ app.whenReady().then(async()=>{
     assert.equal(await js("document.querySelector('.link-chip').textContent"),'Copied');
     // The bubble is placed with translate and grows from the side facing the kite; it collapses back on dismiss (UX-16).
     const grown=await js("(()=>{const b=document.querySelector('.speech-bubble'),s=getComputedStyle(b);return {translate:b.style.translate,transform:s.transform,origin:s.transformOrigin};})()");
-    assert.ok(/px/.test(grown.translate)&&grown.transform==='none'&&/^0px \d+px$/.test(grown.origin),JSON.stringify(grown));
+    assert.ok(/px/.test(grown.translate)&&grown.transform==='none',JSON.stringify(grown));
     voice(400,{type:'voice:aborted'});await delay(350);
-    assert.match(await js("getComputedStyle(document.querySelector('.speech-bubble')).transform"),/^matrix\(0\.96, 0, 0, 0\.96, -4, 0\)$/);
+    assert.equal(await js("getComputedStyle(document.querySelector('.speech-bubble')).transform"),'none','reading panel fades without scaling its text');
     // Something finished well: one loop-de-loop in place, while the bubble holds still beside it (K-09).
     voice(401,{type:'ptt:start'});await delay(40);voice(401,{type:'ptt:stop'});await delay(40);voice(401,{type:'tool:executing'});await delay(200);
     voice(401,{type:'tool:result',success:true,text:'Saved your note.'});
     let looped=0,last=(await kiteFrame()).rotation;const places=new Set();
     for(let i=0;i<40;i++){await delay(30);const f=await kiteFrame();looped+=((f.rotation-last)%360+540)%360-180;last=f.rotation;if(i<14)places.add(await js("document.querySelector('.speech-bubble').style.translate"));}
-    assert.ok(Math.abs(looped)>300,'loops once: '+looped);
+    assert.ok(Math.abs(looped)<45,'no celebration flight while reading: '+looped);
     assert.equal(places.size,1,'the bubble holds still during the loop');
     // A reminder tugs toward its bubble for a few seconds, then the kite settles (K-09).
     voice(401,{type:'reminder:fired'});await delay(100);
     const side=await js("document.querySelector('.speech-bubble').dataset.side")==='left'?-1:1;let tug=0;
     for(let i=0;i<30;i++){await delay(40);tug=Math.max(tug,((await kiteFrame()).x-382)*side);}
-    assert.ok(tug>2.5,'pulls toward the bubble: '+tug);
+    assert.ok(tug<2.5,'no repeated reminder tug while reading: '+tug);
     await delay(2600);assert.ok(Math.abs((await kiteFrame()).x-382)<1.5,'then settles');
     await js("[...document.querySelectorAll('.speech-bubble button')].find(b=>b.textContent==='Dismiss reminder').click()");
     voice(401,{type:'voice:aborted'});await delay(300);
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Close')?.click()");await delay(50);
     // App notices come from the kite as a small bubble; they wait while an answer shows, and an update offers Restart (UX-18).
     voice(402,{type:'ptt:start'});await delay(60);
     overlay.webContents.send('app:event',{type:'update:ready'});await delay(400);
     assert.equal(await js("document.querySelector('.speech-bubble.notice.visible')"),null,'waits while Kite is listening');
-    voice(402,{type:'ptt:cancel'});await delay(400);
+    voice(402,{type:'ptt:cancel'});await delay(100);
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Close')?.click()");await delay(400);
     assert.equal(await js("document.querySelector('.speech-bubble.notice.visible [role=status]').textContent"),'I have an update ready.');
     assert.match(await js("document.querySelector('.speech-bubble.notice').style.translate"),/px/,'placed beside the kite');
     await js("[...document.querySelectorAll('.speech-bubble.notice button')].find(b=>b.textContent==='Restart').click()");await delay(250);
@@ -725,7 +744,7 @@ app.whenReady().then(async()=>{
     voice(403,{type:'ptt:start'});await delay(40);voice(403,{type:'ptt:tooShort'});await delay(600);
     const xl=await kiteFrame(), pill=await js("parseFloat(document.querySelector('.speech-bubble').style.translate)");
     assert.ok(xl.scale===1.6&&Math.hypot(xl.x-(350+32*1.6),xl.y-(250+28*1.6))<6,'scaled kite at its scaled offset: '+JSON.stringify(xl));
-    assert.ok(pill-xl.x>=11+13*1.6-1,'the bubble clears the bigger kite: '+(pill-xl.x));
+    assert.ok(pill>=12&&pill<748,'the retained conversation stays on screen with the bigger kite');
     snapshot.settings.kiteSize='standard';overlay.webContents.send('settings:changed',snapshot);await delay(200);
     // A kite color (K-15) recolors the sail's gradient in the overlay; rose comes back when chosen again.
     const sailStop=()=>js("getComputedStyle(document.querySelector('.kite-glint-body')).stopColor");
@@ -735,8 +754,120 @@ app.whenReady().then(async()=>{
     assert.notEqual(await sailStop(),rose,'the sail wears teal');
     snapshot.settings.kiteSkin='rose';overlay.webContents.send('settings:changed',snapshot);await delay(150);
     assert.equal(await sailStop(),rose);
+    // Phase 1: Subtle settles at the screen edge and remains still even as the pointer moves.
+    voice(500,{type:'model:changed'});voice(500,{type:'voice:aborted'});
+    snapshot.settings.liveliness='subtle';snapshot.settings.kitePlacement='screenEdge';
+    overlay.webContents.send('settings:changed',snapshot);await delay(1500);
+    const resting=await kiteFrame(), sailAtRest=await js("document.querySelector('.kite-sail').getAttribute('d')");
+    overlay.webContents.send('cursor:update',{x:80,y:70},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});await delay(500);
+    const settled=await kiteFrame();
+    assert.ok(Math.hypot(resting.x-settled.x,resting.y-settled.y)<.01,'no idle floating or pointer following at screen edge');
+    assert.equal(await js("document.querySelector('.kite-sail').getAttribute('d')"),sailAtRest,'no perpetual sail breathing');
+    voice(501,{type:'model:changed'});voice(501,{type:'tts:start'});
+    voice(501,{type:'llm:delta',text:'## A comfortable answer\nYou can read all of this immediately, even while the voice is still on the first word.\n\n1. Expand for more room.\n2. Make the text larger.\n3. Minimize and come back later.'});
+    voice(501,{type:'tts:chunk',audio:new Float32Array(44100*8).buffer});voice(501,{type:'tts:done'});voice(501,{type:'llm:done'});await delay(300);
+    const answerPosition=await js("document.querySelector('.speech-bubble').style.translate");
+    snapshot.settings.kitePlacement='pointer';overlay.webContents.send('settings:changed',snapshot);
+    overlay.webContents.send('cursor:update',{x:600,y:450},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});await delay(200);
+    assert.equal(await js("document.querySelector('.speech-bubble').style.translate"),answerPosition);
+    overlay.webContents.send('cursor:update',{x:900,y:450},{origin:{x:0,y:0},display:{x:760,y:0,width:760,height:960}});await delay(200);
+    assert.equal(await js("document.querySelector('.speech-bubble').style.translate"),answerPosition,'answer stays on its opening display');
+    overlay.webContents.send('cursor:update',{x:600,y:450},{origin:{x:0,y:0},display:{x:0,y:0,width:760,height:960}});
+    await js("document.querySelector('.bubble-stop-speech').click()");await delay(100);
+    assert.equal(speechStops.at(-1),501);assert.match(await js("document.querySelector('.bubble-reply').textContent"),/come back later/);
+    voice(501,{type:'tts:start'});voice(501,{type:'tts:chunk',audio:new Float32Array(44100).buffer});await delay(100);
+    assert.equal(await js("document.querySelector('.bubble-stop-speech')"),null,'late audio cannot restart stopped speech');
+    await js("document.querySelector('[aria-label=\"Larger answer text\"]').click()");await delay(80);
+    assert.equal(await js("getComputedStyle(document.querySelector('.speech-bubble')).fontSize"),'18px');
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Expand').click()");await delay(100);
+    assert.equal(await js("document.querySelector('.speech-bubble').offsetWidth"),640);
+    assert.equal(await js("getComputedStyle(document.querySelector('.speech-bubble')).resize"),'both');
+    await js("document.querySelector('.speech-bubble').style.width='500px';document.querySelector('.speech-bubble').style.height='400px'");await delay(100);
+    assert.ok(await js("(()=>{const r=document.querySelector('.speech-bubble').getBoundingClientRect();return r.left>=12&&r.top>=12&&r.right<=748&&r.bottom<=948})()"),'resizing stays on screen');
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Minimize').click()");await delay(100);
+    assert.equal(await js("getComputedStyle(document.querySelector('.bubble-body')).display"),'none');
+    assert.ok(await js("document.querySelector('.speech-bubble').offsetHeight<65"),'resized answer minimizes to a small handle');
+    await delay(9000);
+    assert.equal(await js("document.querySelector('.speech-bubble').getAttribute('aria-hidden')"),'false','answer does not expire');
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Show answer').click()");await delay(100);
+    assert.match(await js("document.querySelector('.bubble-reply').textContent"),/come back later/);
+    overlay.webContents.debugger.attach('1.3');
+    for(const [name,features] of [['light',[{name:'prefers-color-scheme',value:'light'}]],['dark',[{name:'prefers-color-scheme',value:'dark'}]],['contrast',[{name:'forced-colors',value:'active'}]]]) {
+      await overlay.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features});await delay(100);
+      fs.writeFileSync(path.join(temporary,`answer-${name}.png`),(await overlay.webContents.capturePage()).toPNG());
+    }
+    await overlay.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[]});overlay.webContents.debugger.detach();
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Close').click()");voice(501,{type:'llm:delta',text:' Late text.'});await delay(100);
+    assert.equal(await js("document.querySelector('.speech-bubble').getAttribute('aria-hidden')"),'true','closed answers do not reopen as text arrives');
+    snapshot.settings.kitePlacement='invoked';overlay.webContents.send('settings:changed',snapshot);voice(502,{type:'model:changed'});voice(502,{type:'llm:delta',text:'Here when needed.'});voice(502,{type:'llm:done'});await delay(400);
+    assert.equal(await js("document.querySelector('.kite-canvas').style.visibility"),'visible');
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Close').click()");await delay(500);
+    assert.equal(await js("document.querySelector('.kite-canvas').style.visibility"),'hidden');
+    // Phase 2: open from the tray/keyboard path, then continue one conversation with voice and text.
+    overlay.webContents.send('conversation:open',{id:testConversation,messages:[],reason:'new'});await delay(100);
+    voice(550,{type:'ptt:start'});voice(550,{type:'voice:transcript',text:'Explain this error.'});voice(550,{type:'conversation:started',conversationId:testConversation});
+    voice(550,{type:'llm:delta',text:'The service needs to restart.'});voice(550,{type:'llm:done'});await delay(100);
+    const setDraft=text=>js(`(()=>{const input=document.querySelector('#conversation-reply');Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype,'value').set.call(input,${JSON.stringify(text)});input.dispatchEvent(new Event('input',{bubbles:true}));})()`);
+    const submit=()=>js("document.querySelector('.conversation-composer').dispatchEvent(new Event('submit',{bubbles:true,cancelable:true}))");
+    await setDraft('Give me the shortest fix.');await delay(50);await submit();await delay(250);
+    assert.equal(typedSends.at(-1),'Give me the shortest fix.');
+    assert.match(await js("document.querySelector('.conversation-turns').textContent"),/Explain this error.*service needs to restart/s);
+    assert.match(await js("document.querySelector('.bubble-transcript').textContent"),/Give me the shortest fix/);
+    assert.match(await js("document.querySelector('.bubble-reply').textContent"),/Shortest fix/);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'');
+    await setDraft('Why does that work?');await delay(40);
+    await js("document.querySelector('.speech-bubble').style.width='640px';document.querySelector('.speech-bubble').style.height='560px';document.querySelector('.bubble-body').scrollTop=0");await delay(100);
+    for(const [name,features] of [['light',[{name:'prefers-color-scheme',value:'light'}]],['dark',[{name:'prefers-color-scheme',value:'dark'}]],['contrast',[{name:'forced-colors',value:'active'}]]]) {
+      overlay.webContents.debugger.attach('1.3');await overlay.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features});await delay(80);
+      fs.writeFileSync(path.join(temporary,`conversation-${name}.png`),(await overlay.webContents.capturePage()).toPNG());overlay.webContents.debugger.detach();
+    }
+    overlay.webContents.debugger.attach('1.3');await overlay.webContents.debugger.sendCommand('Emulation.setEmulatedMedia',{features:[]});overlay.webContents.debugger.detach();
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Minimize').click()");await delay(80);
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Show answer').click()");await delay(80);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'Why does that work?');
+    await js("[...document.querySelectorAll('.bubble-header button')].find(b=>b.textContent==='Close').click()");await delay(50);
+    overlay.webContents.send('app:event',{type:'conversation:show'});await delay(80);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'Why does that work?');
+    assert.equal(await js("document.querySelectorAll('.conversation-turn').length"),1,'closing and reopening do not duplicate turns');
+    // Accidental holds preserve the last answer and draft, without duplicating it.
+    for(const [id,type] of [[560,'ptt:tooShort'],[561,'voice:empty'],[562,'ptt:cancel']]){
+      voice(id,{type:'ptt:start'});await delay(30);voice(id,{type});await delay(80);
+      assert.match(await js("document.querySelector('.bubble-reply').textContent"),/Shortest fix/);
+      assert.equal(await js("document.querySelector('#conversation-reply').value"),'Why does that work?');
+      assert.equal(await js("document.querySelectorAll('.conversation-turn').length"),1);
+    }
+    rejectTyped=true;await submit();await delay(80);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'Why does that work?');
+    assert.match(await js("document.querySelector('.composer-error').textContent"),/Couldn’t send/);rejectTyped=false;
+    await setDraft('A question that fails');await delay(40);await submit();await delay(200);
+    assert.match(await js("document.querySelector('.bubble-transcript').textContent"),/question that fails/);
+    await js("[...document.querySelectorAll('.bubble-body button')].find(b=>b.textContent==='Edit and retry').click()");await delay(80);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'A question that fails');
+    // Reading earlier turns must not jump to the bottom while new text streams.
+    await js("const readingBody=document.querySelector('.bubble-body');readingBody.dispatchEvent(new WheelEvent('wheel',{bubbles:true,deltaY:-300}));readingBody.scrollTop=0");await delay(80);
+    voice(typedId,{type:'llm:delta',text:' More context.'});await delay(100);
+    assert.ok(await js("document.querySelector('.bubble-body').scrollTop<5"));voice(typedId,{type:'llm:done'});await delay(50);
+    fs.writeFileSync(path.join(temporary,'conversation.png'),(await overlay.webContents.capturePage()).toPNG());
+    await js("document.querySelector('.new-conversation').click()");await delay(150);
+    assert.equal(await js("document.querySelectorAll('.conversation-turn').length"),0);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'');
+    assert.equal(await js("document.querySelector('.bubble-reply')"),null,'New conversation clears the visible chat deliberately');
+    const resumedHistory=await create('history');await delay(250);
+    for(let i=0;i<100&&!await resumedHistory.webContents.executeJavaScript("[...document.querySelectorAll('.conversation-head button')].some(b=>b.textContent==='Continue conversation'&&!b.disabled)");i++)await delay(30);
+    await resumedHistory.webContents.executeJavaScript("[...document.querySelectorAll('.conversation-head button')].find(b=>b.textContent==='Continue conversation').click()");await delay(150);
+    assert.equal(continued.at(-1),'history-test');assert.match(await js("document.querySelector('.conversation-turns').textContent"),/saved error.*saved explanation/s);
+    await setDraft('Draft for saved chat');await delay(50);await submit();await delay(150);
+    assert.match(await js("document.querySelector('.conversation-turns').textContent"),/saved explanation/);
+    // Preserve a per-conversation draft while switching to another saved chat and back.
+    await setDraft('Keep this draft');await delay(50);
+    overlay.webContents.send('conversation:open',{id:'another-chat',messages:[],reason:'resume'});await delay(80);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'');
+    await resumedHistory.webContents.executeJavaScript("[...document.querySelectorAll('.conversation-head button')].find(b=>b.textContent==='Continue conversation').click()");await delay(100);
+    assert.equal(await js("document.querySelector('#conversation-reply').value"),'Keep this draft');resumedHistory.destroy();
+    overlay.webContents.send('conversation:open',{id:null,messages:[],reason:'deleted'});await delay(100);
+    assert.equal(await js("document.querySelector('.speech-bubble').getAttribute('aria-hidden')"),'true','history deletion removes retained chat and drafts');
     assert.deepEqual(errors.filter(e=>!e.includes('NotAllowedError')),[]);
     console.log('PASS settings, model IPC, Web Audio, timestamp reveal, hover, interrupt, approval arguments/countdown/approve/deny, scaled JPEGs, tap ring, annotation pointer capture/limits/fade, capture hiding, guide ring/card/flight/controls, whiteboard drawing/pen/highlight/export/controls, task approval scopes/card/ring/pointing/controls. Screenshots: '+temporary);
-  } catch(error) {console.error(error);process.exitCode=1;}
+  } catch(error) {console.error(error);console.error('Last script:',lastScript,'Renderer errors:',errors);process.exitCode=1;}
   finally {windows.forEach(w=>{if(!w.isDestroyed())w.destroy();});app.exit(process.exitCode||0);}
 });
